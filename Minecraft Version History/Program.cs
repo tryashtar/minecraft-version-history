@@ -14,12 +14,15 @@ namespace Minecraft_Version_History
     {
         static void Main(string[] args)
         {
-            var java = new JavaUpdater(@"D:\Minecraft\Java Storage\Java History",
+            JavaVersion.ServerJarFolder = @"D:\Projects\Visual Studio\Java Updater\Java Updater\bin\Debug\settings\servers";
+            var java = new JavaUpdater(//@"D:\Minecraft\Java Storage\Java History",
+                @"D:\~No Sync\tests\java",
                                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft\versions"));
 
             java.CommitChanges();
 
-            var bedrock = new BedrockUpdater(@"D:\Minecraft\Bedrock Storage\Bedrock History",
+            var bedrock = new BedrockUpdater(//@"D:\Minecraft\Bedrock Storage\Bedrock History",
+                @"D:\~No Sync\tests\bedrock",
                                              @"D:\~No Sync\~Unorganized\~mc builds unorganized");
 
             bedrock.CommitChanges();
