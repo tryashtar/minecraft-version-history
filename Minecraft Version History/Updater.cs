@@ -22,6 +22,7 @@ namespace Minecraft_Version_History
             cmd.StartInfo.Arguments = $"/C {input}";
             cmd.StartInfo.RedirectStandardInput = true;
             cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.RedirectStandardError = true;
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
             cmd.Start();
@@ -36,6 +37,7 @@ namespace Minecraft_Version_History
         protected string VersionsFolder { get; private set; }
         protected List<T> CommittedVersions;
         protected List<T> UncommittedVersions;
+        private string LoggedVersionsPath;
         readonly static string[] GitFolders = new[] { ".git" };
         readonly static string[] GitFiles = new[] { ".gitignore", "version.txt" };
         public Updater(string repo_folder, string versions_folder)
@@ -44,7 +46,8 @@ namespace Minecraft_Version_History
             VersionsFolder = versions_folder;
             CommittedVersions = new List<T>();
             UncommittedVersions = new List<T>();
-            string[] logged = File.ReadAllLines(Path.Combine(versions_folder, "logged.txt"));
+            LoggedVersionsPath = Path.Combine(versions_folder, "logged.txt");
+            string[] logged = File.ReadAllLines(LoggedVersionsPath);
             foreach (var version in GetAllVersions())
             {
                 if (logged.Contains(version.VersionName))
@@ -69,20 +72,22 @@ namespace Minecraft_Version_History
                 foreach (var version in branch.OrderBy(x => x, versioncomparer))
                 {
                     Console.WriteLine($"Version {version}");
-                    CommandRunner.RunCommand(RepoFolder, $"git add -A");
                     WipeFolderExcept(RepoFolder, GitFolders, GitFiles);
                     version.ExtractData(RepoFolder);
                     File.WriteAllText(Path.Combine(RepoFolder, "version.txt"), version.VersionName);
+                    CommandRunner.RunCommand(RepoFolder, $"git add -A");
                     Console.WriteLine("Committing...");
-                    CommandRunner.RunCommand(RepoFolder, $"git commit --date=\"{version.ReleaseTime}\" -m {version.VersionName}");
+                    CommandRunner.RunCommand(RepoFolder, $"git commit --date=\"{version.ReleaseTime}\" -m \"{version.VersionName}\"");
+                    File.AppendAllText(LoggedVersionsPath, version.VersionName + Environment.NewLine);
                     CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
                     CommandRunner.RunCommand(RepoFolder, $"git repack");
                 }
             }
-
-            // TO DO:
-            // move uncommited to commited list
-            // rewrite contesnts of logged.txt as you go
+            foreach (var version in UncommittedVersions)
+            {
+                CommittedVersions.Add(version);
+            }
+            UncommittedVersions.Clear();
         }
 
         protected abstract IEnumerable<T> GetAllVersions();
@@ -159,6 +164,7 @@ namespace Minecraft_Version_History
     {
         private string JarPath;
         public static string ServerJarFolder;
+        private static DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
         public JavaVersion(string folder)
         {
@@ -172,18 +178,28 @@ namespace Minecraft_Version_History
 
         public override void ExtractData(string output)
         {
-            bool success = false;
-            foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
+            if (ReleaseTime > DataGenerators)
             {
-                var run = CommandRunner.RunCommand(ServerJarFolder, $"java -Xss1M -cp \"{JarPath}\";\"{serverjar}\" net.minecraft.data.Main --reports --output \"{output}\"");
-                if (run.ExitCode == 0)
+                bool success = false;
+                foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
                 {
-                    success = true;
-                    break;
+                    // data reports wipe the entire output folder they run in
+                    // so we need to put them somewhere safe and then copy
+                    var run = CommandRunner.RunCommand(ServerJarFolder, $"java -Xss1M -cp \"{JarPath}\";\"{serverjar}\" net.minecraft.data.Main --reports");
+                    if (run.ExitCode == 0)
+                    {
+                        success = true;
+                        break;
+                    }
+                }
+                if (!success)
+                    throw new FileNotFoundException("No compatible server jar found to generate data reports");
+                Directory.CreateDirectory(Path.Combine(output, "reports"));
+                foreach (var report in Directory.EnumerateFiles(Path.Combine(ServerJarFolder, "generated", "reports")))
+                {
+                    File.Copy(report, Path.Combine(output, "reports", Path.GetFileName(report)));
                 }
             }
-            if (!success)
-                throw new FileNotFoundException("No compatible server jar found to generate data reports");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
             {
                 foreach (var entry in zip.Entries)
