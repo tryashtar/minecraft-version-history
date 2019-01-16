@@ -20,11 +20,11 @@ namespace Minecraft_Version_History
             cmd.StartInfo.FileName = "cmd.exe";
             cmd.StartInfo.WorkingDirectory = cd;
             cmd.StartInfo.Arguments = $"/C {input}";
-            cmd.StartInfo.RedirectStandardInput = true;
-            cmd.StartInfo.RedirectStandardOutput = true;
-            cmd.StartInfo.RedirectStandardError = true;
             cmd.StartInfo.CreateNoWindow = true;
             cmd.StartInfo.UseShellExecute = false;
+            cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.RedirectStandardError = true;
+            cmd.StartInfo.RedirectStandardInput = true;
             cmd.Start();
             cmd.WaitForExit();
             return cmd;
@@ -35,62 +35,125 @@ namespace Minecraft_Version_History
     {
         protected string RepoFolder { get; private set; }
         protected string VersionsFolder { get; private set; }
-        protected List<T> CommittedVersions;
-        protected List<T> UncommittedVersions;
-        private string LoggedVersionsPath;
+        // key = version, value = commit hash
+        protected Dictionary<T, string> CommittedVersionDict;
+        protected List<T> UncommittedVersionList;
+        public IEnumerable<T> CommittedVersions => CommittedVersionDict.Keys;
+        public IEnumerable<T> UncommitedVersions => UncommittedVersionList;
         readonly static string[] GitFolders = new[] { ".git" };
         readonly static string[] GitFiles = new[] { ".gitignore", "version.txt" };
         public Updater(string repo_folder, string versions_folder)
         {
             RepoFolder = repo_folder;
             VersionsFolder = versions_folder;
-            CommittedVersions = new List<T>();
-            UncommittedVersions = new List<T>();
-            LoggedVersionsPath = Path.Combine(versions_folder, "logged.txt");
-            string[] logged = File.ReadAllLines(LoggedVersionsPath);
+            CommittedVersionDict = new Dictionary<T, string>();
+            UncommittedVersionList = new List<T>();
+            Console.WriteLine("Scanning versions...");
             foreach (var version in GetAllVersions())
             {
-                if (logged.Contains(version.VersionName))
-                    CommittedVersions.Add(version);
+                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"").StandardOutput.ReadToEnd();
+                if (hash.Length == 0)
+                {
+                    UncommittedVersionList.Add(version);
+                    Console.WriteLine($"New version -- {version.VersionName}");
+                }
                 else
-                    UncommittedVersions.Add(version);
+                {
+                    hash = hash.Substring("commit ".Length, 40);
+                    CommittedVersionDict.Add(version, hash);
+                }
             }
         }
 
         public void CommitChanges()
         {
-            var versioncomparer = new VersionComparer();
-            var groupcomparer = new ReleaseComparer();
-            // each group has its own git branch
-            var groups = UncommittedVersions.GroupBy(x => x.MadeForRelease);
-            foreach (var branch in groups.OrderBy(x => x.Key, groupcomparer))
+            var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x.ReleaseTime);
+            foreach (var version in idealhistory)
             {
-                Console.WriteLine($"Release version {branch.Key}");
-                var branchname = branch.Key.Replace(' ', '-');
-                CommandRunner.RunCommand(RepoFolder, $"git branch {branchname}");
-                CommandRunner.RunCommand(RepoFolder, $"git checkout {branchname}");
-                foreach (var version in branch.OrderBy(x => x, versioncomparer))
+                if (UncommitedVersions.Contains(version))
                 {
-                    Console.WriteLine($"Version {version}");
-                    WipeFolderExcept(RepoFolder, GitFolders, GitFiles);
-                    version.ExtractData(RepoFolder);
-                    File.WriteAllText(Path.Combine(RepoFolder, "version.txt"), version.VersionName);
-                    CommandRunner.RunCommand(RepoFolder, $"git add -A");
-                    Console.WriteLine("Committing...");
-                    CommandRunner.RunCommand(RepoFolder, $"git commit --date=\"{version.ReleaseTime}\" -m \"{version.VersionName}\"");
-                    File.AppendAllText(LoggedVersionsPath, version.VersionName + Environment.NewLine);
-                    CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
-                    CommandRunner.RunCommand(RepoFolder, $"git repack");
+                    var parent = idealhistory.LastOrDefault(x => x != version && x.ReleaseName == version.ReleaseName && x.ReleaseTime <= version.ReleaseTime);
+                    if (parent == null)
+                        parent = idealhistory.LastOrDefault(x => x != version && x.ReleaseTime <= version.ReleaseTime);
+                    if (parent == null)
+                        InitialCommit(version);
+                    else
+                        InsertCommit(version, parent);
                 }
             }
-            foreach (var version in UncommittedVersions)
-            {
-                CommittedVersions.Add(version);
-            }
-            UncommittedVersions.Clear();
         }
 
         protected abstract IEnumerable<T> GetAllVersions();
+
+        private string GetBranchName(T version)
+        {
+            return version.ReleaseName.Replace(' ', '-');
+        }
+
+        // commit stuff common to all commit methods
+        private void DoCommit(T version)
+        {
+            // extract
+            Console.WriteLine($"Wiping folder...");
+            WipeFolderExcept(RepoFolder, GitFolders, GitFiles);
+            Console.WriteLine($"Extracting {version}");
+            version.ExtractData(RepoFolder);
+            File.WriteAllText(Path.Combine(RepoFolder, "version.txt"), version.VersionName);
+            // commit
+            Console.WriteLine($"Committing...");
+            CommandRunner.RunCommand(RepoFolder, $"git add -A");
+            CommandRunner.RunCommand(RepoFolder, $"git commit --date=\"{version.ReleaseTime}\" -m \"{version.VersionName}\"");
+            // cleanup
+            Console.WriteLine($"Cleaning up...");
+            UncommittedVersionList.Remove(version);
+            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"").StandardOutput.ReadToEnd();
+            hash = hash.Substring("commit ".Length, 40);
+            CommittedVersionDict.Add(version, hash);
+            CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
+            CommandRunner.RunCommand(RepoFolder, $"git repack");
+        }
+
+        // for committing the first version
+        private void InitialCommit(T version)
+        {
+            Console.WriteLine("Initializing repo...");
+            CommandRunner.RunCommand(RepoFolder, $"git init");
+            File.WriteAllText(Path.Combine(RepoFolder, ".gitignore"), "*.ini");
+            CommandRunner.RunCommand(RepoFolder, $"git add -A");
+            CommandRunner.RunCommand(RepoFolder, $"git commit -m \"Initial commit\"");
+            // create branch
+            var branchname = GetBranchName(version);
+            CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
+            CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
+            DoCommit(version);
+        }
+
+        // for committing a version after an existing one
+        private void InsertCommit(T version, T parent)
+        {
+            // create branch
+            var branchname = GetBranchName(version);
+            CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
+            // find commit hash for existing version
+            string hash = CommittedVersionDict[parent];
+            // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
+            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"").StandardOutput.ReadToEnd();
+            tophash = tophash.Substring(0, 40);
+            if (hash == tophash)
+            {
+                CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
+                DoCommit(version);
+            }
+            else
+            {
+                // make a branch that starts there and prepare to commit to it
+                CommandRunner.RunCommand(RepoFolder, $"git checkout -b temp {hash}");
+                DoCommit(version);
+                // insert
+                CommandRunner.RunCommand(RepoFolder, $"git rebase temp \"{branchname}\"");
+                CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
+            }
+        }
 
         private static void WipeFolderExcept(string folder, string[] keep_folders, string[] keep_files)
         {
@@ -145,16 +208,11 @@ namespace Minecraft_Version_History
         // example: 15w33a or 1.7.0.5
         public string VersionName { get; protected set; }
         // corresponding: 1.9 or 1.7
-        public string MadeForRelease { get; protected set; }
+        public string ReleaseName { get; protected set; }
 
         public override string ToString()
         {
-            return $"{this.GetType().Name} {VersionName} for {MadeForRelease}, released {ReleaseTime}";
-        }
-
-        public virtual int CompareTo(Version other)
-        {
-            return DateTime.Compare(this.ReleaseTime, other.ReleaseTime);
+            return $"{this.GetType().Name} {VersionName} for {ReleaseName}, released {ReleaseTime}";
         }
 
         public abstract void ExtractData(string output);
@@ -162,9 +220,9 @@ namespace Minecraft_Version_History
 
     public class JavaVersion : Version
     {
-        private string JarPath;
+        private readonly string JarPath;
         public static string ServerJarFolder;
-        private static DateTime DataGenerators = new DateTime(2018, 1, 1);
+        private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
         public JavaVersion(string folder)
         {
@@ -173,7 +231,7 @@ namespace Minecraft_Version_History
             JarPath = Path.Combine(folder, VersionName + ".jar");
             JObject json = JObject.Parse(File.ReadAllText(jsonpath));
             ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
-            MadeForRelease = GetMadeForRelease(VersionName);
+            ReleaseName = GetMadeForRelease(VersionName);
         }
 
         public override void ExtractData(string output)
@@ -288,7 +346,7 @@ namespace Minecraft_Version_History
 
     public class BedrockVersion : Version
     {
-        private string ZipPath;
+        private readonly string ZipPath;
         public BedrockVersion(string zippath)
         {
             using (ZipArchive zip = ZipFile.OpenRead(zippath))
@@ -296,7 +354,7 @@ namespace Minecraft_Version_History
                 ZipPath = zippath;
                 var mainappx = GetMainAppx(zip);
                 VersionName = Path.GetFileName(mainappx.FullName).Split('_')[1];
-                MadeForRelease = VersionName.Substring(0, VersionName.IndexOf('.', VersionName.IndexOf('.') + 1));
+                ReleaseName = VersionName.Substring(0, VersionName.IndexOf('.', VersionName.IndexOf('.') + 1));
                 ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
             }
         }
@@ -333,80 +391,6 @@ namespace Minecraft_Version_History
                     return entry;
             }
             throw new FileNotFoundException($"Could not find main APPX");
-        }
-    }
-
-    public class VersionComparer : IComparer<Version>
-    {
-        public int Compare(Version x, Version y)
-        {
-            return x.CompareTo(y);
-        }
-    }
-
-    public class ReleaseComparer : IComparer<string>
-    {
-        // determine which release version came later
-        // example inputs: "Alpha 0.4" and "1.12.2"
-        public int Compare(string x, string y)
-        {
-            int x_era = Era(x);
-            int y_era = Era(y);
-            if (x_era > y_era)
-                return 1;
-            else if (x_era < y_era)
-                return -1;
-            if (x.Contains('.') && y.Contains('.'))
-            {
-                // convert something like "Alpha 0.2" to "0.2"
-                x = x.Substring(x.LastIndexOf(' ') + 1);
-                y = y.Substring(y.LastIndexOf(' ') + 1);
-                return CompareSemVer(x, y);
-            }
-            return 0;
-        }
-
-        private int CompareSemVer(string x, string y)
-        {
-            // convert something like "1.7.10b" to ["1", "7", "10b"]
-            string[] x_semver = x.Split('.');
-            string[] y_semver = y.Split('.');
-            for (int i = 0; i < Math.Min(x_semver.Length, y_semver.Length); i++)
-            {
-                // first try to compare numerically
-                if (int.TryParse(x_semver[i], out int xsvi) && int.TryParse(y_semver[i], out int ysvi))
-                {
-                    if (xsvi > ysvi)
-                        return 1;
-                    else if (xsvi < ysvi)
-                        return -1;
-                }
-                // if it has a letter or something just string compare
-                else
-                {
-                    int strcompare = String.Compare(x_semver[i], y_semver[i]);
-                    if (strcompare != 0)
-                        return strcompare;
-                }
-            }
-            if (x_semver.Length > y_semver.Length)
-                return 1;
-            else if (x_semver.Length < y_semver.Length)
-                return -1;
-            return 0;
-        }
-
-        private int Era(string input)
-        {
-            if (input.StartsWith("Classic"))
-                return 0;
-            if (input.StartsWith("Infdev"))
-                return 1;
-            if (input.StartsWith("Alpha"))
-                return 2;
-            if (input.StartsWith("Beta"))
-                return 3;
-            return 4;
         }
     }
 }

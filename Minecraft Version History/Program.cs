@@ -18,13 +18,11 @@ namespace Minecraft_Version_History
             var java = new JavaUpdater(//@"D:\Minecraft\Java Storage\Java History",
                 @"D:\~No Sync\tests\java",
                                        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft\versions"));
-
             java.CommitChanges();
 
             var bedrock = new BedrockUpdater(//@"D:\Minecraft\Bedrock Storage\Bedrock History",
                 @"D:\~No Sync\tests\bedrock",
                                              @"D:\~No Sync\~Unorganized\~mc builds unorganized");
-
             bedrock.CommitChanges();
 
             Console.ReadLine();
