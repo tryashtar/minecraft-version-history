@@ -14,17 +14,18 @@ namespace Minecraft_Version_History
 {
     public static class CommandRunner
     {
-        public static Process RunCommand(string cd, string input)
+        public static Process RunCommand(string cd, string input, bool output = false)
         {
             Process cmd = new Process();
             cmd.StartInfo.FileName = "cmd.exe";
             cmd.StartInfo.WorkingDirectory = cd;
             cmd.StartInfo.Arguments = $"/C {input}";
             cmd.StartInfo.CreateNoWindow = true;
-            cmd.StartInfo.UseShellExecute = false;
-            cmd.StartInfo.RedirectStandardOutput = true;
-            cmd.StartInfo.RedirectStandardError = true;
-            cmd.StartInfo.RedirectStandardInput = true;
+            if (output)
+            {
+                cmd.StartInfo.UseShellExecute = false;
+                cmd.StartInfo.RedirectStandardOutput = true;
+            }
             cmd.Start();
             cmd.WaitForExit();
             return cmd;
@@ -51,7 +52,7 @@ namespace Minecraft_Version_History
             Console.WriteLine("Scanning versions...");
             foreach (var version in GetAllVersions())
             {
-                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"").StandardOutput.ReadToEnd();
+                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).StandardOutput.ReadToEnd();
                 if (hash.Length == 0)
                 {
                     UncommittedVersionList.Add(version);
@@ -106,7 +107,7 @@ namespace Minecraft_Version_History
             // cleanup
             Console.WriteLine($"Cleaning up...");
             UncommittedVersionList.Remove(version);
-            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"").StandardOutput.ReadToEnd();
+            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).StandardOutput.ReadToEnd();
             hash = hash.Substring("commit ".Length, 40);
             CommittedVersionDict.Add(version, hash);
             CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
@@ -137,7 +138,7 @@ namespace Minecraft_Version_History
             // find commit hash for existing version
             string hash = CommittedVersionDict[parent];
             // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
-            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"").StandardOutput.ReadToEnd();
+            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"", output: true).StandardOutput.ReadToEnd();
             tophash = tophash.Substring(0, 40);
             if (hash == tophash)
             {
@@ -238,6 +239,9 @@ namespace Minecraft_Version_History
         {
             if (ReleaseTime > DataGenerators)
             {
+                string reports_path = Path.Combine(ServerJarFolder, "generated");
+                if (Directory.Exists(reports_path))
+                    Directory.Delete(reports_path, true);
                 bool success = false;
                 foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
                 {
@@ -253,7 +257,7 @@ namespace Minecraft_Version_History
                 if (!success)
                     throw new FileNotFoundException("No compatible server jar found to generate data reports");
                 Directory.CreateDirectory(Path.Combine(output, "reports"));
-                foreach (var report in Directory.EnumerateFiles(Path.Combine(ServerJarFolder, "generated", "reports")))
+                foreach (var report in Directory.EnumerateFiles(Path.Combine(reports_path, "reports")))
                 {
                     File.Copy(report, Path.Combine(output, "reports", Path.GetFileName(report)));
                 }
