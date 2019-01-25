@@ -71,19 +71,6 @@ namespace Minecraft_Version_History
         public static string ToSnbt(this NbtFloat tag) => $"{(decimal)tag.Value}f"; // cast to decimal to avoid scientific notation
         public static string ToSnbt(this NbtDouble tag) => $"{(decimal)tag.Value}d";
 
-        // shared technique for single-line arrays
-        // (list, int array, byte array)
-        private static string ListToString<T>(string list_prefix, Func<T, string> function, IEnumerable<T> values, bool spaced = false)
-        {
-            string separator = spaced ? " " : "";
-            string prefix_separator = spaced && list_prefix.Length > 0 && values.Any() ? " " : "";
-            var s = new StringBuilder("[" + list_prefix + prefix_separator);
-            string contents = String.Join("," + separator, values.Select(x => function(x)).ToArray());
-            s.Append(contents);
-            s.Append("]");
-            return s.ToString();
-        }
-
         public static string ToSnbt(this NbtByteArray tag, bool multiline = false)
         {
             return ListToString("B;", x => x.ToString() + "b", tag.Value, multiline);
@@ -91,7 +78,10 @@ namespace Minecraft_Version_History
 
         public static string ToSnbt(this NbtString tag)
         {
-            return $"\"{tag.Value}\"";
+            if (StringRegex.IsMatch(tag.Value))
+                return tag.Value;
+            else
+                return QuoteAndEscape(tag.Value);
         }
 
         public static string ToSnbt(this NbtList tag, bool multiline = false)
@@ -122,9 +112,37 @@ namespace Minecraft_Version_History
             return ListToString("I;", x => x.ToString(), tag.Value, multiline);
         }
 
+        private static readonly Regex StringRegex;
+
+        static NbtUtil()
+        {
+            StringRegex = new Regex("^[a-zA-Z0-9._+-]*$", RegexOptions.Compiled);
+        }
+
+        // shared technique for single-line arrays
+        // (list, int array, byte array)
+        private static string ListToString<T>(string list_prefix, Func<T, string> function, IEnumerable<T> values, bool spaced = false)
+        {
+            string separator = spaced ? " " : "";
+            string prefix_separator = spaced && list_prefix.Length > 0 && values.Any() ? " " : "";
+            var s = new StringBuilder("[" + list_prefix + prefix_separator);
+            string contents = String.Join("," + separator, values.Select(x => function(x)).ToArray());
+            s.Append(contents);
+            s.Append("]");
+            return s.ToString();
+        }
+
         private static string GetName(NbtTag tag)
         {
-            return tag.Name;
+            if (StringRegex.IsMatch(tag.Name))
+                return tag.Name;
+            else
+                return QuoteAndEscape(tag.Name);
+        }
+
+        private static string QuoteAndEscape(string input)
+        {
+            return "\"" + input.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
         }
 
         private static void AddIndents(StringBuilder sb, string indentString, int indentLevel)
