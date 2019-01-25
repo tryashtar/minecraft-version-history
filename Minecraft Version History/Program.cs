@@ -17,7 +17,7 @@ namespace Minecraft_Version_History
             Console.WriteLine("Java:");
             JavaVersion.ServerJarFolder = @"D:\~No Sync\mc server jars";
             var java = new JavaUpdater(@"D:\Minecraft\Java Storage\History",
-                                       Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft\versions"));
+                                       Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), ".minecraft", "versions"));
             java.CommitChanges();
 
             Console.WriteLine("Bedrock:");
@@ -26,7 +26,6 @@ namespace Minecraft_Version_History
             bedrock.CommitChanges();
 
             Console.WriteLine("All done!");
-            Console.ReadLine();
         }
     }
 }
