@@ -24,7 +24,7 @@ namespace Minecraft_Version_History
             cmd.StartInfo.CreateNoWindow = false;
             cmd.StartInfo.UseShellExecute = false;
             if (output)
-            cmd.StartInfo.RedirectStandardOutput = true;
+                cmd.StartInfo.RedirectStandardOutput = true;
             cmd.Start();
             cmd.WaitForExit();
             return cmd;
@@ -33,6 +33,7 @@ namespace Minecraft_Version_History
 
     public abstract class Updater<T> where T : Version
     {
+        private static Regex ReleaseRegex = new Regex(@"(.*?)1\.(\d*)");
         protected string RepoFolder { get; private set; }
         protected string VersionsFolder { get; private set; }
         // key = version, value = commit hash
@@ -72,15 +73,32 @@ namespace Minecraft_Version_History
             {
                 if (UncommitedVersions.Contains(version))
                 {
-                    var parent = idealhistory.LastOrDefault(x => x != version && x.ReleaseName == version.ReleaseName && x.ReleaseTime <= version.ReleaseTime);
+                    var parent = idealhistory.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime);
                     if (parent == null)
-                        parent = idealhistory.LastOrDefault(x => x != version && x.ReleaseTime <= version.ReleaseTime);
+                    {
+                        string parentrelease = GetParentRelease(version.ReleaseName);
+                        parent = idealhistory.LastOrDefault(x => version != x && x.ReleaseName == parentrelease && version.ReleaseTime >= x.ReleaseTime);
+                    }
                     if (parent == null)
                         InitialCommit(version);
                     else
                         InsertCommit(version, parent);
                 }
             }
+        }
+
+        protected abstract string GetParentRelease(string release);
+
+        protected string SubtractMajorVersion(string release)
+        {
+            var match = ReleaseRegex.Match(release);
+            if (match.Success)
+            {
+                string prefix = match.Groups[1].Value;
+                int minor = int.Parse(match.Groups[2].Value);
+                return prefix + "1." + (minor - 1).ToString();
+            }
+            return null;
         }
 
         protected abstract IEnumerable<T> GetAllVersions();
@@ -104,7 +122,7 @@ namespace Minecraft_Version_History
             // commit
             Console.WriteLine($"Committing...");
             CommandRunner.RunCommand(RepoFolder, $"git add -A");
-            CommandRunner.RunCommand(RepoFolder, $"git commit --date=\"{version.ReleaseTime}\" -m \"{version.VersionName}\"");
+            CommandRunner.RunCommand(RepoFolder, $"set GIT_COMMITTER_DATE={version.ReleaseTime} & git commit --date=\"{version.ReleaseTime}\" -m \"{version.VersionName}\"");
             // cleanup
             Console.WriteLine($"Cleaning up...");
             UncommittedVersionList.Remove(version);
@@ -133,11 +151,11 @@ namespace Minecraft_Version_History
         // for committing a version after an existing one
         private void InsertCommit(T version, T parent)
         {
-            // create branch
-            var branchname = GetBranchName(version);
-            CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
             // find commit hash for existing version
             string hash = CommittedVersionDict[parent];
+            // create branch
+            var branchname = GetBranchName(version);
+            CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\" {hash}");
             // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
             string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"", output: true).StandardOutput.ReadToEnd();
             tophash = tophash.Substring(0, 40);
@@ -150,6 +168,7 @@ namespace Minecraft_Version_History
             {
                 // make a branch that starts there and prepare to commit to it
                 CommandRunner.RunCommand(RepoFolder, $"git checkout -b temp {hash}");
+                CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
                 DoCommit(version);
                 // insert
                 CommandRunner.RunCommand(RepoFolder, $"git rebase temp \"{branchname}\"");
@@ -194,9 +213,25 @@ namespace Minecraft_Version_History
 
     public class JavaUpdater : Updater<JavaVersion>
     {
+        private static Dictionary<string, string> ParentReleaseDict;
         public JavaUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
+            ParentReleaseDict = new Dictionary<string, string>()
+            {
+                {"1.0", "Beta 1.9" },
+                {"Beta 1.0", "Alpha 1.2" },
+                {"Alpha 1.0", "Infdev" },
+                {"Infdev", "Alpha 0.30" },
+                {"Alpha 0.30", "Alpha 0.0" },
+                {"Alpha 0.0", "Classic" },
 
+                {"April Fools 2013", "1.5" },
+                {"April Fools 2015", "1.8" },
+                {"April Fools 2016", "1.9" },
+                {"April Fools 2019", "1.14" },
+                {"Combat Test 1", "1.14" },
+                {"Combat Test 2", "1.14" }
+            };
         }
 
         protected override IEnumerable<JavaVersion> GetAllVersions()
@@ -206,13 +241,22 @@ namespace Minecraft_Version_History
                 yield return new JavaVersion(folder);
             }
         }
+
+        protected override string GetParentRelease(string release)
+        {
+            if (ParentReleaseDict.TryGetValue(release, out string result))
+                return result;
+            return SubtractMajorVersion(release);
+        }
     }
 
     public class BedrockUpdater : Updater<BedrockVersion>
     {
+        private static Dictionary<string, string> ParentReleaseDict;
         public BedrockUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
-
+            ParentReleaseDict = new Dictionary<string, string>()
+            { };
         }
 
         protected override IEnumerable<BedrockVersion> GetAllVersions()
@@ -221,6 +265,13 @@ namespace Minecraft_Version_History
             {
                 yield return new BedrockVersion(zip);
             }
+        }
+
+        protected override string GetParentRelease(string release)
+        {
+            if (ParentReleaseDict.TryGetValue(release, out string result))
+                return result;
+            return SubtractMajorVersion(release);
         }
     }
 
@@ -244,6 +295,7 @@ namespace Minecraft_Version_History
     {
         private readonly string JarPath;
         public static string ServerJarFolder;
+        private static Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
         public JavaVersion(string folder)
@@ -306,6 +358,21 @@ namespace Minecraft_Version_History
             // inf-xxxx     Infdev
             // rd-xxxx      Classic
             // yywxxl       (needs lookup)
+
+            // special stuff first
+            if (versionname == "1.14_combat-212796")
+                return "Combat Test 1";
+            if (versionname == "1.14_combat-0")
+                return "Combat Test 2";
+            if (versionname.StartsWith("April Fools 2.0"))
+                return "April Fools 2013";
+            if (versionname == "15w14a")
+                return "April Fools 2015";
+            if (versionname == "1.RV-Pre1")
+                return "April Fools 2016";
+            if (versionname == "3D Shareware v1.34")
+                return "April Fools 2019";
+            // real versions
             if (versionname.StartsWith("1."))
                 return MajorMinor(versionname);
             if (versionname.StartsWith("a1.") || versionname.StartsWith("c"))
@@ -316,11 +383,11 @@ namespace Minecraft_Version_History
                 return "Infdev";
             if (versionname.StartsWith("rd-"))
                 return "Classic";
-            var match = Regex.Match(versionname, @"(\d\d)w(\d\d)[a-z~]");
+            var match = SnapshotRegex.Match(versionname);
             if (match.Success)
             {
-                string year = match.Groups[1].ToString();
-                int week = int.Parse(match.Groups[2].ToString());
+                string year = match.Groups[1].Value;
+                int week = int.Parse(match.Groups[2].Value);
                 var snapshots = new Dictionary<Tuple<string, int>, string>
                 {
                     // if a snapshot is in year A and on week B or earlier, it was for version C
@@ -341,7 +408,8 @@ namespace Minecraft_Version_History
                     { Tuple.Create("17", 50), "1.13" },
                     { Tuple.Create("18", 33), "1.13" },
                     { Tuple.Create("18", 50), "1.14" },
-                    { Tuple.Create("19", 50), "1.14" },
+                    { Tuple.Create("19", 33), "1.14" },
+                    { Tuple.Create("19", 50), "1.15" },
                 };
                 foreach (var rule in snapshots)
                 {
@@ -356,14 +424,19 @@ namespace Minecraft_Version_History
         {
             if (versionname.Count(x => x == '.') < 2)
             {
-                var ends = new[] { '-', ' ', '_' };
+                var ends = new[] { '-', ' ', '_', 'a', 'b', 'c', 'd' };
+                int bestresult = int.MaxValue;
+                string final = versionname;
                 foreach (var end in ends)
                 {
                     int index = versionname.IndexOf(end);
-                    if (index != -1)
-                        return versionname.Substring(0, index);
+                    if (index != -1 && index < bestresult)
+                    {
+                        bestresult = index;
+                        final = versionname.Substring(0, index);
+                    }
                 }
-                return versionname;
+                return final;
             }
             return versionname.Substring(0, versionname.IndexOf('.', versionname.IndexOf('.') + 1));
         }
