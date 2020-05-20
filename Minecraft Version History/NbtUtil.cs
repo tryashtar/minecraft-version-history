@@ -36,6 +36,8 @@ namespace Minecraft_Version_History
                     return ((NbtCompound)tag).ToSnbt(multiline);
                 case NbtTagType.IntArray:
                     return ((NbtIntArray)tag).ToSnbt(multiline);
+                case NbtTagType.LongArray:
+                    return ((NbtLongArray)tag).ToSnbt(multiline);
                 default:
                     return "";
             }
@@ -57,6 +59,11 @@ namespace Minecraft_Version_History
         public static string ToSnbt(this NbtIntArray tag, bool multiline = false)
         {
             return ListToString("I;", x => x.ToString(), tag.Value, multiline);
+        }
+
+        public static string ToSnbt(this NbtLongArray tag, bool multiline = false)
+        {
+            return ListToString("L;", x => x.ToString(), tag.Value, multiline);
         }
 
         public static string ToSnbt(this NbtList tag, bool multiline = false)
@@ -172,7 +179,8 @@ namespace Minecraft_Version_History
                 tag.ListType == NbtTagType.String ||
                 tag.ListType == NbtTagType.List ||
                 tag.ListType == NbtTagType.IntArray ||
-                tag.ListType == NbtTagType.ByteArray);
+                tag.ListType == NbtTagType.ByteArray ||
+                tag.ListType == NbtTagType.LongArray);
             if (!lines)
                 sb.Append(ListToString("", x => x.ToSnbt(false), tag, true));
             else
