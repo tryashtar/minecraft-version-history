@@ -14,28 +14,32 @@ namespace Minecraft_Version_History
     {
         static void Main(string[] args)
         {
-#if RELEASE
+#if !DEBUG
+            start:
             try
-#endif
             {
+#endif
+                var config = JObject.Parse(File.ReadAllText(@"..\config.json"));
                 Console.WriteLine("Java:");
-                JavaVersion.ServerJarFolder = @"D:\~No Sync\mc server jars";
-                var java = new JavaUpdater(@"D:\Minecraft\Java Storage\History",
-                                           @"D:\~No Sync\Game Directories\.minecraft\versions");
+                JavaVersion.ServerJarFolder = (string)config["server_jars"];
+                JavaVersion.DecompilerFile = (string)config["decompiler"];
+                var java = new JavaUpdater((string)config["java_repo"], (string)config["java_versions"]);
                 java.CommitChanges();
 
                 Console.WriteLine("Bedrock:");
-                var bedrock = new BedrockUpdater(@"D:\Minecraft\Bedrock Storage\History",
-                                                 @"D:\~No Sync\~Unorganized\~mc builds unorganized");
+                var bedrock = new BedrockUpdater((string)config["bedrock_repo"], (string)config["bedrock_versions"]);
                 bedrock.CommitChanges();
 
                 Console.WriteLine("All done!");
+#if !DEBUG
             }
-#if RELEASE
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                Console.WriteLine();
+                Console.WriteLine("Press enter to try again");
                 Console.ReadLine();
+                goto start;
             }
 #endif
         }

@@ -10,12 +10,13 @@ using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using fNbt;
+using System.Globalization;
 
 namespace Minecraft_Version_History
 {
     public static class CommandRunner
     {
-        public static Process RunCommand(string cd, string input, bool output = false)
+        public static CommandResult RunCommand(string cd, string input, bool output = false)
         {
             Process cmd = new Process();
             cmd.StartInfo.FileName = "cmd.exe";
@@ -26,8 +27,32 @@ namespace Minecraft_Version_History
             if (output)
                 cmd.StartInfo.RedirectStandardOutput = true;
             cmd.Start();
+            string result = null;
+            if (output)
+                result = cmd.StandardOutput.ReadToEnd();
             cmd.WaitForExit();
-            return cmd;
+            return new CommandResult { ExitCode = cmd.ExitCode, Output = result };
+        }
+
+        public struct CommandResult
+        {
+            public string Output;
+            public int ExitCode;
+        }
+    }
+
+    public class GitHistory<T> where T : Version
+    {
+        public string RepoFolder { get; private set; }
+        public GitHistory(string repopath)
+        {
+            RepoFolder = repopath;
+            string output = CommandRunner.RunCommand(repopath, $"git --no-pager log --all", output: true).Output;
+            Console.WriteLine();
+        }
+        private class Branch
+        {
+
         }
     }
 
@@ -52,7 +77,7 @@ namespace Minecraft_Version_History
             Console.WriteLine("Scanning versions...");
             foreach (var version in GetAllVersions())
             {
-                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).StandardOutput.ReadToEnd();
+                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).Output;
                 if (hash.Length == 0)
                 {
                     UncommittedVersionList.Add(version);
@@ -126,7 +151,7 @@ namespace Minecraft_Version_History
             // cleanup
             Console.WriteLine($"Cleaning up...");
             UncommittedVersionList.Remove(version);
-            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).StandardOutput.ReadToEnd();
+            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).Output;
             hash = hash.Substring("commit ".Length, 40);
             CommittedVersionDict.Add(version, hash);
             CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
@@ -157,7 +182,7 @@ namespace Minecraft_Version_History
             var branchname = GetBranchName(version);
             CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\" {hash}");
             // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
-            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"", output: true).StandardOutput.ReadToEnd();
+            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"", output: true).Output;
             tophash = tophash.Substring(0, 40);
             if (hash == tophash)
             {
@@ -183,7 +208,10 @@ namespace Minecraft_Version_History
             FreshFolder(translations_path);
             foreach (var nbtpath in Directory.EnumerateFiles(RepoFolder, "*.nbt", SearchOption.AllDirectories))
             {
+                // remove DataVersion that makes diffs hard to read
                 var file = new NbtFile(nbtpath);
+                file.RootTag.Remove("DataVersion");
+                file.SaveToFile(nbtpath, file.FileCompression);
                 string dest = Path.Combine(translations_path, nbtpath.Substring(RepoFolder.Length + 1));
                 Directory.CreateDirectory(Path.GetDirectoryName(dest));
                 File.WriteAllText(Path.ChangeExtension(dest, ".snbt"), file.RootTag.ToSnbt(true));
@@ -229,8 +257,12 @@ namespace Minecraft_Version_History
                 {"April Fools 2015", "1.8" },
                 {"April Fools 2016", "1.9" },
                 {"April Fools 2019", "1.14" },
+                {"April Fools 2020", "1.16" },
                 {"Combat Test 1", "1.14" },
-                {"Combat Test 2", "1.14" }
+                {"Combat Test 2", "1.14" },
+                {"Combat Test 3", "Combat Test 2" },
+                {"Combat Test 4", "1.15" },
+                {"Combat Test 5", "1.15" },
             };
         }
 
@@ -238,7 +270,9 @@ namespace Minecraft_Version_History
         {
             foreach (var folder in Directory.EnumerateDirectories(VersionsFolder))
             {
-                yield return new JavaVersion(folder);
+                var version = new JavaVersion(folder);
+                if (version.VersionName.IndexOf("optifine", StringComparison.OrdinalIgnoreCase) == -1)
+                    yield return new JavaVersion(folder);
             }
         }
 
@@ -256,7 +290,9 @@ namespace Minecraft_Version_History
         public BedrockUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
             ParentReleaseDict = new Dictionary<string, string>()
-            { };
+            {
+                { "1.4", "1.2" }
+            };
         }
 
         protected override IEnumerable<BedrockVersion> GetAllVersions()
@@ -295,8 +331,12 @@ namespace Minecraft_Version_History
     {
         private readonly string JarPath;
         public static string ServerJarFolder;
+        public static string DecompilerFile;
         private static Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
+        private static readonly DateTime AssetGenerators = new DateTime(2020, 3, 1);
+        private static readonly DateTime Mappings = new DateTime(2019, 9, 4);
+        private static readonly string[] ModelOrder = new string[] { "model", "x", "y", "z", "uvlock", "weight" };
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
         public JavaVersion(string folder)
         {
@@ -312,6 +352,7 @@ namespace Minecraft_Version_History
         {
             if (ReleaseTime > DataGenerators)
             {
+                Console.WriteLine("Fetching data reports...");
                 string reports_path = Path.Combine(ServerJarFolder, "generated");
                 if (Directory.Exists(reports_path))
                     Directory.Delete(reports_path, true);
@@ -329,12 +370,40 @@ namespace Minecraft_Version_History
                 }
                 if (!success)
                     throw new FileNotFoundException("No compatible server jar found to generate data reports");
-                Directory.CreateDirectory(Path.Combine(output, "reports"));
+                var outputfolder = Path.Combine(output, "reports");
+                Directory.CreateDirectory(outputfolder);
                 foreach (var report in Directory.EnumerateFiles(Path.Combine(reports_path, "reports")))
                 {
-                    File.Copy(report, Path.Combine(output, "reports", Path.GetFileName(report)));
+                    var destination = Path.Combine(outputfolder, Path.GetFileName(report));
+                    File.Copy(report, destination);
                 }
             }
+            if (ReleaseTime > Mappings && !VersionName.Contains("1.14_combat"))
+            {
+                Console.WriteLine("Fetching mappers and decompiling source...");
+                string decompiler_folder = Path.GetDirectoryName(DecompilerFile);
+                string python_name = Path.GetFileName(DecompilerFile);
+                CommandRunner.RunCommand(decompiler_folder, $"python {python_name} {VersionName}");
+                File.Copy(Path.Combine(decompiler_folder, "mappings", VersionName, "mappings.txt"), Path.Combine(output, "mappings.txt"));
+                Console.WriteLine("Extracting source...");
+
+                // cfr
+                Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory(Path.Combine(decompiler_folder, "src", VersionName), Path.Combine(output, "source"));
+
+                // fernflower (disabled for now)
+                // using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(decompiler_path, "src", VersionName, VersionName + "-temp.jar")))
+                // {
+                //     foreach (var entry in zip.Entries)
+                //     {
+                //         if (entry.FullName.StartsWith("com") || entry.FullName.StartsWith("net"))
+                //         {
+                //             Directory.CreateDirectory(Path.Combine(output, "source", Path.GetDirectoryName(entry.FullName)));
+                //             entry.ExtractToFile(Path.Combine(output, "source", entry.FullName));
+                //         }
+                //     }
+                // }
+            }
+            Console.WriteLine("Extracting jar...");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
             {
                 foreach (var entry in zip.Entries)
@@ -343,10 +412,116 @@ namespace Minecraft_Version_History
                     if (entry.FullName.EndsWith("/") || IllegalNames.Contains(filename.ToLower()) || filename.EndsWith(".class") || filename.EndsWith(".xml") || entry.FullName.Contains("META-INF"))
                         continue;
                     Directory.CreateDirectory(Path.Combine(output, "jar", Path.GetDirectoryName(entry.FullName)));
-                    entry.ExtractToFile(Path.Combine(output, "jar", entry.FullName));
+                    var destination = Path.Combine(output, "jar", entry.FullName);
+                    entry.ExtractToFile(destination);
+                    // sort special files that are arbitrarily ordered with each extraction
+                    if (entry.FullName == "data/minecraft/advancements/nether/all_effects.json" ||
+                        entry.FullName == "data/minecraft/advancements/nether/all_potions.json")
+                    {
+                        var advancement = JObject.Parse(File.ReadAllText(destination));
+                        SortKeys((JObject)advancement["criteria"]["all_effects"]["conditions"]["effects"]);
+                        File.WriteAllText(destination, ToMinecraftJson(advancement));
+                    }
+                    else if (entry.FullName == "data/minecraft/loot_tables/chests/shipwreck_supply.json")
+                    {
+                        var table = JObject.Parse(File.ReadAllText(destination));
+                        var stew = ((JArray)table["pools"][0]["entries"]).FirstOrDefault(x => x["name"].ToString() == "minecraft:suspicious_stew");
+                        if (stew != null)
+                        {
+                            var function = (JObject)stew["functions"][0];
+                            function["effects"] = new JArray(((JArray)function["effects"]).OrderBy(x => x["type"].ToString()));
+                            File.WriteAllText(destination, ToMinecraftJson(table));
+                        }
+                    }
+                    else if (ReleaseTime > AssetGenerators && Path.GetDirectoryName(entry.FullName) == @"assets\minecraft\blockstates")
+                    {
+                        var blockstate = JObject.Parse(File.ReadAllText(destination));
+                        if (blockstate.TryGetValue("variants", out var variants))
+                        {
+                            foreach (var variant in (JObject)variants)
+                            {
+                                if (variant.Value is JArray many)
+                                {
+                                    foreach (JObject option in many)
+                                    {
+                                        SortKeys(option, ModelOrder);
+                                    }
+                                }
+                                else
+                                    SortKeys((JObject)variant.Value, ModelOrder);
+                            }
+                        }
+                        else if (blockstate.TryGetValue("multipart", out var multipart))
+                        {
+                            foreach (JObject part in (JArray)multipart)
+                            {
+                                var apply = part["apply"];
+                                if (apply is JArray many)
+                                {
+                                    foreach (JObject item in many)
+                                    {
+                                        SortKeys(item, ModelOrder);
+                                    }
+                                }
+                                else
+                                    SortKeys((JObject)apply, ModelOrder);
+                                if (part.TryGetValue("when", out var when))
+                                {
+                                    if (((JObject)when).TryGetValue("OR", out var or))
+                                    {
+                                        foreach (JObject option in or)
+                                        {
+                                            SortKeys(option);
+                                        }
+                                    }
+                                    else
+                                        SortKeys((JObject)when);
+                                }
+                            }
+                        }
+                        File.WriteAllText(destination, ToMinecraftJson(blockstate));
+                    }
                 }
             }
         }
+
+        private static void SortKeys(JObject obj, string[] order = null)
+        {
+            var tokens = new List<KeyValuePair<string, JToken>>();
+            foreach (var item in obj)
+            {
+                tokens.Add(item);
+            }
+            obj.RemoveAll();
+            var ordered = order == null ? tokens.OrderBy(x => x.Key) : tokens.OrderBy(x =>
+            {
+                var index = Array.IndexOf(order, x.Key);
+                return index < 0 ? int.MaxValue : index;
+            }).ThenBy(x => x.Key);
+            foreach (var item in ordered)
+            {
+                obj.Add(item.Key, item.Value);
+            }
+        }
+
+        private static string ToMinecraftJson(JObject value)
+        {
+            StringBuilder sb = new StringBuilder(256);
+            StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
+
+            var jsonSerializer = JsonSerializer.CreateDefault();
+            using (JsonTextWriter jsonWriter = new JsonTextWriter(sw))
+            {
+                jsonWriter.Formatting = Formatting.Indented;
+                jsonWriter.IndentChar = ' ';
+                jsonWriter.Indentation = 2;
+
+                jsonSerializer.Serialize(jsonWriter, value, typeof(JObject));
+            }
+
+            return sw.ToString();
+        }
+
         // facts of versions
         private static string GetMadeForRelease(string versionname)
         {
@@ -364,6 +539,12 @@ namespace Minecraft_Version_History
                 return "Combat Test 1";
             if (versionname == "1.14_combat-0")
                 return "Combat Test 2";
+            if (versionname == "1.14_combat-3")
+                return "Combat Test 3";
+            if (versionname == "1.15_combat-1")
+                return "Combat Test 4";
+            if (versionname == "1.15_combat-6")
+                return "Combat Test 5";
             if (versionname.StartsWith("April Fools 2.0"))
                 return "April Fools 2013";
             if (versionname == "15w14a")
@@ -372,17 +553,23 @@ namespace Minecraft_Version_History
                 return "April Fools 2016";
             if (versionname == "3D Shareware v1.34")
                 return "April Fools 2019";
+            if (versionname == "20w14infinite")
+                return "April Fools 2020";
             // real versions
             if (versionname.StartsWith("1."))
                 return MajorMinor(versionname);
-            if (versionname.StartsWith("a1.") || versionname.StartsWith("c"))
+            if (versionname.StartsWith("a1."))
                 return "Alpha " + MajorMinor(versionname.Substring(1));
             if (versionname.StartsWith("b1."))
                 return "Beta " + MajorMinor(versionname.Substring(1));
             if (versionname.StartsWith("inf-"))
                 return "Infdev";
-            if (versionname.StartsWith("rd-"))
+            if (versionname.StartsWith("in-"))
+                return "Indev";
+            if (versionname.StartsWith("c"))
                 return "Classic";
+            if (versionname.StartsWith("rd-"))
+                return "Pre-Classic";
             var match = SnapshotRegex.Match(versionname);
             if (match.Success)
             {
@@ -410,6 +597,7 @@ namespace Minecraft_Version_History
                     { Tuple.Create("18", 50), "1.14" },
                     { Tuple.Create("19", 33), "1.14" },
                     { Tuple.Create("19", 50), "1.15" },
+                    { Tuple.Create("20", 50), "1.16" },
                 };
                 foreach (var rule in snapshots)
                 {
