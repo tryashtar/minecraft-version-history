@@ -326,6 +326,8 @@ namespace fNbt {
                     return "TAG_Int";
                 case NbtTagType.IntArray:
                     return "TAG_Int_Array";
+                case NbtTagType.LongArray:
+                    return "TAG_Long_Array";
                 case NbtTagType.List:
                     return "TAG_List";
                 case NbtTagType.Long:

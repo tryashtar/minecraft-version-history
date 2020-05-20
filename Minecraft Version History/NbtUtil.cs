@@ -53,7 +53,7 @@ namespace Minecraft_Version_History
 
         public static string ToSnbt(this NbtByteArray tag, bool multiline = false)
         {
-            return ListToString("B;", x => x.ToString() + "b", tag.Value, multiline);
+            return ListToString("B;", x => $"{x}b", tag.Value, multiline);
         }
 
         public static string ToSnbt(this NbtIntArray tag, bool multiline = false)
@@ -63,7 +63,7 @@ namespace Minecraft_Version_History
 
         public static string ToSnbt(this NbtLongArray tag, bool multiline = false)
         {
-            return ListToString("L;", x => x.ToString(), tag.Value, multiline);
+            return ListToString("L;", x => $"{x}L", tag.Value, multiline);
         }
 
         public static string ToSnbt(this NbtList tag, bool multiline = false)
