@@ -1,0 +1,10 @@
+_ReSharper.LibNbt
+fNbt/obj
+fNbt.Test/obj
+fNbt.Serialization/obj
+fNbt.Serialization.Test/obj
+bin/
+packages/
+*.user
+*.suo
+.vs
