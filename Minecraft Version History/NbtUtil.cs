@@ -47,8 +47,8 @@ namespace Minecraft_Version_History
         public static string ToSnbt(this NbtShort tag) => $"{tag.Value}s";
         public static string ToSnbt(this NbtInt tag) => $"{tag.Value}";
         public static string ToSnbt(this NbtLong tag) => $"{tag.Value}L";
-        public static string ToSnbt(this NbtFloat tag) => $"{(decimal)tag.Value}f"; // cast to decimal to avoid scientific notation
-        public static string ToSnbt(this NbtDouble tag) => $"{(decimal)tag.Value}d";
+        public static string ToSnbt(this NbtFloat tag) => tag.Value.ToString("0." + new string('#', 339)) + "f";
+        public static string ToSnbt(this NbtDouble tag) => tag.Value.ToString("0." + new string('#', 339)) + "d";
         public static string ToSnbt(this NbtString tag) => QuoteAndEscape(tag.Value);
 
         public static string ToSnbt(this NbtByteArray tag, bool multiline = false)
@@ -93,7 +93,7 @@ namespace Minecraft_Version_History
 
         static NbtUtil()
         {
-            StringRegex = new Regex("^[a-zA-Z0-9._+-]*$", RegexOptions.Compiled);
+            StringRegex = new Regex("^[A-Za-z0-9._+-]+$", RegexOptions.Compiled);
         }
 
         // shared technique for single-line arrays
@@ -117,9 +117,29 @@ namespace Minecraft_Version_History
                 return QuoteAndEscape(tag.Name);
         }
 
+        // adapted directly from minecraft's (decompiled) source
         private static string QuoteAndEscape(string input)
         {
-            return "\"" + input.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+            var builder = new StringBuilder(" ");
+            char preferred_quote = '\0';
+            foreach (char c in input)
+            {
+                if (c == '\\')
+                    builder.Append('\\');
+                else if (c == '"' || c == '\'')
+                {
+                    if (preferred_quote == '\0')
+                        preferred_quote = (c == '"' ? '\'' : '"');
+                    if (c == preferred_quote)
+                        builder.Append('\\');
+                }
+                builder.Append(c);
+            }
+            if (preferred_quote == '\0')
+                preferred_quote = '"';
+            builder[0] = preferred_quote;
+            builder.Append(preferred_quote);
+            return builder.ToString();
         }
 
         private static void AddIndents(StringBuilder sb, string indentString, int indentLevel)

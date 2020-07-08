@@ -16,16 +16,19 @@ namespace Minecraft_Version_History
 {
     public static class CommandRunner
     {
-        public static CommandResult RunCommand(string cd, string input, bool output = false)
+        public static CommandResult RunCommand(string cd, string input, bool output = false, bool suppress_errors = false)
         {
+#if DEBUG
+            Console.WriteLine($"Running this command: {input}");
+#endif
             Process cmd = new Process();
             cmd.StartInfo.FileName = "cmd.exe";
             cmd.StartInfo.WorkingDirectory = cd;
-            cmd.StartInfo.Arguments = $"/C {input}";
+            cmd.StartInfo.Arguments = $"/S /C \"{input}\"";
             cmd.StartInfo.CreateNoWindow = false;
             cmd.StartInfo.UseShellExecute = false;
-            if (output)
-                cmd.StartInfo.RedirectStandardOutput = true;
+            cmd.StartInfo.RedirectStandardError = suppress_errors;
+            cmd.StartInfo.RedirectStandardOutput = output;
             cmd.Start();
             string result = null;
             if (output)
@@ -38,21 +41,6 @@ namespace Minecraft_Version_History
         {
             public string Output;
             public int ExitCode;
-        }
-    }
-
-    public class GitHistory<T> where T : Version
-    {
-        public string RepoFolder { get; private set; }
-        public GitHistory(string repopath)
-        {
-            RepoFolder = repopath;
-            string output = CommandRunner.RunCommand(repopath, $"git --no-pager log --all", output: true).Output;
-            Console.WriteLine();
-        }
-        private class Branch
-        {
-
         }
     }
 
@@ -81,7 +69,7 @@ namespace Minecraft_Version_History
                 if (hash.Length == 0)
                 {
                     UncommittedVersionList.Add(version);
-                    Console.WriteLine($"New version -- {version.VersionName}");
+                    Console.WriteLine($"New version: {version.VersionName}");
                 }
                 else
                 {
@@ -93,21 +81,28 @@ namespace Minecraft_Version_History
 
         public void CommitChanges()
         {
-            var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x.ReleaseTime);
+            var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x, VersionComparer.Instance).ToList();
             foreach (var version in idealhistory)
             {
                 if (UncommitedVersions.Contains(version))
                 {
-                    var parent = idealhistory.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime);
+                    int my_index = idealhistory.IndexOf(version);
+                    var parent = idealhistory.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime && idealhistory.IndexOf(x) < my_index);
                     if (parent == null)
                     {
                         string parentrelease = GetParentRelease(version.ReleaseName);
-                        parent = idealhistory.LastOrDefault(x => version != x && x.ReleaseName == parentrelease && version.ReleaseTime >= x.ReleaseTime);
+                        parent = idealhistory.FirstOrDefault(x => version != x && x.ReleaseName == parentrelease && version.ReleaseTime >= x.ReleaseTime);
                     }
                     if (parent == null)
+                    {
+                        Console.WriteLine($"{version.VersionName} is the first version in the history!");
                         InitialCommit(version);
+                    }
                     else
+                    {
+                        Console.WriteLine($"Parent of {version.VersionName} is {parent.VersionName}");
                         InsertCommit(version, parent);
+                    }
                 }
             }
         }
@@ -206,15 +201,46 @@ namespace Minecraft_Version_History
         {
             string translations_path = Path.Combine(RepoFolder, "nbt_translations");
             FreshFolder(translations_path);
-            foreach (var nbtpath in Directory.EnumerateFiles(RepoFolder, "*.nbt", SearchOption.AllDirectories))
+            // don't enumerate because we're creating new directories as we go
+            foreach (var directory in Directory.GetDirectories(RepoFolder, "*", SearchOption.AllDirectories))
             {
-                // remove DataVersion that makes diffs hard to read
-                var file = new NbtFile(nbtpath);
-                file.RootTag.Remove("DataVersion");
-                file.SaveToFile(nbtpath, file.FileCompression);
-                string dest = Path.Combine(translations_path, nbtpath.Substring(RepoFolder.Length + 1));
-                Directory.CreateDirectory(Path.GetDirectoryName(dest));
-                File.WriteAllText(Path.ChangeExtension(dest, ".snbt"), file.RootTag.ToSnbt(true));
+                string dest_folder = Path.Combine(translations_path, directory.Substring(RepoFolder.Length + 1));
+                bool any_nbts = false;
+
+                foreach (var nbtpath in Directory.EnumerateFiles(directory, "*.nbt", SearchOption.TopDirectoryOnly))
+                {
+                    any_nbts = true;
+                    // remove DataVersion that makes diffs hard to read
+                    var file = new NbtFile(nbtpath);
+                    file.RootTag.Remove("DataVersion");
+                    file.SaveToFile(nbtpath, file.FileCompression);
+
+                    // custom method (matches vanilla really well, maintains order)
+                    Directory.CreateDirectory(dest_folder);
+                    File.WriteAllText(Path.Combine(dest_folder, Path.ChangeExtension(Path.GetFileName(nbtpath), ".snbt")), file.RootTag.ToSnbt(true) + "\n");
+                }
+
+                foreach (var bedrock_structure in Directory.EnumerateFiles(directory, "*.mcstructure", SearchOption.TopDirectoryOnly))
+                {
+                    any_nbts = true;
+                    var file = new NbtFile();
+                    file.BigEndian = false;
+                    file.LoadFromFile(bedrock_structure);
+                    Directory.CreateDirectory(dest_folder);
+                    File.WriteAllText(Path.Combine(dest_folder, Path.ChangeExtension(Path.GetFileName(bedrock_structure), ".mcstructure_str")), file.RootTag.ToSnbt(true) + "\n");
+                }
+
+                // data generator method (has annoying arbitrary order that doesn't match actual file)
+                // if (any_nbts)
+                // {
+                //     Console.WriteLine($"Translating NBT files in top-level of {directory}");
+                //     Directory.CreateDirectory(dest_folder);
+                //     CommandRunner.RunCommand(Path.GetDirectoryName(JavaVersion.NbtTranslationJar), $"\"{JavaVersion.JavaPath}\" -cp \"{JavaVersion.NbtTranslationJar}\" net.minecraft.data.Main --dev --input \"{directory}\"");
+                //     foreach (var item in Directory.GetFiles(Path.Combine(Path.GetDirectoryName(JavaVersion.NbtTranslationJar), "generated"), "*.snbt", SearchOption.TopDirectoryOnly))
+                //     {
+                //         File.Move(item, Path.Combine(dest_folder, Path.GetFileName(item)));
+                //     }
+                // }
             }
         }
 
@@ -330,6 +356,8 @@ namespace Minecraft_Version_History
     public class JavaVersion : Version
     {
         private readonly string JarPath;
+        public static string JavaPath;
+        public static string NbtTranslationJar;
         public static string ServerJarFolder;
         public static string DecompilerFile;
         private static Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
@@ -356,20 +384,7 @@ namespace Minecraft_Version_History
                 string reports_path = Path.Combine(ServerJarFolder, "generated");
                 if (Directory.Exists(reports_path))
                     Directory.Delete(reports_path, true);
-                bool success = false;
-                foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
-                {
-                    // data reports wipe the entire output folder they run in
-                    // so we need to put them somewhere safe and then copy
-                    var run = CommandRunner.RunCommand(ServerJarFolder, $"java -Xss1M -cp \"{JarPath}\";\"{serverjar}\" net.minecraft.data.Main --reports");
-                    if (run.ExitCode == 0)
-                    {
-                        success = true;
-                        break;
-                    }
-                }
-                if (!success)
-                    throw new FileNotFoundException("No compatible server jar found to generate data reports");
+                TryWithAllServers($"\"{JavaVersion.JavaPath}\" -Xss1M -cp \"{JarPath}\";\"{{0}}\" net.minecraft.data.Main --reports");
                 var outputfolder = Path.Combine(output, "reports");
                 Directory.CreateDirectory(outputfolder);
                 foreach (var report in Directory.EnumerateFiles(Path.Combine(reports_path, "reports")))
@@ -378,31 +393,35 @@ namespace Minecraft_Version_History
                     File.Copy(report, destination);
                 }
             }
-            if (ReleaseTime > Mappings && !VersionName.Contains("1.14_combat"))
-            {
-                Console.WriteLine("Fetching mappers and decompiling source...");
-                string decompiler_folder = Path.GetDirectoryName(DecompilerFile);
-                string python_name = Path.GetFileName(DecompilerFile);
-                CommandRunner.RunCommand(decompiler_folder, $"python {python_name} {VersionName}");
+            bool remap = ReleaseTime > Mappings && !VersionName.Contains("1.14_combat");
+            Console.WriteLine("Decompiling source...");
+            if (remap)
+                Console.WriteLine("(with mappings)");
+            string decompiler_folder = Path.GetDirectoryName(DecompilerFile);
+            string python_name = Path.GetFileName(DecompilerFile);
+            string python_config = "{\\\"version\\\":\\\"" + VersionName + "\\\",\\\"remap\\\":" + remap.ToString().ToLower() + "}";
+            string command = $"python {python_name} {python_config}";
+            CommandRunner.RunCommand(decompiler_folder, command);
+            if (remap)
                 File.Copy(Path.Combine(decompiler_folder, "mappings", VersionName, "mappings.txt"), Path.Combine(output, "mappings.txt"));
-                Console.WriteLine("Extracting source...");
+            Console.WriteLine("Copying source...");
 
-                // cfr
-                Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory(Path.Combine(decompiler_folder, "src", VersionName), Path.Combine(output, "source"));
+            // cfr
+            Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory(Path.Combine(decompiler_folder, "src", VersionName), Path.Combine(output, "source"));
 
-                // fernflower (disabled for now)
-                // using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(decompiler_path, "src", VersionName, VersionName + "-temp.jar")))
-                // {
-                //     foreach (var entry in zip.Entries)
-                //     {
-                //         if (entry.FullName.StartsWith("com") || entry.FullName.StartsWith("net"))
-                //         {
-                //             Directory.CreateDirectory(Path.Combine(output, "source", Path.GetDirectoryName(entry.FullName)));
-                //             entry.ExtractToFile(Path.Combine(output, "source", entry.FullName));
-                //         }
-                //     }
-                // }
-            }
+            // fernflower (disabled for now)
+            // using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(decompiler_path, "src", VersionName, VersionName + "-temp.jar")))
+            // {
+            //     foreach (var entry in zip.Entries)
+            //     {
+            //         if (entry.FullName.StartsWith("com") || entry.FullName.StartsWith("net"))
+            //         {
+            //             Directory.CreateDirectory(Path.Combine(output, "source", Path.GetDirectoryName(entry.FullName)));
+            //             entry.ExtractToFile(Path.Combine(output, "source", entry.FullName));
+            //         }
+            //     }
+            // }
+
             Console.WriteLine("Extracting jar...");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
             {
@@ -483,6 +502,27 @@ namespace Minecraft_Version_History
                     }
                 }
             }
+        }
+
+        public static void TryWithAllServers(string command)
+        {
+            bool success = false;
+            foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
+            {
+                // data reports wipe the entire output folder they run in
+                // so we need to put them somewhere safe and then copy
+                var run = CommandRunner.RunCommand(ServerJarFolder, String.Format(command, serverjar), suppress_errors: true);
+                if (run.ExitCode == 0)
+                {
+                    Console.WriteLine($"{Path.GetFileName(serverjar)} was compatible");
+                    success = true;
+                    break;
+                }
+                else
+                    Console.WriteLine($"{Path.GetFileName(serverjar)} was incompatible");
+            }
+            if (!success)
+                throw new FileNotFoundException("No compatible server jar found");
         }
 
         private static void SortKeys(JObject obj, string[] order = null)
@@ -677,6 +717,31 @@ namespace Minecraft_Version_History
                     return entry;
             }
             throw new FileNotFoundException($"Could not find main APPX");
+        }
+    }
+
+    public class VersionComparer : IComparer<Version>
+    {
+        public static VersionComparer Instance = new VersionComparer();
+        private VersionComparer() { }
+
+        public int Compare(Version x, Version y)
+        {
+            if (x.ReleaseTime > y.ReleaseTime)
+                return 1;
+            if (x.ReleaseTime < y.ReleaseTime)
+                return -1;
+            var x_pieces = x.VersionName.Split('.').Where(o => int.TryParse(o, out _)).ToList();
+            var y_pieces = y.VersionName.Split('.').Where(o => int.TryParse(o, out _)).ToList();
+            for (int i = 0; i < Math.Min(x_pieces.Count, y_pieces.Count); i++)
+            {
+                int x_num = int.Parse(x_pieces[i]);
+                int y_num = int.Parse(y_pieces[i]);
+                int compare = x_num.CompareTo(y_num);
+                if (compare != 0)
+                    return compare;
+            }
+            return 0;
         }
     }
 }

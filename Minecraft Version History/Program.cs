@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using fNbt;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,15 +15,23 @@ namespace Minecraft_Version_History
     {
         static void Main(string[] args)
         {
+            // var test = new NbtFile(@"D:\Minecraft\Java Storage\History\jar\data\minecraft\structures\igloo\igloo_bottom.nbt");
+            // File.WriteAllText("awesometest2.txt", test.RootTag.ToSnbt(true));
+
+
 #if !DEBUG
             start:
             try
             {
 #endif
                 var config = JObject.Parse(File.ReadAllText(@"..\config.json"));
-                Console.WriteLine("Java:");
+                // java 9+ crashes when getting data from some versions (https://bugs.mojang.com/browse/MC-132888)
+                JavaVersion.JavaPath = (string)config["java_install"];
+                JavaVersion.NbtTranslationJar = (string)config["nbt_translation_jar"];
                 JavaVersion.ServerJarFolder = (string)config["server_jars"];
                 JavaVersion.DecompilerFile = (string)config["decompiler"];
+
+                Console.WriteLine("Java:");
                 var java = new JavaUpdater((string)config["java_repo"], (string)config["java_versions"]);
                 java.CommitChanges();
 
