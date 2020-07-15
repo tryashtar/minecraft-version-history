@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using fNbt;
 using System.Globalization;
+using System.Net;
 
 namespace Minecraft_Version_History
 {
@@ -63,36 +64,58 @@ namespace Minecraft_Version_History
             CommittedVersionDict = new Dictionary<T, string>();
             UncommittedVersionList = new List<T>();
             Console.WriteLine("Scanning versions...");
+            string all = CommandRunner.RunCommand(RepoFolder, $"git log --all", output: true).Output;
             foreach (var version in GetAllVersions())
             {
-                string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).Output;
-                if (hash.Length == 0)
+                int index = all.IndexOf($"\n\n    {version.VersionName}\n");
+                if (index == -1)
                 {
                     UncommittedVersionList.Add(version);
                     Console.WriteLine($"New version: {version.VersionName}");
                 }
                 else
                 {
-                    hash = hash.Substring("commit ".Length, 40);
+                    int hash_index = all.LastIndexOf("commit ", index);
+                    string hash = all.Substring(hash_index + "commit ".Length, 40);
                     CommittedVersionDict.Add(version, hash);
                 }
             }
         }
 
+        private T Parent(T version, List<T> history)
+        {
+            if (version.ReleaseName == "Combat Test 3")
+                return history.FirstOrDefault(x => x.ReleaseName == "Combat Test 2");
+            T parent;
+            int my_index = history.IndexOf(version);
+            parent = history.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime && history.IndexOf(x) < my_index);
+            if (parent == null && my_index > 0)
+            {
+                int search = my_index;
+                while (true)
+                {
+                    search--;
+                    string name = history[search].ReleaseName;
+                    if (!name.Contains("April Fools") && !name.Contains("Combat Test"))
+                        return history[search];
+                }
+            }
+            return parent;
+        }
+
         public void CommitChanges()
         {
             var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x, VersionComparer.Instance).ToList();
+            Console.WriteLine("Ideal history:");
+            foreach (var version in idealhistory)
+            {
+                Console.WriteLine($"{version} (comes after {Parent(version, idealhistory)})");
+            }
             foreach (var version in idealhistory)
             {
                 if (UncommitedVersions.Contains(version))
                 {
-                    int my_index = idealhistory.IndexOf(version);
-                    var parent = idealhistory.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime && idealhistory.IndexOf(x) < my_index);
-                    if (parent == null)
-                    {
-                        string parentrelease = GetParentRelease(version.ReleaseName);
-                        parent = idealhistory.FirstOrDefault(x => version != x && x.ReleaseName == parentrelease && version.ReleaseTime >= x.ReleaseTime);
-                    }
+                    var parent = Parent(version, idealhistory);
                     if (parent == null)
                     {
                         Console.WriteLine($"{version.VersionName} is the first version in the history!");
@@ -107,7 +130,7 @@ namespace Minecraft_Version_History
             }
         }
 
-        protected abstract string GetParentRelease(string release);
+        protected abstract string GetSpecialParent(string release);
 
         protected string SubtractMajorVersion(string release)
         {
@@ -267,28 +290,11 @@ namespace Minecraft_Version_History
 
     public class JavaUpdater : Updater<JavaVersion>
     {
-        private static Dictionary<string, string> ParentReleaseDict;
+        private static Dictionary<string, string> ParentDict;
         public JavaUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
-            ParentReleaseDict = new Dictionary<string, string>()
+            ParentDict = new Dictionary<string, string>()
             {
-                {"1.0", "Beta 1.9" },
-                {"Beta 1.0", "Alpha 1.2" },
-                {"Alpha 1.0", "Infdev" },
-                {"Infdev", "Alpha 0.30" },
-                {"Alpha 0.30", "Alpha 0.0" },
-                {"Alpha 0.0", "Classic" },
-
-                {"April Fools 2013", "1.5" },
-                {"April Fools 2015", "1.8" },
-                {"April Fools 2016", "1.9" },
-                {"April Fools 2019", "1.14" },
-                {"April Fools 2020", "1.16" },
-                {"Combat Test 1", "1.14" },
-                {"Combat Test 2", "1.14" },
-                {"Combat Test 3", "Combat Test 2" },
-                {"Combat Test 4", "1.15" },
-                {"Combat Test 5", "1.15" },
             };
         }
 
@@ -302,11 +308,11 @@ namespace Minecraft_Version_History
             }
         }
 
-        protected override string GetParentRelease(string release)
+        protected override string GetSpecialParent(string release)
         {
-            if (ParentReleaseDict.TryGetValue(release, out string result))
+            if (ParentDict.TryGetValue(release, out string result))
                 return result;
-            return SubtractMajorVersion(release);
+            return null;
         }
     }
 
@@ -329,7 +335,7 @@ namespace Minecraft_Version_History
             }
         }
 
-        protected override string GetParentRelease(string release)
+        protected override string GetSpecialParent(string release)
         {
             if (ParentReleaseDict.TryGetValue(release, out string result))
                 return result;
@@ -356,11 +362,12 @@ namespace Minecraft_Version_History
     public class JavaVersion : Version
     {
         private readonly string JarPath;
+        private readonly string ServerJarURL;
         public static string JavaPath;
         public static string NbtTranslationJar;
         public static string ServerJarFolder;
         public static string DecompilerFile;
-        private static Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
+        private static readonly Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly DateTime AssetGenerators = new DateTime(2020, 3, 1);
         private static readonly DateTime Mappings = new DateTime(2019, 9, 4);
@@ -374,6 +381,7 @@ namespace Minecraft_Version_History
             JObject json = JObject.Parse(File.ReadAllText(jsonpath));
             ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
             ReleaseName = GetMadeForRelease(VersionName);
+            ServerJarURL = (string)json["downloads"]?["server"]?["url"];
         }
 
         public override void ExtractData(string output)
@@ -384,14 +392,22 @@ namespace Minecraft_Version_History
                 string reports_path = Path.Combine(ServerJarFolder, "generated");
                 if (Directory.Exists(reports_path))
                     Directory.Delete(reports_path, true);
-                TryWithAllServers($"\"{JavaVersion.JavaPath}\" -Xss1M -cp \"{JarPath}\";\"{{0}}\" net.minecraft.data.Main --reports");
+
+                var serverjar = Path.Combine(ServerJarFolder, VersionName + ".jar");
+                if (!File.Exists(serverjar))
+                {
+                    Console.WriteLine("Downloading server jar...");
+                    using (var client = new WebClient())
+                    {
+                        client.DownloadFile(ServerJarURL, serverjar);
+                    }
+                    Console.WriteLine("Download complete!");
+                }
+                var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersion.JavaPath}\" -Xss1M -cp \"{serverjar}\" net.minecraft.data.Main --reports");
                 var outputfolder = Path.Combine(output, "reports");
                 Directory.CreateDirectory(outputfolder);
-                foreach (var report in Directory.EnumerateFiles(Path.Combine(reports_path, "reports")))
-                {
-                    var destination = Path.Combine(outputfolder, Path.GetFileName(report));
-                    File.Copy(report, destination);
-                }
+
+                Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
             }
             bool remap = ReleaseTime > Mappings && !VersionName.Contains("1.14_combat");
             Console.WriteLine("Decompiling source...");
@@ -502,27 +518,6 @@ namespace Minecraft_Version_History
                     }
                 }
             }
-        }
-
-        public static void TryWithAllServers(string command)
-        {
-            bool success = false;
-            foreach (var serverjar in Directory.EnumerateFiles(ServerJarFolder, "*.jar"))
-            {
-                // data reports wipe the entire output folder they run in
-                // so we need to put them somewhere safe and then copy
-                var run = CommandRunner.RunCommand(ServerJarFolder, String.Format(command, serverjar), suppress_errors: true);
-                if (run.ExitCode == 0)
-                {
-                    Console.WriteLine($"{Path.GetFileName(serverjar)} was compatible");
-                    success = true;
-                    break;
-                }
-                else
-                    Console.WriteLine($"{Path.GetFileName(serverjar)} was incompatible");
-            }
-            if (!success)
-                throw new FileNotFoundException("No compatible server jar found");
         }
 
         private static void SortKeys(JObject obj, string[] order = null)
