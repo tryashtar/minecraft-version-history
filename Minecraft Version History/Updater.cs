@@ -12,6 +12,8 @@ using System.Diagnostics;
 using fNbt;
 using System.Globalization;
 using System.Net;
+using System.Reflection.Emit;
+using System.Runtime.InteropServices;
 
 namespace Minecraft_Version_History
 {
@@ -155,12 +157,16 @@ namespace Minecraft_Version_History
         private void DoCommit(T version)
         {
             // extract
-            Console.WriteLine($"Wiping folder...");
-            WipeFolderExcept(RepoFolder, GitFolders, GitFiles);
+            string workspace = Path.Combine(Path.GetTempPath(), "mc_version_history_workspace");
+            if (Directory.Exists(workspace))
+                Directory.Delete(workspace, true);
             Console.WriteLine($"Extracting {version}");
-            version.ExtractData(RepoFolder);
+            version.ExtractData(workspace);
             Console.WriteLine($"Translating NBT files...");
-            TranslateNbtFiles();
+            TranslateNbtFiles(workspace);
+            MergeWithWorkspace(RepoFolder, workspace);
+            Directory.Delete(workspace, true);
+            Util.RemoveEmptyFolders(RepoFolder);
             File.WriteAllText(Path.Combine(RepoFolder, "version.txt"), version.VersionName);
             // commit
             Console.WriteLine($"Committing...");
@@ -174,6 +180,33 @@ namespace Minecraft_Version_History
             CommittedVersionDict.Add(version, hash);
             CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
             CommandRunner.RunCommand(RepoFolder, $"git repack");
+        }
+
+        private void MergeWithWorkspace(string base_folder, string workspace)
+        {
+            // delete files that are not present in workspace
+            foreach (var item in Directory.GetFiles(base_folder, "*", SearchOption.AllDirectories))
+            {
+                string relative = Util.RelativePath(base_folder, item);
+                if (relative.StartsWith(".git"))
+                    continue;
+                string workspace_version = Path.Combine(workspace, relative);
+                if (!File.Exists(workspace_version))
+                    File.Delete(item);
+            }
+
+            // copy new/changed files from workspace
+            foreach (var item in Directory.GetFiles(workspace, "*", SearchOption.AllDirectories))
+            {
+                string relative = Util.RelativePath(workspace, item);
+                string base_version = Path.Combine(base_folder, relative);
+                if (!File.Exists(base_version) || !Util.FilesAreEqual(new FileInfo(item), new FileInfo(base_version)))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(base_version));
+                    File.Copy(item, base_version, true);
+                }
+                File.Delete(item);
+            }
         }
 
         // for committing the first version
@@ -220,19 +253,19 @@ namespace Minecraft_Version_History
         }
 
         // read all NBT files in the version and write textual copies
-        private void TranslateNbtFiles()
+        private void TranslateNbtFiles(string root_folder)
         {
-            string translations_path = Path.Combine(RepoFolder, "nbt_translations");
-            FreshFolder(translations_path);
+            string translations_path = Path.Combine(root_folder, "nbt_translations");
+            Directory.CreateDirectory(translations_path);
             // don't enumerate because we're creating new directories as we go
-            foreach (var directory in Directory.GetDirectories(RepoFolder, "*", SearchOption.AllDirectories))
+            foreach (var directory in Directory.GetDirectories(root_folder, "*", SearchOption.AllDirectories))
             {
-                string dest_folder = Path.Combine(translations_path, directory.Substring(RepoFolder.Length + 1));
-                bool any_nbts = false;
+                string dest_folder = Path.Combine(translations_path, directory.Substring(root_folder.Length + 1));
+                // bool any_nbts = false;
 
                 foreach (var nbtpath in Directory.EnumerateFiles(directory, "*.nbt", SearchOption.TopDirectoryOnly))
                 {
-                    any_nbts = true;
+                    // any_nbts = true;
                     // remove DataVersion that makes diffs hard to read
                     var file = new NbtFile(nbtpath);
                     file.RootTag.Remove("DataVersion");
@@ -245,7 +278,7 @@ namespace Minecraft_Version_History
 
                 foreach (var bedrock_structure in Directory.EnumerateFiles(directory, "*.mcstructure", SearchOption.TopDirectoryOnly))
                 {
-                    any_nbts = true;
+                    // any_nbts = true;
                     var file = new NbtFile();
                     file.BigEndian = false;
                     file.LoadFromFile(bedrock_structure);
@@ -264,26 +297,6 @@ namespace Minecraft_Version_History
                 //         File.Move(item, Path.Combine(dest_folder, Path.GetFileName(item)));
                 //     }
                 // }
-            }
-        }
-
-        private static void FreshFolder(string folder)
-        {
-            Directory.CreateDirectory(folder);
-            WipeFolderExcept(folder, new string[] { }, new string[] { });
-        }
-
-        private static void WipeFolderExcept(string folder, string[] keep_folders, string[] keep_files)
-        {
-            foreach (var subfolder in Directory.EnumerateDirectories(folder))
-            {
-                if (!keep_folders.Contains(Path.GetFileName(subfolder)))
-                    Directory.Delete(subfolder, true);
-            }
-            foreach (var file in Directory.EnumerateFiles(folder))
-            {
-                if (!keep_files.Contains(Path.GetFileName(file)))
-                    File.Delete(file);
             }
         }
     }
@@ -403,7 +416,7 @@ namespace Minecraft_Version_History
                     }
                     Console.WriteLine("Download complete!");
                 }
-                var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersion.JavaPath}\" -Xss1M -cp \"{serverjar}\" net.minecraft.data.Main --reports");
+                var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersion.JavaPath}\" -cp \"{serverjar}\" net.minecraft.data.Main --reports");
                 var outputfolder = Path.Combine(output, "reports");
                 Directory.CreateDirectory(outputfolder);
 
@@ -454,8 +467,8 @@ namespace Minecraft_Version_History
                         entry.FullName == "data/minecraft/advancements/nether/all_potions.json")
                     {
                         var advancement = JObject.Parse(File.ReadAllText(destination));
-                        SortKeys((JObject)advancement["criteria"]["all_effects"]["conditions"]["effects"]);
-                        File.WriteAllText(destination, ToMinecraftJson(advancement));
+                        Util.SortKeys((JObject)advancement["criteria"]["all_effects"]["conditions"]["effects"]);
+                        File.WriteAllText(destination, Util.ToMinecraftJson(advancement));
                     }
                     else if (entry.FullName == "data/minecraft/loot_tables/chests/shipwreck_supply.json")
                     {
@@ -465,7 +478,7 @@ namespace Minecraft_Version_History
                         {
                             var function = (JObject)stew["functions"][0];
                             function["effects"] = new JArray(((JArray)function["effects"]).OrderBy(x => x["type"].ToString()));
-                            File.WriteAllText(destination, ToMinecraftJson(table));
+                            File.WriteAllText(destination, Util.ToMinecraftJson(table));
                         }
                     }
                     else if (ReleaseTime > AssetGenerators && Path.GetDirectoryName(entry.FullName) == @"assets\minecraft\blockstates")
@@ -479,11 +492,11 @@ namespace Minecraft_Version_History
                                 {
                                     foreach (JObject option in many)
                                     {
-                                        SortKeys(option, ModelOrder);
+                                        Util.SortKeys(option, ModelOrder);
                                     }
                                 }
                                 else
-                                    SortKeys((JObject)variant.Value, ModelOrder);
+                                    Util.SortKeys((JObject)variant.Value, ModelOrder);
                             }
                         }
                         else if (blockstate.TryGetValue("multipart", out var multipart))
@@ -495,66 +508,29 @@ namespace Minecraft_Version_History
                                 {
                                     foreach (JObject item in many)
                                     {
-                                        SortKeys(item, ModelOrder);
+                                        Util.SortKeys(item, ModelOrder);
                                     }
                                 }
                                 else
-                                    SortKeys((JObject)apply, ModelOrder);
+                                    Util.SortKeys((JObject)apply, ModelOrder);
                                 if (part.TryGetValue("when", out var when))
                                 {
                                     if (((JObject)when).TryGetValue("OR", out var or))
                                     {
                                         foreach (JObject option in or)
                                         {
-                                            SortKeys(option);
+                                            Util.SortKeys(option);
                                         }
                                     }
                                     else
-                                        SortKeys((JObject)when);
+                                        Util.SortKeys((JObject)when);
                                 }
                             }
                         }
-                        File.WriteAllText(destination, ToMinecraftJson(blockstate));
+                        File.WriteAllText(destination, Util.ToMinecraftJson(blockstate));
                     }
                 }
             }
-        }
-
-        private static void SortKeys(JObject obj, string[] order = null)
-        {
-            var tokens = new List<KeyValuePair<string, JToken>>();
-            foreach (var item in obj)
-            {
-                tokens.Add(item);
-            }
-            obj.RemoveAll();
-            var ordered = order == null ? tokens.OrderBy(x => x.Key) : tokens.OrderBy(x =>
-            {
-                var index = Array.IndexOf(order, x.Key);
-                return index < 0 ? int.MaxValue : index;
-            }).ThenBy(x => x.Key);
-            foreach (var item in ordered)
-            {
-                obj.Add(item.Key, item.Value);
-            }
-        }
-
-        private static string ToMinecraftJson(JObject value)
-        {
-            StringBuilder sb = new StringBuilder(256);
-            StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
-
-            var jsonSerializer = JsonSerializer.CreateDefault();
-            using (JsonTextWriter jsonWriter = new JsonTextWriter(sw))
-            {
-                jsonWriter.Formatting = Formatting.Indented;
-                jsonWriter.IndentChar = ' ';
-                jsonWriter.Indentation = 2;
-
-                jsonSerializer.Serialize(jsonWriter, value, typeof(JObject));
-            }
-
-            return sw.ToString();
         }
 
         // facts of versions
