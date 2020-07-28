@@ -160,6 +160,7 @@ namespace Minecraft_Version_History
             string workspace = Path.Combine(Path.GetTempPath(), "mc_version_history_workspace");
             if (Directory.Exists(workspace))
                 Directory.Delete(workspace, true);
+            Directory.CreateDirectory(workspace);
             Console.WriteLine($"Extracting {version}");
             version.ExtractData(workspace);
             Console.WriteLine($"Translating NBT files...");
