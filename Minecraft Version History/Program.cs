@@ -15,8 +15,19 @@ namespace Minecraft_Version_History
     {
         static void Main(string[] args)
         {
-            // var test = new NbtFile(@"D:\Minecraft\Java Storage\History\jar\data\minecraft\structures\igloo\igloo_bottom.nbt");
-            // File.WriteAllText("awesometest2.txt", test.RootTag.ToSnbt(true));
+            string source = Path.Combine(Directory.GetCurrentDirectory(), "nbt");
+            string dest = Path.Combine(Directory.GetCurrentDirectory(), "snbt");
+            if (Directory.Exists(source))
+            {
+                Directory.CreateDirectory(dest);
+                foreach (var structure in Directory.EnumerateFiles(source, "*.mcstructure", SearchOption.TopDirectoryOnly))
+                {
+                    var file = new NbtFile();
+                    file.BigEndian = false;
+                    file.LoadFromFile(structure);
+                    File.WriteAllText(Path.Combine(dest, Path.ChangeExtension(Path.GetFileName(structure), ".snbt")), file.RootTag.ToSnbt(true) + "\n");
+                }
+            }
 
 
 #if !DEBUG
@@ -24,22 +35,24 @@ namespace Minecraft_Version_History
             try
             {
 #endif
-                var config = JObject.Parse(File.ReadAllText(@"..\config.json"));
-                // java 9+ crashes when getting data from some versions (https://bugs.mojang.com/browse/MC-132888)
-                JavaVersion.JavaPath = (string)config["java_install"];
-                JavaVersion.NbtTranslationJar = (string)config["nbt_translation_jar"];
-                JavaVersion.ServerJarFolder = (string)config["server_jars"];
-                JavaVersion.DecompilerFile = (string)config["decompiler"];
+            var version_facts = JObject.Parse(File.ReadAllText(@"..\version_facts.json"));
+            var config = JObject.Parse(File.ReadAllText(@"..\config.json"));
+            // java 9+ crashes when getting data from some versions (https://bugs.mojang.com/browse/MC-132888)
+            JavaVersion.JavaPath = (string)config["java_install"];
+            JavaVersion.NbtTranslationJar = (string)config["nbt_translation_jar"];
+            JavaVersion.ServerJarFolder = (string)config["server_jars"];
+            JavaVersion.DecompilerFile = (string)config["decompiler"];
+            JavaVersion.ReleasesMap = (JObject)version_facts["releases"];
 
-                Console.WriteLine("Java:");
-                var java = new JavaUpdater((string)config["java_repo"], (string)config["java_versions"]);
-                java.CommitChanges();
+            Console.WriteLine("Java:");
+            var java = new JavaUpdater(version_facts, (string)config["java_repo"], (string)config["java_versions"]);
+            java.CommitChanges();
 
-                Console.WriteLine("Bedrock:");
-                var bedrock = new BedrockUpdater((string)config["bedrock_repo"], (string)config["bedrock_versions"]);
-                bedrock.CommitChanges();
+            Console.WriteLine("Bedrock:");
+            var bedrock = new BedrockUpdater((string)config["bedrock_repo"], (string)config["bedrock_versions"]);
+            bedrock.CommitChanges();
 
-                Console.WriteLine("All done!");
+            Console.WriteLine("All done!");
 #if !DEBUG
             }
             catch (Exception ex)

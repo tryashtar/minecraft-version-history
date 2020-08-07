@@ -84,10 +84,21 @@ namespace Minecraft_Version_History
             }
         }
 
+        protected virtual T SpecialParent(T version, List<T> history)
+        {
+            return null;
+        }
+
+        protected virtual bool NoParentsAllowed(T version)
+        {
+            return false;
+        }
+
         private T Parent(T version, List<T> history)
         {
-            if (version.ReleaseName == "Combat Test 3")
-                return history.FirstOrDefault(x => x.ReleaseName == "Combat Test 2");
+            var special = SpecialParent(version, history);
+            if (special != null)
+                return special;
             T parent;
             int my_index = history.IndexOf(version);
             parent = history.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime && history.IndexOf(x) < my_index);
@@ -97,9 +108,9 @@ namespace Minecraft_Version_History
                 while (true)
                 {
                     search--;
-                    string name = history[search].ReleaseName;
-                    if (!name.Contains("April Fools") && !name.Contains("Combat Test"))
-                        return history[search];
+                    if (NoParentsAllowed(history[search]))
+                        continue;
+                    return history[search];
                 }
             }
             return parent;
@@ -131,8 +142,6 @@ namespace Minecraft_Version_History
                 }
             }
         }
-
-        protected abstract string GetSpecialParent(string release);
 
         protected string SubtractMajorVersion(string release)
         {
@@ -304,12 +313,12 @@ namespace Minecraft_Version_History
 
     public class JavaUpdater : Updater<JavaVersion>
     {
-        private static Dictionary<string, string> ParentDict;
-        public JavaUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
+        private readonly Dictionary<string, string> ParentDict;
+        private readonly JObject VersionFacts;
+        public JavaUpdater(JObject version_facts, string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
-            ParentDict = new Dictionary<string, string>()
-            {
-            };
+            VersionFacts = version_facts;
+            ParentDict = new Dictionary<string, string>();
         }
 
         protected override IEnumerable<JavaVersion> GetAllVersions()
@@ -317,28 +326,40 @@ namespace Minecraft_Version_History
             foreach (var folder in Directory.EnumerateDirectories(VersionsFolder))
             {
                 var version = new JavaVersion(folder);
-                if (version.VersionName.IndexOf("optifine", StringComparison.OrdinalIgnoreCase) == -1)
+                bool should_load = true;
+                foreach (string item in (JArray)VersionFacts["skip_contains"])
+                {
+                    if (version.VersionName.IndexOf(item, StringComparison.OrdinalIgnoreCase) != -1)
+                        should_load = false;
+                }
+                if (should_load)
                     yield return new JavaVersion(folder);
             }
         }
 
-        protected override string GetSpecialParent(string release)
+        protected override JavaVersion SpecialParent(JavaVersion version, List<JavaVersion> history)
         {
-            if (ParentDict.TryGetValue(release, out string result))
-                return result;
-            return null;
+            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.ReleaseName, out var parent))
+                return history.LastOrDefault(x => x.ReleaseName == (string)parent);
+            return base.SpecialParent(version, history);
+        }
+
+        protected override bool NoParentsAllowed(JavaVersion version)
+        {
+            foreach (string item in (JArray)VersionFacts["parents"]["skip_contains"])
+            {
+                if (version.ReleaseName.Contains(item))
+                    return true;
+            }
+            return base.NoParentsAllowed(version);
         }
     }
 
     public class BedrockUpdater : Updater<BedrockVersion>
     {
-        private static Dictionary<string, string> ParentReleaseDict;
         public BedrockUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
-            ParentReleaseDict = new Dictionary<string, string>()
-            {
-                { "1.4", "1.2" }
-            };
+
         }
 
         protected override IEnumerable<BedrockVersion> GetAllVersions()
@@ -349,11 +370,11 @@ namespace Minecraft_Version_History
             }
         }
 
-        protected override string GetSpecialParent(string release)
+        protected override BedrockVersion SpecialParent(BedrockVersion version, List<BedrockVersion> history)
         {
-            if (ParentReleaseDict.TryGetValue(release, out string result))
-                return result;
-            return SubtractMajorVersion(release);
+            if (version.ReleaseName == "1.4")
+                return history.LastOrDefault(x => x.ReleaseName == "1.2");
+            return base.SpecialParent(version, history);
         }
     }
 
@@ -381,6 +402,7 @@ namespace Minecraft_Version_History
         public static string NbtTranslationJar;
         public static string ServerJarFolder;
         public static string DecompilerFile;
+        public static JObject ReleasesMap;
         private static readonly Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly DateTime AssetGenerators = new DateTime(2020, 3, 1);
@@ -535,7 +557,7 @@ namespace Minecraft_Version_History
         }
 
         // facts of versions
-        private static string GetMadeForRelease(string versionname)
+        private string GetMadeForRelease(string versionname)
         {
             // possible formats:
             // 1.x.x        1.x
@@ -546,27 +568,9 @@ namespace Minecraft_Version_History
             // rd-xxxx      Classic
             // yywxxl       (needs lookup)
 
-            // special stuff first
-            if (versionname == "1.14_combat-212796")
-                return "Combat Test 1";
-            if (versionname == "1.14_combat-0")
-                return "Combat Test 2";
-            if (versionname == "1.14_combat-3")
-                return "Combat Test 3";
-            if (versionname == "1.15_combat-1")
-                return "Combat Test 4";
-            if (versionname == "1.15_combat-6")
-                return "Combat Test 5";
-            if (versionname.StartsWith("April Fools 2.0"))
-                return "April Fools 2013";
-            if (versionname == "15w14a")
-                return "April Fools 2015";
-            if (versionname == "1.RV-Pre1")
-                return "April Fools 2016";
-            if (versionname == "3D Shareware v1.34")
-                return "April Fools 2019";
-            if (versionname == "20w14infinite")
-                return "April Fools 2020";
+            if ((ReleasesMap["special"] as JObject).TryGetValue(versionname, out var release))
+                return (string)release;
+
             // real versions
             if (versionname.StartsWith("1."))
                 return MajorMinor(versionname);
@@ -582,39 +586,20 @@ namespace Minecraft_Version_History
                 return "Classic";
             if (versionname.StartsWith("rd-"))
                 return "Pre-Classic";
+
             var match = SnapshotRegex.Match(versionname);
             if (match.Success)
             {
-                string year = match.Groups[1].Value;
+                int year = int.Parse(match.Groups[1].Value);
                 int week = int.Parse(match.Groups[2].Value);
-                var snapshots = new Dictionary<Tuple<string, int>, string>
+
+                foreach (var snapshot in (JObject)ReleasesMap["snapshots"])
                 {
-                    // if a snapshot is in year A and on week B or earlier, it was for version C
-                    { Tuple.Create("11", 50), "1.1" },
-                    { Tuple.Create("12", 1), "1.1" },
-                    { Tuple.Create("12", 8), "1.2" },
-                    { Tuple.Create("12", 30), "1.3" },
-                    { Tuple.Create("12", 50), "1.4" },
-                    { Tuple.Create("13", 12), "1.5" },
-                    { Tuple.Create("13", 26), "1.6" },
-                    { Tuple.Create("13", 49), "1.7" },
-                    { Tuple.Create("14", 34), "1.8" },
-                    { Tuple.Create("15", 51), "1.9" },
-                    { Tuple.Create("16", 15), "1.9" },
-                    { Tuple.Create("16", 21), "1.10" },
-                    { Tuple.Create("16", 50), "1.11" },
-                    { Tuple.Create("17", 31), "1.12" },
-                    { Tuple.Create("17", 50), "1.13" },
-                    { Tuple.Create("18", 33), "1.13" },
-                    { Tuple.Create("18", 50), "1.14" },
-                    { Tuple.Create("19", 33), "1.14" },
-                    { Tuple.Create("19", 50), "1.15" },
-                    { Tuple.Create("20", 50), "1.16" },
-                };
-                foreach (var rule in snapshots)
-                {
-                    if (year == rule.Key.Item1 && week <= rule.Key.Item2)
-                        return rule.Value;
+                    string[] parts = snapshot.Key.Split('.');
+                    int template_year = int.Parse(parts[0]);
+                    int template_week = int.Parse(parts[1]);
+                    if (year == template_year && week <= template_week)
+                        return (string)snapshot.Value;
                 }
             }
             throw new ArgumentException($"Could not determine the version to which {versionname} belongs");
