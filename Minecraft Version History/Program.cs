@@ -43,9 +43,10 @@ namespace Minecraft_Version_History
             JavaVersion.ServerJarFolder = (string)config["server_jars"];
             JavaVersion.DecompilerFile = (string)config["decompiler"];
             JavaVersion.ReleasesMap = (JObject)version_facts["releases"];
+            JavaUpdater.VersionFacts = version_facts;
 
             Console.WriteLine("Java:");
-            var java = new JavaUpdater(version_facts, (string)config["java_repo"], (string)config["java_versions"]);
+            var java = new JavaUpdater((string)config["java_repo"], (string)config["java_versions"]);
             java.CommitChanges();
 
             Console.WriteLine("Bedrock:");

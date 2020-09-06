@@ -257,7 +257,7 @@ namespace Minecraft_Version_History
                 CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
                 DoCommit(version);
                 // insert
-                CommandRunner.RunCommand(RepoFolder, $"git rebase temp \"{branchname}\"");
+                CommandRunner.RunCommand(RepoFolder, $"git rebase --strategy-option theirs temp \"{branchname}\"");
                 CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
             }
         }
@@ -313,12 +313,9 @@ namespace Minecraft_Version_History
 
     public class JavaUpdater : Updater<JavaVersion>
     {
-        private readonly Dictionary<string, string> ParentDict;
-        private readonly JObject VersionFacts;
-        public JavaUpdater(JObject version_facts, string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
+        public static JObject VersionFacts;
+        public JavaUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
-            VersionFacts = version_facts;
-            ParentDict = new Dictionary<string, string>();
         }
 
         protected override IEnumerable<JavaVersion> GetAllVersions()
