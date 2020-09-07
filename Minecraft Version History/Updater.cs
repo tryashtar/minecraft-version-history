@@ -2,18 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using fNbt;
-using System.Globalization;
 using System.Net;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
 
 namespace Minecraft_Version_History
 {
@@ -49,7 +43,7 @@ namespace Minecraft_Version_History
 
     public abstract class Updater<T> where T : Version
     {
-        private static Regex ReleaseRegex = new Regex(@"(.*?)1\.(\d*)");
+        private static readonly Regex ReleaseRegex = new Regex(@"(.*?)1\.(\d*)");
         protected string RepoFolder { get; private set; }
         protected string VersionsFolder { get; private set; }
         // key = version, value = commit hash
@@ -57,8 +51,6 @@ namespace Minecraft_Version_History
         protected List<T> UncommittedVersionList;
         public IEnumerable<T> CommittedVersions => CommittedVersionDict.Keys;
         public IEnumerable<T> UncommitedVersions => UncommittedVersionList;
-        readonly static string[] GitFolders = new[] { ".git" };
-        readonly static string[] GitFiles = new[] { ".gitignore", "version.txt" };
         public Updater(string repo_folder, string versions_folder)
         {
             RepoFolder = repo_folder;
@@ -361,6 +353,7 @@ namespace Minecraft_Version_History
 
     public class BedrockUpdater : Updater<BedrockVersion>
     {
+        public static JObject VersionFacts;
         public BedrockUpdater(string repo_folder, string versions_folder) : base(repo_folder, versions_folder)
         {
 
@@ -376,8 +369,8 @@ namespace Minecraft_Version_History
 
         protected override BedrockVersion SpecialParent(BedrockVersion version, List<BedrockVersion> history)
         {
-            if (version.ReleaseName == "1.4")
-                return history.LastOrDefault(x => x.ReleaseName == "1.2");
+            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.ReleaseName, out var parent))
+                return history.LastOrDefault(x => x.ReleaseName == (string)parent);
             return base.SpecialParent(version, history);
         }
     }

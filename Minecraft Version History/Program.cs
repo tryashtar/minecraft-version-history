@@ -27,8 +27,9 @@ namespace Minecraft_Version_History
                 JavaVersion.NbtTranslationJar = (string)config["nbt_translation_jar"];
                 JavaVersion.ServerJarFolder = (string)config["server_jars"];
                 JavaVersion.DecompilerFile = (string)config["decompiler"];
-                JavaVersion.ReleasesMap = (JObject)version_facts["releases"];
-                JavaUpdater.VersionFacts = version_facts;
+                JavaVersion.ReleasesMap = (JObject)version_facts["java"]["releases"];
+                JavaUpdater.VersionFacts = (JObject)version_facts["java"];
+                BedrockUpdater.VersionFacts = (JObject)version_facts["bedrock"];
 
                 Console.WriteLine("Java:");
                 var java = new JavaUpdater((string)config["java_repo"], (string)config["java_versions"]);
