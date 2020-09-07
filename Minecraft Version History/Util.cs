@@ -13,19 +13,9 @@ namespace Minecraft_Version_History
 {
     public static class Util
     {
-        public static string RelativePath(string fromPath, string toPath)
+        public static string RelativePath(string fromDir, string toPath)
         {
-            if (string.IsNullOrEmpty(fromPath))
-            {
-                throw new ArgumentNullException("fromPath");
-            }
-
-            if (string.IsNullOrEmpty(toPath))
-            {
-                throw new ArgumentNullException("toPath");
-            }
-
-            Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromPath));
+            Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromDir));
             Uri toUri = new Uri(toPath);
 
             if (fromUri.Scheme != toUri.Scheme)
@@ -44,11 +34,21 @@ namespace Minecraft_Version_History
             return relativePath;
         }
 
+        public static string[] Split(string path)
+        {
+            return path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        public static void Copy(string from, string to)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(to));
+            File.Copy(from, to, true);
+        }
+
         private static string AppendDirectorySeparatorChar(string path)
         {
             // Append a slash only if the path is a directory and does not have a slash.
-            if (!Path.HasExtension(path) &&
-                !path.EndsWith(Path.DirectorySeparatorChar.ToString()))
+            if (!path.EndsWith(Path.DirectorySeparatorChar.ToString()) && !path.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
             {
                 return path + Path.DirectorySeparatorChar;
             }
@@ -90,7 +90,7 @@ namespace Minecraft_Version_History
             }
         }
 
-        public static string ToMinecraftJson(JObject value)
+        public static string ToMinecraftJson(JToken value)
         {
             StringBuilder sb = new StringBuilder(256);
             StringWriter sw = new StringWriter(sb, CultureInfo.InvariantCulture);
@@ -102,7 +102,7 @@ namespace Minecraft_Version_History
                 jsonWriter.IndentChar = ' ';
                 jsonWriter.Indentation = 2;
 
-                jsonSerializer.Serialize(jsonWriter, value, typeof(JObject));
+                jsonSerializer.Serialize(jsonWriter, value, value.GetType());
             }
 
             return sw.ToString();

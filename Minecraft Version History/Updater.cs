@@ -126,20 +126,25 @@ namespace Minecraft_Version_History
             }
             foreach (var version in idealhistory)
             {
-                if (UncommitedVersions.Contains(version))
-                {
-                    var parent = Parent(version, idealhistory);
-                    if (parent == null)
-                    {
-                        Console.WriteLine($"{version.VersionName} is the first version in the history!");
-                        InitialCommit(version);
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Parent of {version.VersionName} is {parent.VersionName}");
-                        InsertCommit(version, parent);
-                    }
-                }
+                CommitVersion(version, idealhistory);
+            }
+        }
+
+        private void CommitVersion(T version, List<T> history)
+        {
+            if (!UncommitedVersions.Contains(version))
+                return;
+            var parent = Parent(version, history);
+            if (parent == null)
+            {
+                Console.WriteLine($"{version.VersionName} is the first version in the history!");
+                InitialCommit(version);
+            }
+            else
+            {
+                Console.WriteLine($"Parent of {version.VersionName} is {parent.VersionName}");
+                CommitVersion(parent, history);
+                InsertCommit(version, parent);
             }
         }
 
@@ -211,10 +216,7 @@ namespace Minecraft_Version_History
                 string relative = Util.RelativePath(workspace, item);
                 string base_version = Path.Combine(base_folder, relative);
                 if (!File.Exists(base_version) || !Util.FilesAreEqual(new FileInfo(item), new FileInfo(base_version)))
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(base_version));
-                    File.Copy(item, base_version, true);
-                }
+                    Util.Copy(item, base_version);
                 File.Delete(item);
             }
         }
@@ -237,6 +239,7 @@ namespace Minecraft_Version_History
         // for committing a version after an existing one
         private void InsertCommit(T version, T parent)
         {
+            Console.WriteLine($"Starting commit of {version}");
             // find commit hash for existing version
             string hash = CommittedVersionDict[parent];
             // create branch
@@ -247,18 +250,22 @@ namespace Minecraft_Version_History
             tophash = tophash.Substring(0, 40);
             if (hash == tophash)
             {
+                Console.WriteLine($"On top, ready to go");
                 CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
                 DoCommit(version);
             }
             else
             {
+                Console.WriteLine($"Needs to insert into history for this one");
                 // make a branch that starts there and prepare to commit to it
                 CommandRunner.RunCommand(RepoFolder, $"git checkout -b temp {hash}");
                 CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
                 DoCommit(version);
                 // insert
+                Console.WriteLine($"Commit done, beginning rebase");
                 CommandRunner.RunCommand(RepoFolder, $"git rebase --strategy-option theirs temp \"{branchname}\"");
                 CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
+                Console.WriteLine($"Rebase complete");
             }
         }
 
@@ -647,6 +654,7 @@ namespace Minecraft_Version_History
                 var appx = GetMainAppx(zip);
                 appx.ExtractToFile(appxpath);
             }
+
             using (ZipArchive zip = ZipFile.OpenRead(appxpath))
             {
                 foreach (var entry in zip.Entries)
@@ -658,7 +666,219 @@ namespace Minecraft_Version_History
                     }
                 }
             }
+            var merged = Path.Combine(output, "latest_packs");
+            var latest_behavior = Path.Combine(merged, "behavior_pack");
+            var latest_resource = Path.Combine(merged, "resource_pack");
+            Directory.CreateDirectory(merged);
+            Directory.CreateDirectory(latest_behavior);
+            Directory.CreateDirectory(latest_resource);
+            var bpacks = GetVanillaPacks(Path.Combine(output, "data", "behavior_packs"));
+            var rpacks = GetVanillaPacks(Path.Combine(output, "data", "resource_packs"));
+            OverwriteAndMerge(bpacks, latest_behavior);
+            OverwriteAndMerge(rpacks, latest_resource);
             File.Delete(appxpath);
+        }
+
+        private void OverwriteAndMerge(IEnumerable<string> sourcepacks, string destination_folder)
+        {
+            Console.WriteLine("Merging vanilla packs");
+            foreach (var pack in sourcepacks)
+            {
+                Console.WriteLine($"Applying pack {Path.GetFileName(pack)}");
+                foreach (var file in Directory.GetFiles(pack, "*.*", SearchOption.AllDirectories))
+                {
+                    var relative = Util.RelativePath(pack, file);
+                    var dest = Path.Combine(destination_folder, relative);
+                    var pieces = Util.Split(relative);
+                    var first = pieces.First();
+                    var last = pieces.Last();
+                    var extension = Path.GetExtension(last);
+                    bool handled = false;
+
+                    if (pieces.Length == 1) // stuff in root
+                    {
+                        if (first == "blocks.json")
+                        {
+                            MergeJsons(dest, file, ObjectStraightFrom, x => x);
+                            handled = true;
+                        }
+                        else if (first == "biomes_client.json")
+                        {
+                            MergeJsons(dest, file, x => (JObject)PathTo(ObjectStraightFrom(x), "biomes"), x =>
+                             new JObject() { { "biomes", x } });
+                            handled = true;
+                        }
+                        else if (first == "items_offsets_client.json")
+                        {
+                            MergeJsons(dest, file, x => (JObject)PathTo(ObjectStraightFrom(x), "render_offsets"), x =>
+                             new JObject() { { "render_offsets", x } });
+                            handled = true;
+                        }
+                        else if (first == "sounds.json" && File.Exists(dest))
+                        {
+                            var existing = JObject.Parse(File.ReadAllText(dest));
+                            var incoming = JObject.Parse(File.ReadAllText(file));
+                            var both = new Dictionary<JObject, List<JObject>> { { existing, new List<JObject>() }, { incoming, new List<JObject>() } };
+                            foreach (var item in both.Keys)
+                            {
+                                var stuff = both[item];
+                                stuff.Add((JObject)PathTo(item, "individual_event_sounds", "events") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "entity_sounds", "defaults") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "entity_sounds", "entities") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "block_sounds") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "interactive_sounds", "block_sounds") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "interactive_sounds", "entity_sounds", "defaults") ?? new JObject());
+                                stuff.Add((JObject)PathTo(item, "interactive_sounds", "entity_sounds", "entities") ?? new JObject());
+                            }
+                            foreach (var item in both[existing].Zip(both[incoming], (x, y) => Tuple.Create(x, y)))
+                            {
+                                MergeJsons(item.Item1, item.Item2);
+                            }
+                            handled = true;
+                        }
+                    }
+                    else
+                    {
+                        if (first == "sounds")
+                        {
+                            if (last == "sound_definitions.json")
+                            {
+                                MergeJsons(dest, file, SoundDefinitionsFrom, x =>
+                                 new JObject() { { "format_version", "1.14.0" }, { "sound_definitions", x } });
+                                handled = true;
+                            }
+                            else if (last == "music_definitions.json")
+                            {
+                                MergeJsons(dest, file, ObjectStraightFrom, x => x);
+                                handled = true;
+                            }
+                        }
+                        else if (first == "textures")
+                        {
+                            if (last == "flipbook_textures.json")
+                            {
+                                MergeJsons(dest, file, ArrayStraightFrom, x => x);
+                                handled = true;
+                            }
+                            else if (last == "item_texture.json")
+                            {
+                                MergeJsons(dest, file, x => (JObject)PathTo(ObjectStraightFrom(x), "texture_data"), x =>
+                                    new JObject() { { "resource_pack_name", "vanilla" }, { "texture_name", "atlas.items" }, { "texture_data", x } });
+                                handled = true;
+                            }
+                            else if (last == "terrain_texture.json")
+                            {
+                                MergeJsons(dest, file, x => (JObject)PathTo(ObjectStraightFrom(x), "texture_data"), x =>
+                                 new JObject() { { "resource_pack_name", "vanilla" }, { "texture_name", "atlas.terrain" }, { "padding", 8 }, { "num_mip_levels", 4 }, { "texture_data", x } });
+                                handled = true;
+                            }
+                        }
+                    }
+                    if (!handled)
+                        Util.Copy(file, dest);
+                }
+            }
+        }
+
+        private JToken PathTo(JObject top, params string[] subs)
+        {
+            foreach (var item in subs.Take(subs.Length - 1))
+            {
+                if (top.TryGetValue(item, out var sub) && sub is JObject obj)
+                    top = obj;
+                else
+                    return null;
+            }
+            if (top.TryGetValue(subs.Last(), out var final))
+                return final;
+            else
+                return null;
+        }
+
+        private JObject MergeJsons(JObject existing, JObject incoming)
+        {
+            foreach (var item in incoming)
+            {
+                existing[item.Key] = item.Value;
+            }
+            return existing;
+        }
+
+        private void MergeJsons(string existing_path, string incoming_path, Func<string, JObject> loader, Func<JObject, JObject> transformer)
+        {
+            if (!File.Exists(existing_path))
+                Util.Copy(incoming_path, existing_path);
+            else
+            {
+                var existing = loader(existing_path);
+                var incoming = loader(incoming_path);
+                existing = MergeJsons(existing, incoming);
+                var final = transformer(existing);
+                File.WriteAllText(existing_path, Util.ToMinecraftJson(final));
+            }
+        }
+
+        private void MergeJsons(string existing_path, string incoming_path, Func<string, JArray> loader, Func<JArray, JArray> transformer)
+        {
+            if (!File.Exists(existing_path))
+                Util.Copy(incoming_path, existing_path);
+            else
+            {
+                var existing = loader(existing_path);
+                var incoming = loader(incoming_path);
+                foreach (var item in incoming)
+                {
+                    existing.Add(item);
+                }
+                var final = transformer(existing);
+                File.WriteAllText(existing_path, Util.ToMinecraftJson(final));
+            }
+        }
+
+        private JObject SoundDefinitionsFrom(string filepath)
+        {
+            var jobj = ObjectStraightFrom(filepath);
+            JObject definitions;
+            if (jobj.TryGetValue("sound_definitions", out var def))
+                definitions = (JObject)def;
+            else
+                definitions = jobj;
+            return definitions;
+        }
+
+        private JObject ObjectStraightFrom(string filepath)
+        {
+            var jobj = JObject.Parse(File.ReadAllText(filepath), new JsonLoadSettings() { CommentHandling = CommentHandling.Ignore });
+            return jobj;
+        }
+
+        private JArray ArrayStraightFrom(string filepath)
+        {
+            var jarr = JArray.Parse(File.ReadAllText(filepath), new JsonLoadSettings() { CommentHandling = CommentHandling.Ignore });
+            return jarr;
+        }
+
+        private IEnumerable<string> GetVanillaPacks(string packsfolder)
+        {
+            var vanilla = Path.Combine(packsfolder, "vanilla");
+            if (Directory.Exists(vanilla))
+                yield return vanilla;
+            var rest = new List<Match>();
+            foreach (var directory in Directory.EnumerateDirectories(packsfolder))
+            {
+                var name = Path.GetFileName(directory);
+                var match = Regex.Match(name, @"^vanilla_(\d+)\.(\d+)(\.(\d+))?$");
+                if (match.Success)
+                    rest.Add(match);
+            }
+            var sorted = rest.OrderBy(x => int.Parse(x.Groups[1].Value))
+                .ThenBy(x => int.Parse(x.Groups[2].Value))
+                .ThenBy(x => x.Groups[4].Success ? int.Parse(x.Groups[4].Value) : 0)
+                .Select(x => x.Value);
+            foreach (var item in sorted)
+            {
+                yield return Path.Combine(packsfolder, item);
+            }
         }
 
         private ZipArchiveEntry GetMainAppx(ZipArchive zip)
@@ -685,13 +905,11 @@ namespace Minecraft_Version_History
                 return 1;
             if (x.ReleaseTime < y.ReleaseTime)
                 return -1;
-            var x_pieces = x.VersionName.Split('.').Where(o => int.TryParse(o, out _)).ToList();
-            var y_pieces = y.VersionName.Split('.').Where(o => int.TryParse(o, out _)).ToList();
+            var x_pieces = x.VersionName.Split('.').Where(o => int.TryParse(o, out _)).Select(int.Parse).ToList();
+            var y_pieces = y.VersionName.Split('.').Where(o => int.TryParse(o, out _)).Select(int.Parse).ToList();
             for (int i = 0; i < Math.Min(x_pieces.Count, y_pieces.Count); i++)
             {
-                int x_num = int.Parse(x_pieces[i]);
-                int y_num = int.Parse(y_pieces[i]);
-                int compare = x_num.CompareTo(y_num);
+                int compare = x_pieces[i].CompareTo(y_pieces[i]);
                 if (compare != 0)
                     return compare;
             }
