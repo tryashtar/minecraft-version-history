@@ -93,7 +93,8 @@ namespace Minecraft_Version_History
                 return special;
             T parent;
             int my_index = history.IndexOf(version);
-            parent = history.LastOrDefault(x => version != x && version.ReleaseName == x.ReleaseName && version.ReleaseTime >= x.ReleaseTime && history.IndexOf(x) < my_index);
+            var comparer = GetComparer();
+            parent = history.LastOrDefault(x => version != x && x.ReleaseName == version.ReleaseName && history.IndexOf(x) < my_index && comparer.Compare(x, version) > 0);
             if (parent == null && my_index > 0)
             {
                 int search = my_index;
@@ -110,7 +111,7 @@ namespace Minecraft_Version_History
 
         public void CommitChanges()
         {
-            var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x, VersionComparer.Instance).ToList();
+            var idealhistory = CommittedVersions.Concat(UncommitedVersions).OrderBy(x => x, GetComparer()).ToList();
             Console.WriteLine("Ideal history:");
             foreach (var version in idealhistory)
             {
@@ -121,6 +122,8 @@ namespace Minecraft_Version_History
                 CommitVersion(version, idealhistory);
             }
         }
+
+        protected abstract IComparer<T> GetComparer();
 
         private void CommitVersion(T version, List<T> history)
         {
@@ -135,7 +138,11 @@ namespace Minecraft_Version_History
             else
             {
                 Console.WriteLine($"Parent of {version.VersionName} is {parent.VersionName}");
-                CommitVersion(parent, history);
+                if (UncommitedVersions.Contains(parent))
+                {
+                    Console.WriteLine("Need to commit parent first");
+                    CommitVersion(parent, history);
+                }
                 InsertCommit(version, parent);
             }
         }
@@ -182,8 +189,8 @@ namespace Minecraft_Version_History
             // cleanup
             Console.WriteLine($"Cleaning up...");
             UncommittedVersionList.Remove(version);
-            string hash = CommandRunner.RunCommand(RepoFolder, $"git log --all --grep=\"^{Regex.Escape(version.VersionName)}$\"", output: true).Output;
-            hash = hash.Substring("commit ".Length, 40);
+            string hash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse HEAD", output: true).Output;
+            hash = hash.Substring(0, 40);
             CommittedVersionDict.Add(version, hash);
             CommandRunner.RunCommand(RepoFolder, $"git gc --prune=now --aggressive");
             CommandRunner.RunCommand(RepoFolder, $"git repack");
@@ -256,6 +263,7 @@ namespace Minecraft_Version_History
                 // insert
                 Console.WriteLine($"Commit done, beginning rebase");
                 CommandRunner.RunCommand(RepoFolder, $"git rebase --strategy-option theirs temp \"{branchname}\"");
+                CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
                 CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
                 Console.WriteLine($"Rebase complete");
             }
@@ -349,6 +357,11 @@ namespace Minecraft_Version_History
             }
             return base.NoParentsAllowed(version);
         }
+
+        protected override IComparer<JavaVersion> GetComparer()
+        {
+            return new VersionComparer(true);
+        }
     }
 
     public class BedrockUpdater : Updater<BedrockVersion>
@@ -367,10 +380,15 @@ namespace Minecraft_Version_History
             }
         }
 
+        protected override IComparer<BedrockVersion> GetComparer()
+        {
+            return new VersionComparer(false);
+        }
+
         protected override BedrockVersion SpecialParent(BedrockVersion version, List<BedrockVersion> history)
         {
-            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.ReleaseName, out var parent))
-                return history.LastOrDefault(x => x.ReleaseName == (string)parent);
+            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.VersionName, out var parent))
+                return history.LastOrDefault(x => x.VersionName == (string)parent);
             return base.SpecialParent(version, history);
         }
     }
@@ -626,6 +644,7 @@ namespace Minecraft_Version_History
 
     public class BedrockVersion : Version
     {
+        private static HashSet<string> UsedNames = new HashSet<string>();
         private readonly string ZipPath;
         public BedrockVersion(string zippath)
         {
@@ -633,7 +652,14 @@ namespace Minecraft_Version_History
             {
                 ZipPath = zippath;
                 var mainappx = GetMainAppx(zip);
-                VersionName = Path.GetFileName(mainappx.FullName).Split('_')[1];
+                var base_name = Path.GetFileName(mainappx.FullName).Split('_')[1];
+                var name = base_name;
+                for (int i = 2; UsedNames.Contains(name); i++)
+                {
+                    name = $"{base_name} (v{i})";
+                }
+                VersionName = name;
+                UsedNames.Add(name);
                 ReleaseName = VersionName.Substring(0, VersionName.IndexOf('.', VersionName.IndexOf('.') + 1));
                 ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
             }
@@ -687,8 +713,9 @@ namespace Minecraft_Version_History
                     var last = pieces.Last();
                     var extension = Path.GetExtension(last);
                     bool handled = false;
-
-                    if (pieces.Length == 1) // stuff in root
+                    if (last == "contents.json" || last == "textures_list.json")
+                        handled = true; //skip
+                    else if (pieces.Length == 1) // stuff in root
                     {
                         if (first == "blocks.json")
                         {
@@ -889,15 +916,17 @@ namespace Minecraft_Version_History
 
     public class VersionComparer : IComparer<Version>
     {
-        public static VersionComparer Instance = new VersionComparer();
-        private VersionComparer() { }
+        readonly bool PrioritizeDate;
+        public VersionComparer(bool prioritize_date)
+        {
+            PrioritizeDate = prioritize_date;
+        }
 
         public int Compare(Version x, Version y)
         {
-            if (x.ReleaseTime > y.ReleaseTime)
-                return 1;
-            if (x.ReleaseTime < y.ReleaseTime)
-                return -1;
+            int datecheck = DateCheck(x, y);
+            if (datecheck != 0 && PrioritizeDate)
+                return datecheck;
             var x_pieces = x.VersionName.Split('.').Where(o => int.TryParse(o, out _)).Select(int.Parse).ToList();
             var y_pieces = y.VersionName.Split('.').Where(o => int.TryParse(o, out _)).Select(int.Parse).ToList();
             for (int i = 0; i < Math.Min(x_pieces.Count, y_pieces.Count); i++)
@@ -906,6 +935,15 @@ namespace Minecraft_Version_History
                 if (compare != 0)
                     return compare;
             }
+            return datecheck;
+        }
+
+        private int DateCheck(Version x, Version y)
+        {
+            if (x.ReleaseTime > y.ReleaseTime)
+                return 1;
+            if (x.ReleaseTime < y.ReleaseTime)
+                return -1;
             return 0;
         }
     }
