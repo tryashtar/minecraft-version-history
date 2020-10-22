@@ -413,15 +413,17 @@ namespace Minecraft_Version_History
     {
         private readonly string JarPath;
         private readonly string ServerJarURL;
+        private readonly string MappingsURL;
         public static string JavaPath;
         public static string NbtTranslationJar;
         public static string ServerJarFolder;
-        public static string DecompilerFile;
+        public static string FernflowerJar;
+        public static string CfrJar;
+        public static string SpecialSourceJar;
         public static JObject ReleasesMap;
         private static readonly Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
         private static readonly DateTime AssetGenerators = new DateTime(2020, 3, 1);
-        private static readonly DateTime Mappings = new DateTime(2019, 9, 4);
         private static readonly string[] ModelOrder = new string[] { "model", "x", "y", "z", "uvlock", "weight" };
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
         public JavaVersion(string folder)
@@ -433,6 +435,7 @@ namespace Minecraft_Version_History
             ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
             ReleaseName = GetMadeForRelease(VersionName);
             ServerJarURL = (string)json["downloads"]?["server"]?["url"];
+            MappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
         }
 
         public override void ExtractData(string output)
@@ -446,48 +449,14 @@ namespace Minecraft_Version_History
 
                 var serverjar = Path.Combine(ServerJarFolder, VersionName + ".jar");
                 if (!File.Exists(serverjar))
-                {
-                    Console.WriteLine("Downloading server jar...");
-                    using (var client = new WebClient())
-                    {
-                        client.DownloadFile(ServerJarURL, serverjar);
-                    }
-                    Console.WriteLine("Download complete!");
-                }
+                    DownloadServerJar(serverjar);
                 var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersion.JavaPath}\" -cp \"{serverjar}\" net.minecraft.data.Main --reports");
                 var outputfolder = Path.Combine(output, "reports");
                 Directory.CreateDirectory(outputfolder);
 
                 Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
             }
-            bool remap = ReleaseTime > Mappings && !VersionName.Contains("1.14_combat");
-            Console.WriteLine("Decompiling source...");
-            if (remap)
-                Console.WriteLine("(with mappings)");
-            string decompiler_folder = Path.GetDirectoryName(DecompilerFile);
-            string python_name = Path.GetFileName(DecompilerFile);
-            string python_config = "{\\\"version\\\":\\\"" + VersionName + "\\\",\\\"remap\\\":" + remap.ToString().ToLower() + "}";
-            string command = $"python {python_name} {python_config}";
-            CommandRunner.RunCommand(decompiler_folder, command);
-            if (remap)
-                File.Copy(Path.Combine(decompiler_folder, "mappings", VersionName, "mappings.txt"), Path.Combine(output, "mappings.txt"));
-            Console.WriteLine("Copying source...");
-
-            // cfr
-            Microsoft.VisualBasic.FileIO.FileSystem.MoveDirectory(Path.Combine(decompiler_folder, "src", VersionName), Path.Combine(output, "source"));
-
-            // fernflower (disabled for now)
-            // using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(decompiler_path, "src", VersionName, VersionName + "-temp.jar")))
-            // {
-            //     foreach (var entry in zip.Entries)
-            //     {
-            //         if (entry.FullName.StartsWith("com") || entry.FullName.StartsWith("net"))
-            //         {
-            //             Directory.CreateDirectory(Path.Combine(output, "source", Path.GetDirectoryName(entry.FullName)));
-            //             entry.ExtractToFile(Path.Combine(output, "source", entry.FullName));
-            //         }
-            //     }
-            // }
+            DecompileMinecraft(Decompiler.Cfr, Path.Combine(output, "source"));
 
             Console.WriteLine("Extracting jar...");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
@@ -569,6 +538,171 @@ namespace Minecraft_Version_History
                     }
                 }
             }
+        }
+
+        private enum Decompiler
+        {
+            Fernflower,
+            Cfr
+        }
+        private void DecompileMinecraft(Decompiler decompiler, string destination)
+        {
+            string jar_path = JarPath;
+            Action cleanup = null;
+            if (MappingsURL != null)
+            {
+                string mappings_path = Path.Combine(destination, "mappings.txt");
+                string tsrg_path = Path.Combine(destination, "tsrg.tsrg");
+                string mapped_jar_path = Path.Combine(destination, "mapped.jar");
+                DownloadMappings(mappings_path);
+                ConvertMappings(mappings_path, tsrg_path);
+                RemapJar(tsrg_path, mapped_jar_path);
+                jar_path = mapped_jar_path;
+                cleanup = () =>
+                {
+                    File.Delete(tsrg_path);
+                    File.Delete(mapped_jar_path);
+                };
+            }
+
+            if (decompiler == Decompiler.Cfr)
+            {
+                Console.WriteLine($"Decompiling with CFR...");
+                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx2G -Xms2G -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
+                    $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
+            }
+            else if (decompiler == Decompiler.Fernflower)
+            {
+                Console.WriteLine($"Decompiling with fernflower...");
+                string output_jar = Path.Combine(destination, "decompiled.jar");
+                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx2G -Xms2G -jar \"{JavaVersion.FernflowerJar}\" " +
+                    $"-hes=0 -hdc=0 -dgs=1 -ren=1 -log=WARN \"{jar_path}\" \"{output_jar}\"");
+                using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_jar)))
+                {
+                    foreach (var entry in zip.Entries)
+                    {
+                        if (entry.FullName.StartsWith("com") || entry.FullName.StartsWith("net"))
+                        {
+                            Directory.CreateDirectory(Path.Combine(destination, Path.GetDirectoryName(entry.FullName)));
+                            entry.ExtractToFile(Path.Combine(destination, entry.FullName));
+                        }
+                    }
+                }
+                cleanup += () => File.Delete(output_jar);
+            }
+            else
+                throw new ArgumentException(nameof(decompiler));
+
+            cleanup?.Invoke();
+        }
+
+        private void DownloadMappings(string path)
+        {
+            Console.WriteLine("Downloading mappings...");
+            using (var client = new WebClient())
+            {
+                client.DownloadFile(MappingsURL, path);
+            }
+            Console.WriteLine("Download complete!");
+        }
+
+        private void DownloadServerJar(string path)
+        {
+            Console.WriteLine("Downloading server jar...");
+            using (var client = new WebClient())
+            {
+                client.DownloadFile(ServerJarURL, path);
+            }
+            Console.WriteLine("Download complete!");
+        }
+
+        private static readonly Dictionary<string, string> PrimitiveMappings = new Dictionary<string, string>
+        {
+            { "int", "I" },
+            { "double", "D" },
+            { "boolean", "Z" },
+            { "float", "F" },
+            { "long", "J" },
+            { "byte", "B" },
+            { "short", "S" },
+            { "char", "C" },
+            { "void", "V" }
+        };
+        private static string RemapIdentifier(string identifier)
+        {
+            if (PrimitiveMappings.TryGetValue(identifier, out string result))
+                return result;
+            return "L" + String.Join("/", identifier.Split('.')) + ";";
+        }
+        private string ConvertMapping(string mapping, Dictionary<string, string> obfuscation_map)
+        {
+            int array_length_type = Regex.Matches(mapping, Regex.Escape("[]")).Count;
+            mapping = mapping.Replace("[]", "");
+            mapping = RemapIdentifier(mapping);
+            if (obfuscation_map.TryGetValue(mapping, out var mapped))
+                mapping = "L" + mapped + ";";
+            mapping = mapping.Replace('.', '/');
+            mapping = new string('[', array_length_type) + mapping;
+            return mapping;
+        }
+        private void ConvertMappings(string mappings_path, string output_path)
+        {
+            Console.WriteLine("Converting mappings to TSRG...");
+            var lines = File.ReadAllLines(mappings_path).Where(x => !x.StartsWith("#"));
+            var output = new List<string>();
+            var class_maps = new Dictionary<string, string>();
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("    "))
+                    continue;
+                string[] names = line.Split(new[] { " -> " }, StringSplitOptions.None);
+                string obfuscated_name = names[1].Split(':')[0];
+                string deobfuscated_name = names[0];
+                class_maps[RemapIdentifier(deobfuscated_name)] = obfuscated_name;
+            }
+            foreach (var line in lines)
+            {
+                string[] names = line.Split(new[] { " -> " }, StringSplitOptions.None);
+                if (line.StartsWith("    "))
+                {
+                    string obfuscated_name = names[1].TrimEnd();
+                    string deobfuscated_name = names[0].TrimStart();
+                    string[] type_name = deobfuscated_name.Split(' ');
+                    string method_name = type_name[1];
+                    string method_type = type_name[0].Split(':').Last();
+                    if (method_name.Contains("(") && method_name.Contains(")"))
+                    {
+                        string variables = method_name.Split('(').Last().Split(')')[0];
+                        string function_name = method_name.Split('(')[0];
+                        method_type = ConvertMapping(method_type, class_maps);
+                        if (variables != "")
+                        {
+                            string[] variable_list = variables.Split(',');
+                            variable_list = variable_list.Select(x => ConvertMapping(x, class_maps)).ToArray();
+                            variables = String.Join("", variable_list);
+                        }
+                        output.Add($"\t{obfuscated_name} ({variables}){method_type} {function_name}");
+                    }
+                    else
+                        output.Add($"\t{obfuscated_name} {method_name}");
+                }
+                else
+                {
+                    string obfuscated_name = names[1].Split(':')[0];
+                    string deobfuscated_name = names[0];
+                    obfuscated_name = RemapIdentifier(obfuscated_name);
+                    deobfuscated_name = RemapIdentifier(deobfuscated_name);
+                    output.Add($"{obfuscated_name.Substring(1, obfuscated_name.Length - 2)} {deobfuscated_name.Substring(1, deobfuscated_name.Length - 2)}");
+                }
+            }
+            File.WriteAllLines(output_path, output);
+        }
+
+        private void RemapJar(string tsrg_path, string output_path)
+        {
+            Console.WriteLine("Remapping jar...");
+            CommandRunner.RunCommand(Path.GetDirectoryName(output_path), $"\"{JavaVersion.JavaPath}\" -jar \"{JavaVersion.SpecialSourceJar}\" " +
+                $"--in-jar \"{JarPath}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
         }
 
         // facts of versions

@@ -25,8 +25,10 @@ namespace Minecraft_Version_History
                 // java 9+ crashes when getting data from some versions (https://bugs.mojang.com/browse/MC-132888)
                 JavaVersion.JavaPath = (string)config["java_install"];
                 JavaVersion.NbtTranslationJar = (string)config["nbt_translation_jar"];
+                JavaVersion.FernflowerJar = (string)config["fernflower_jar"];
+                JavaVersion.CfrJar = (string)config["cfr_jar"];
+                JavaVersion.SpecialSourceJar = (string)config["special_source_jar"];
                 JavaVersion.ServerJarFolder = (string)config["server_jars"];
-                JavaVersion.DecompilerFile = (string)config["decompiler"];
                 JavaVersion.ReleasesMap = (JObject)version_facts["java"]["releases"];
                 JavaUpdater.VersionFacts = (JObject)version_facts["java"];
                 BedrockUpdater.VersionFacts = (JObject)version_facts["bedrock"];
