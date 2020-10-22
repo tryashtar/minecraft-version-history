@@ -556,11 +556,12 @@ namespace Minecraft_Version_History
         }
         private void DecompileMinecraft(DecompilerChoice decompiler, string destination)
         {
+            Directory.CreateDirectory(destination);
             string jar_path = JarPath;
             Action cleanup = null;
             if (MappingsURL != null)
             {
-                string mappings_path = Path.Combine(destination, "mappings.txt");
+                string mappings_path = Path.Combine(Path.GetDirectoryName(destination), "mappings.txt");
                 string tsrg_path = Path.Combine(destination, "tsrg.tsrg");
                 string mapped_jar_path = Path.Combine(destination, "mapped.jar");
                 DownloadMappings(mappings_path);
@@ -577,16 +578,17 @@ namespace Minecraft_Version_History
             if (decompiler == DecompilerChoice.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
-                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx2G -Xms2G -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
+                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
             }
             else if (decompiler == DecompilerChoice.Fernflower)
             {
                 Console.WriteLine($"Decompiling with fernflower...");
-                string output_jar = Path.Combine(destination, "decompiled.jar");
-                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx2G -Xms2G -jar \"{JavaVersion.FernflowerJar}\" " +
-                    $"-hes=0 -hdc=0 -dgs=1 -ren=1 -log=WARN \"{jar_path}\" \"{output_jar}\"");
-                using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_jar)))
+                string output_dir = Path.Combine(destination, "decompiled");
+                Directory.CreateDirectory(output_dir);
+                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersion.FernflowerJar}\" " +
+                    $"-hes=0 -hdc=0 -dgs=1 -log=WARN \"{jar_path}\" \"{output_dir}\""); ;
+                using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
                 {
                     foreach (var entry in zip.Entries)
                     {
@@ -597,7 +599,7 @@ namespace Minecraft_Version_History
                         }
                     }
                 }
-                cleanup += () => File.Delete(output_jar);
+                cleanup += () => Directory.Delete(output_dir, true);
             }
             else
                 throw new ArgumentException(nameof(decompiler));
@@ -608,6 +610,7 @@ namespace Minecraft_Version_History
         private void DownloadMappings(string path)
         {
             Console.WriteLine("Downloading mappings...");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             using (var client = new WebClient())
             {
                 client.DownloadFile(MappingsURL, path);
@@ -618,6 +621,7 @@ namespace Minecraft_Version_History
         private void DownloadServerJar(string path)
         {
             Console.WriteLine("Downloading server jar...");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             using (var client = new WebClient())
             {
                 client.DownloadFile(ServerJarURL, path);
