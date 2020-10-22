@@ -30,6 +30,7 @@ namespace Minecraft_Version_History
                 JavaVersion.SpecialSourceJar = (string)config["special_source_jar"];
                 JavaVersion.ServerJarFolder = (string)config["server_jars"];
                 JavaVersion.ReleasesMap = (JObject)version_facts["java"]["releases"];
+                JavaVersion.Decompiler = JavaVersion.ParseDecompiler((string)config["decompiler"]);
                 JavaUpdater.VersionFacts = (JObject)version_facts["java"];
                 BedrockUpdater.VersionFacts = (JObject)version_facts["bedrock"];
 

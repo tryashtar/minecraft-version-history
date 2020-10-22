@@ -420,6 +420,7 @@ namespace Minecraft_Version_History
         public static string FernflowerJar;
         public static string CfrJar;
         public static string SpecialSourceJar;
+        public static DecompilerChoice Decompiler;
         public static JObject ReleasesMap;
         private static readonly Regex SnapshotRegex = new Regex(@"(\d\d)w(\d\d)[a-z~]");
         private static readonly DateTime DataGenerators = new DateTime(2018, 1, 1);
@@ -456,7 +457,7 @@ namespace Minecraft_Version_History
 
                 Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
             }
-            DecompileMinecraft(Decompiler.Cfr, Path.Combine(output, "source"));
+            DecompileMinecraft(Decompiler, Path.Combine(output, "source"));
 
             Console.WriteLine("Extracting jar...");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
@@ -540,12 +541,20 @@ namespace Minecraft_Version_History
             }
         }
 
-        private enum Decompiler
+        public enum DecompilerChoice
         {
             Fernflower,
             Cfr
         }
-        private void DecompileMinecraft(Decompiler decompiler, string destination)
+        public static DecompilerChoice ParseDecompiler(string input)
+        {
+            if (String.Equals(input, "fernflower", StringComparison.OrdinalIgnoreCase))
+                return DecompilerChoice.Fernflower;
+            if (String.Equals(input, "cfr", StringComparison.OrdinalIgnoreCase))
+                return DecompilerChoice.Cfr;
+            throw new ArgumentException(input);
+        }
+        private void DecompileMinecraft(DecompilerChoice decompiler, string destination)
         {
             string jar_path = JarPath;
             Action cleanup = null;
@@ -565,13 +574,13 @@ namespace Minecraft_Version_History
                 };
             }
 
-            if (decompiler == Decompiler.Cfr)
+            if (decompiler == DecompilerChoice.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
                 CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx2G -Xms2G -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
             }
-            else if (decompiler == Decompiler.Fernflower)
+            else if (decompiler == DecompilerChoice.Fernflower)
             {
                 Console.WriteLine($"Decompiling with fernflower...");
                 string output_jar = Path.Combine(destination, "decompiled.jar");
