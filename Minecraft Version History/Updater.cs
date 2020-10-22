@@ -754,6 +754,7 @@ namespace Minecraft_Version_History
                             {
                                 MergeJsons(item.Item1, item.Item2);
                             }
+                            File.WriteAllText(dest, Util.ToMinecraftJson(existing));
                             handled = true;
                         }
                     }
