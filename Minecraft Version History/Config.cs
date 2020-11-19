@@ -75,7 +75,7 @@ namespace Minecraft_Version_History
         {
             foreach (var item in SkipVersions)
             {
-                if (item.IsMatch(version.VersionName))
+                if (item.IsMatch(version.Name))
                     return true;
             }
             return false;
@@ -83,7 +83,7 @@ namespace Minecraft_Version_History
 
         public string GetSpecialParent(Version version)
         {
-            if (ParentsMap.TryGetValue(version.VersionName, out var result))
+            if (ParentsMap.TryGetValue(version.Name, out var result))
                 return result;
             return null;
         }

@@ -24,7 +24,7 @@ namespace Minecraft_Version_History
                 var java_config = new JavaConfig(Util.PathToObject(config_file, "java"));
                 var bedrock_config = new BedrockConfig(Util.PathToObject(config_file, "bedrock"));
 
-                var java = new JavaUpdater2(java_config);
+                var java = new JavaUpdater(java_config);
                 java.Perform();
 
                 var bedrock = new BedrockUpdater2(bedrock_config);

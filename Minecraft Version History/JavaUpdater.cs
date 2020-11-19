@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class JavaUpdater2 : Updater2
+    public class JavaUpdater : Updater
     {
         public readonly JavaConfig Config;
         public List<JavaVersion> AllVersions { get; private set; }
-        public JavaUpdater2(JavaConfig config)
+        public JavaUpdater(JavaConfig config)
         {
             Config = config;
             ScanVersions();
@@ -35,7 +35,7 @@ namespace Minecraft_Version_History
         {
             string name = Config.VersionFacts.GetSpecialParent(child);
             if (name != null)
-                return AllVersions.First(x => x.VersionName == name);
+                return AllVersions.First(x => x.Name == name);
 
         }
 
