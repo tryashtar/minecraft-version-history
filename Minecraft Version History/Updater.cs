@@ -580,6 +580,13 @@ namespace Minecraft_Version_History
                 Console.WriteLine($"Decompiling with CFR...");
                 CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
+                string summary_file = Path.Combine(destination, "summary.txt");
+                if (File.Exists(summary_file))
+                {
+                    Console.WriteLine("Summary:");
+                    Console.WriteLine(File.ReadAllText(summary_file));
+                    cleanup += () => File.Delete(summary_file);
+                }
             }
             else if (decompiler == DecompilerChoice.Fernflower)
             {
