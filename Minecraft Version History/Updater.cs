@@ -55,6 +55,11 @@ namespace Minecraft_Version_History
         {
             RepoFolder = repo_folder;
             VersionsFolder = versions_folder;
+            CreateHashCache();
+        }
+
+        private void CreateHashCache()
+        {
             CommittedVersionDict = new Dictionary<T, string>();
             UncommittedVersionList = new List<T>();
             Console.WriteLine("Scanning versions...");
@@ -266,6 +271,8 @@ namespace Minecraft_Version_History
                 CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
                 CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
                 Console.WriteLine($"Rebase complete");
+                // need to rescan since commit hashes change after a rebase
+                CreateHashCache();
             }
         }
 

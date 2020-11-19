@@ -56,6 +56,21 @@ namespace Minecraft_Version_History
             return path;
         }
 
+        private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T: JToken
+        {
+            JToken start = root;
+            foreach (var item in path)
+            {
+                start = start[item];
+                if (start == null)
+                    return create_default();
+            }
+            return start as T ?? create_default();
+        }
+
+        public static JObject PathToObject(JObject root, params string[] path) => PathToThing(root, () => new JObject(), path);
+        public static JArray PathToArray(JObject root, params string[] path) => PathToThing(root, () => new JArray(), path);
+
         public static void RemoveEmptyFolders(string root)
         {
             foreach (var directory in Directory.GetDirectories(root))

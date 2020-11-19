@@ -18,8 +18,18 @@ namespace Minecraft_Version_History
 #if !DEBUG
             start:
             try
-            {
 #endif
+            {
+                var config_file = JObject.Parse(File.ReadAllText(@"..\config.json"));
+                var java_config = new JavaConfig(Util.PathToObject(config_file, "java"));
+                var bedrock_config = new BedrockConfig(Util.PathToObject(config_file, "bedrock"));
+
+                var java = new JavaUpdater2(java_config);
+                java.Perform();
+
+                var bedrock = new BedrockUpdater2(bedrock_config);
+                bedrock.Perform();
+
                 var version_facts = JObject.Parse(File.ReadAllText(@"..\version_facts.json"));
                 var config = JObject.Parse(File.ReadAllText(@"..\config.json"));
                 // java 9+ crashes when getting data from some versions (https://bugs.mojang.com/browse/MC-132888)
@@ -43,8 +53,8 @@ namespace Minecraft_Version_History
                 bedrock.CommitChanges();
 
                 Console.WriteLine("All done!");
-#if !DEBUG
             }
+#if !DEBUG
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
