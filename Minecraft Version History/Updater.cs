@@ -94,7 +94,7 @@ namespace Minecraft_Version_History
             T parent;
             int my_index = history.IndexOf(version);
             var comparer = GetComparer();
-            parent = history.LastOrDefault(x => version != x && x.ReleaseName == version.ReleaseName && history.IndexOf(x) < my_index && comparer.Compare(x, version) > 0);
+            parent = history.LastOrDefault(x => version != x && x.ReleaseName == version.ReleaseName && history.IndexOf(x) < my_index && comparer.Compare(x, version) < 0);
             if (parent == null && my_index > 0)
             {
                 int search = my_index;
@@ -343,8 +343,8 @@ namespace Minecraft_Version_History
 
         protected override JavaVersion SpecialParent(JavaVersion version, List<JavaVersion> history)
         {
-            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.ReleaseName, out var parent))
-                return history.LastOrDefault(x => x.ReleaseName == (string)parent);
+            if ((VersionFacts["parents"]["map"] as JObject).TryGetValue(version.VersionName, out var parent))
+                return history.LastOrDefault(x => x.VersionName == (string)parent);
             return base.SpecialParent(version, history);
         }
 
