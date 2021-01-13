@@ -7,6 +7,12 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
+    // hard things right now:
+    // - how to get release name from version? should involve config regex thing
+    // - how to extract data from version with context? java version needs values from config to extract itself
+    // - how to get parent of version? should involve config parent skip
+    // - port Energyxxer's slice merger
+    // - move java key sorting rules to config
     public abstract class Updater
     {
         protected Dictionary<Version, string> CommittedVersionDict;
@@ -15,7 +21,7 @@ namespace Minecraft_Version_History
 
         public void Perform()
         {
-            CreateHashCache();
+            CreateVersionLists();
             foreach (var version in UncommittedVersionList)
             {
                 Commit(version);
@@ -118,7 +124,7 @@ namespace Minecraft_Version_History
                 CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
                 Console.WriteLine($"Rebase complete");
                 // need to rescan since commit hashes change after a rebase
-                CreateHashCache();
+                CreateVersionLists();
             }
         }
 
@@ -146,7 +152,7 @@ namespace Minecraft_Version_History
             }
         }
 
-        private void CreateHashCache()
+        private void CreateVersionLists()
         {
             CommittedVersionDict = new Dictionary<Version, string>();
             UncommittedVersionList = new List<Version>();
