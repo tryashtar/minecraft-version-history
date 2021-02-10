@@ -178,6 +178,7 @@ namespace Minecraft_Version_History
             version.ExtractData(workspace);
             Console.WriteLine($"Translating NBT files...");
             TranslateNbtFiles(workspace);
+            Console.WriteLine($"Copying from workspace...");
             MergeWithWorkspace(RepoFolder, workspace);
             Directory.Delete(workspace, true);
             Util.RemoveEmptyFolders(RepoFolder);
@@ -208,6 +209,7 @@ namespace Minecraft_Version_History
                 if (!File.Exists(workspace_version))
                     File.Delete(item);
             }
+            Console.WriteLine("Deleting done");
 
             // copy new/changed files from workspace
             foreach (var item in Directory.GetFiles(workspace, "*", SearchOption.AllDirectories))
@@ -218,6 +220,7 @@ namespace Minecraft_Version_History
                     Util.Copy(item, base_version);
                 File.Delete(item);
             }
+            Console.WriteLine("Copying done");
         }
 
         // for committing the first version
@@ -245,9 +248,9 @@ namespace Minecraft_Version_History
             var branchname = GetBranchName(version);
             CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\" {hash}");
             // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
-            string tophash = CommandRunner.RunCommand(RepoFolder, $"git rev-parse \"{branchname}\"", output: true).Output;
-            tophash = tophash.Substring(0, 40);
-            if (hash == tophash)
+            var parents = ParseCommitParents(CommandRunner.RunCommand(RepoFolder, $"git rev-list --children --all", output: true).Output);
+            var next = parents[hash];
+            if (next == null)
             {
                 Console.WriteLine($"On top, ready to go");
                 CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
@@ -257,16 +260,31 @@ namespace Minecraft_Version_History
             {
                 Console.WriteLine($"Needs to insert into history for this one");
                 // make a branch that starts there and prepare to commit to it
-                CommandRunner.RunCommand(RepoFolder, $"git checkout -b temp {hash}");
-                CommandRunner.RunCommand(RepoFolder, $"git branch \"{branchname}\"");
+                CommandRunner.RunCommand(RepoFolder, $"git checkout {hash}");
                 DoCommit(version);
                 // insert
                 Console.WriteLine($"Commit done, beginning rebase");
-                CommandRunner.RunCommand(RepoFolder, $"git rebase --strategy-option theirs temp \"{branchname}\"");
+                CommandRunner.RunCommand(RepoFolder, $"git replace --graft {next} HEAD");
                 CommandRunner.RunCommand(RepoFolder, $"git checkout \"{branchname}\"");
-                CommandRunner.RunCommand(RepoFolder, $"git branch -d temp");
                 Console.WriteLine($"Rebase complete");
             }
+        }
+
+        private Dictionary<string, string> ParseCommitParents(string output)
+        {
+            var dict = new Dictionary<string, string>();
+            var list = output.Split('\n');
+            foreach (var item in list)
+            {
+                if (item.Contains(' '))
+                {
+                    string[] vals = item.Split(' ');
+                    dict.Add(vals[0], vals[1]);
+                }
+                else
+                    dict.Add(item, null);
+            }
+            return dict;
         }
 
         // read all NBT files in the version and write textual copies
