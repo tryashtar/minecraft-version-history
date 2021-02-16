@@ -45,7 +45,7 @@ namespace Minecraft_Version_History
 
         public override string ToString()
         {
-            return base.ToString();
+            return String.Join("\n", Root.ToStringRecursive());
         }
 
         private class VersionNode
@@ -73,6 +73,19 @@ namespace Minecraft_Version_History
             public void AddChild(VersionNode other)
             {
                 other.SetParent(this);
+            }
+
+            public IEnumerable<string> ToStringRecursive(int indents = 0)
+            {
+                yield return new string(' ', indents) + Version.ToString() + " (" + ReleaseName + ")";
+                int next_indents = ChildNodes.Count > 1 ? indents + 1 : indents;
+                foreach (var child in ChildNodes)
+                {
+                    foreach (var item in child.ToStringRecursive(next_indents))
+                    {
+                        yield return item;
+                    }
+                }
             }
         }
     }

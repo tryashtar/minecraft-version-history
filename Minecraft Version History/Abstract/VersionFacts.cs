@@ -36,8 +36,9 @@ namespace Minecraft_Version_History
             foreach (var item in ReleasesMap)
             {
                 if (item.Key.IsMatch(version.Name))
-                    return item.Value;
+                    return item.Key.Replace(version.Name, item.Value);
             }
+            return "UNKNOWN";
             throw new ArgumentException($"What release is {version} for?");
         }
     }

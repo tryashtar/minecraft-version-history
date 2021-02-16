@@ -32,6 +32,7 @@ namespace Minecraft_Version_History
 #if DEBUG
             Console.WriteLine("New graph:");
             Console.WriteLine(graph.ToString());
+            Console.ReadLine();
 #endif
         }
 
