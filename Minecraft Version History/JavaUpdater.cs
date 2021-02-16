@@ -7,41 +7,28 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class JavaUpdater : Updater
+    public class JavaUpdater
     {
         public readonly JavaConfig Config;
-        public List<JavaVersion> AllVersions { get; private set; }
+        public VersionGraph Graph { get; private set; }
         public JavaUpdater(JavaConfig config)
         {
             Config = config;
-            ScanVersions();
+            BuildGraph();
         }
 
-        protected override string RepoFolder => Config.OutputRepo;
-        protected override IEnumerable<Version> GetAllVersions() => AllVersions;
-
-        private void ScanVersions()
+        private void BuildGraph()
         {
-            AllVersions = new List<JavaVersion>();
+            var graph = new VersionGraph();
             foreach (var folder in Directory.EnumerateDirectories(Config.InputFolder))
             {
-                var version = new JavaVersion(folder);
-                if (!Config.VersionFacts.ShouldSkip(version))
-                    AllVersions.Add(new JavaVersion(folder));
+                var info = new JavaVersionInfo(folder);
+                if (Config.VersionFacts.ShouldSkip(info))
+                    continue;
+                var release = Config.GetReleaseName(info);
+                graph.Add(info, release);
             }
-        }
-
-        protected override Version GetParent(Version child)
-        {
-            string name = Config.VersionFacts.GetSpecialParent(child);
-            if (name != null)
-                return AllVersions.First(x => x.Name == name);
-
-        }
-
-        protected override string GetReleaseName(Version version)
-        {
-            throw new NotImplementedException();
+            Graph = graph;
         }
     }
 }

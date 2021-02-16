@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -8,11 +6,56 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
 namespace Minecraft_Version_History
 {
     public static class Util
     {
+        public static YamlNode ParseYamlFile(string file_path)
+        {
+            using (var reader = new StreamReader(File.OpenRead(file_path)))
+            {
+                var stream = new YamlStream();
+                stream.Load(reader);
+                var root = stream.Documents.SingleOrDefault()?.RootNode;
+                return root;
+            }
+        }
+
+        public static List<TValue> ToList<TValue>(this YamlNode node, Func<YamlNode, TValue> value)
+        {
+            if (node is YamlSequenceNode sequence)
+            {
+                return sequence.Select(value).ToList();
+            }
+            throw new ArgumentException();
+        }
+
+        public static List<string> ToStringList(this YamlNode node)
+        {
+            return ToList(node, x => (string)x);
+        }
+
+        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this YamlNode node, Func<YamlNode, TKey> key, Func<YamlNode, TValue> value)
+        {
+            if (node is YamlMappingNode map)
+            {
+                var dict = new Dictionary<TKey, TValue>();
+                foreach (var child in map)
+                {
+                    dict[key(child.Key)] = value(child.Value);
+                }
+                return dict;
+            }
+            throw new ArgumentException();
+        }
+
+        public static Dictionary<string, string> ToStringDictionary(this YamlNode node)
+        {
+            return ToDictionary(node, x => (string)x, x => (string)x);
+        }
+
         public static string RelativePath(string fromDir, string toPath)
         {
             Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromDir));
@@ -56,7 +99,7 @@ namespace Minecraft_Version_History
             return path;
         }
 
-        private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T: JToken
+        private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T : JToken
         {
             JToken start = root;
             foreach (var item in path)
