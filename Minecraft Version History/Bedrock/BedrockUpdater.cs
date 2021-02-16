@@ -19,7 +19,7 @@ namespace Minecraft_Version_History
 
         private void BuildGraph()
         {
-            var graph = new VersionGraph();
+            var graph = new VersionGraph(Config);
             foreach (var folder in Directory.EnumerateDirectories(Config.InputFolder))
             {
                 var version = new BedrockVersion(folder);
