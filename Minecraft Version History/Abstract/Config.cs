@@ -6,12 +6,7 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class VersionNode
+    public class Config
     {
-        public readonly Version Version;
-        public VersionNode(Version version)
-        {
-            Version = version;
-        }
     }
 }

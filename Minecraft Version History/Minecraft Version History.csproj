@@ -65,7 +65,6 @@
     <Compile Include="Version.cs" />
     <Compile Include="VersionGraph.cs" />
     <Compile Include="VersionInfo.cs" />
-    <Compile Include="VersionNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
