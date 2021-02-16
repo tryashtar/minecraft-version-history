@@ -52,19 +52,24 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BedrockVersion.cs" />
+    <Compile Include="Abstract\Config.cs" />
+    <Compile Include="Bedrock\BedrockConfig.cs" />
+    <Compile Include="Bedrock\BedrockVersionOLD.cs" />
     <Compile Include="CommandRunner.cs" />
-    <Compile Include="Config.cs" />
-    <Compile Include="JavaUpdater.cs" />
-    <Compile Include="JavaVersion.cs" />
+    <Compile Include="Abstract\VersionFacts.cs" />
+    <Compile Include="Java\JavaConfig.cs" />
+    <Compile Include="Bedrock\BedrockUpdater.cs" />
+    <Compile Include="Java\JavaUpdater.cs" />
+    <Compile Include="Java\JavaVersionOLD.cs" />
+    <Compile Include="Java\JavaVersion.cs" />
     <Compile Include="NbtUtil.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Updater.cs" />
+    <Compile Include="Abstract\Updater.cs" />
     <Compile Include="Util.cs" />
-    <Compile Include="Version.cs" />
-    <Compile Include="VersionGraph.cs" />
-    <Compile Include="VersionInfo.cs" />
+    <Compile Include="Abstract\Version.cs" />
+    <Compile Include="Abstract\VersionGraph.cs" />
+    <Compile Include="Bedrock\BedrockVersion.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

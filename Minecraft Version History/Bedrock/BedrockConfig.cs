@@ -2,12 +2,15 @@
 
 namespace Minecraft_Version_History
 {
-    public class BedrockConfig
+    public class BedrockConfig : Config
     {
-        public readonly VersionFacts VersionFacts;
-        public BedrockConfig(YamlMappingNode yaml)
+        public BedrockConfig(YamlMappingNode yaml) : base(yaml)
         {
-            VersionFacts = new VersionFacts(yaml["version facts"] as YamlMappingNode);
+        }
+
+        protected override VersionFacts CreateVersionFacts(YamlMappingNode yaml)
+        {
+            return new VersionFacts(yaml);
         }
     }
 }

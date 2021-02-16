@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class JavaUpdater
+    public class BedrockUpdater
     {
-        public readonly JavaConfig Config;
+        public readonly BedrockConfig Config;
         public VersionGraph Graph { get; private set; }
-        public JavaUpdater(JavaConfig config)
+        public BedrockUpdater(BedrockConfig config)
         {
             Config = config;
             BuildGraph();
@@ -22,17 +22,13 @@ namespace Minecraft_Version_History
             var graph = new VersionGraph();
             foreach (var folder in Directory.EnumerateDirectories(Config.InputFolder))
             {
-                var version = new JavaVersion(folder);
+                var version = new BedrockVersion(folder);
                 if (Config.VersionFacts.ShouldSkip(version))
                     continue;
                 var release = Config.VersionFacts.GetReleaseName(version);
                 graph.Add(version, release);
             }
             Graph = graph;
-#if DEBUG
-            Console.WriteLine("New graph:");
-            Console.WriteLine(graph.ToString());
-#endif
         }
 
         public void Perform()

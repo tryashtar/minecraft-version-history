@@ -17,7 +17,7 @@ namespace Minecraft_Version_History
             {
                 ZipPath = zip_path;
                 var mainappx = GetMainAppx(zip);
-                VersionName = Path.GetFileName(mainappx.FullName).Split('_')[1];
+                Name = Path.GetFileName(mainappx.FullName).Split('_')[1];
                 ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
             }
         }

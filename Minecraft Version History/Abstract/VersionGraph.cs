@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -16,7 +17,7 @@ namespace Minecraft_Version_History
 
         }
 
-        public void Add(IVersionInfo version, string release)
+        public void Add(Version version, string release)
         {
             var node = new VersionNode(version, release);
             if (Root == null)
@@ -25,32 +26,53 @@ namespace Minecraft_Version_History
             }
             else if (version.ReleaseTime < Root.Version.ReleaseTime)
             {
-                Root.Parent = node;
+                Root.SetParent(node);
                 Root = node;
             }
             else
             {
                 if (BranchTips.TryGetValue(release, out var latest))
                 {
-                    node.Parent = latest;
+                    node.SetParent(latest);
                 }
                 else
                 {
-                    node.Parent = Root;
+                    node.SetParent(Root);
                 }
                 BranchTips[release] = node;
             }
         }
 
+        public override string ToString()
+        {
+            return base.ToString();
+        }
+
         private class VersionNode
         {
-            public readonly IVersionInfo Version;
+            public readonly Version Version;
             public readonly string ReleaseName;
-            public VersionNode Parent;
-            public VersionNode(IVersionInfo version, string release)
+            public VersionNode Parent { get; private set; }
+            public ReadOnlyCollection<VersionNode> Children => ChildNodes.AsReadOnly();
+            private readonly List<VersionNode> ChildNodes = new List<VersionNode>();
+            public VersionNode(Version version, string release)
             {
                 Version = version;
                 ReleaseName = release;
+            }
+
+            public void SetParent(VersionNode other)
+            {
+                if (Parent != null)
+                    Parent.ChildNodes.Remove(this);
+                Parent = other;
+                if (Parent != null)
+                    Parent.ChildNodes.Add(this);
+            }
+
+            public void AddChild(VersionNode other)
+            {
+                other.SetParent(this);
             }
         }
     }

@@ -4,13 +4,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class JavaVersion : Version
+    public class JavaVersionOLD
     {
         private readonly string JarPath;
         private readonly string ServerJarURL;
@@ -21,36 +22,36 @@ namespace Minecraft_Version_History
         private static readonly DateTime AssetGenerators = new DateTime(2020, 3, 1);
         private static readonly string[] ModelOrder = new string[] { "model", "x", "y", "z", "uvlock", "weight" };
         private static readonly string[] IllegalNames = new[] { "aux", "con", "clock$", "nul", "prn", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9" };
-        public JavaVersion(string folder)
+        public JavaVersionOLD(string folder)
         {
-            Name = Path.GetFileName(folder);
-            string jsonpath = Path.Combine(folder, Name + ".json");
-            JarPath = Path.Combine(folder, Name + ".jar");
-            var json = JObject.Parse(File.ReadAllText(jsonpath));
-            ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
-            ServerJarURL = (string)json["downloads"]?["server"]?["url"];
-            MappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
+            //Name = Path.GetFileName(folder);
+            //string jsonpath = Path.Combine(folder, Name + ".json");
+            //JarPath = Path.Combine(folder, Name + ".jar");
+            //var json = JObject.Parse(File.ReadAllText(jsonpath));
+            //ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
+            //ServerJarURL = (string)json["downloads"]?["server"]?["url"];
+            //MappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
         }
 
-        public override void ExtractData(string output)
+        public void ExtractData(string output)
         {
-            if (ReleaseTime > DataGenerators)
-            {
-                Console.WriteLine("Fetching data reports...");
-                string reports_path = Path.Combine(ServerJarFolder, "generated");
-                if (Directory.Exists(reports_path))
-                    Directory.Delete(reports_path, true);
-
-                var serverjar = Path.Combine(ServerJarFolder, Name + ".jar");
-                if (!File.Exists(serverjar))
-                    DownloadServerJar(serverjar);
-                var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersion.JavaPath}\" -cp \"{serverjar}\" net.minecraft.data.Main --reports");
-                var outputfolder = Path.Combine(output, "reports");
-                Directory.CreateDirectory(outputfolder);
-
-                Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
-            }
-            DecompileMinecraft(Decompiler, Path.Combine(output, "source"));
+            //if (ReleaseTime > DataGenerators)
+            //{
+            //    Console.WriteLine("Fetching data reports...");
+            //    string reports_path = Path.Combine(ServerJarFolder, "generated");
+            //    if (Directory.Exists(reports_path))
+            //        Directory.Delete(reports_path, true);
+            //
+            //    var serverjar = Path.Combine(ServerJarFolder, Name + ".jar");
+            //    if (!File.Exists(serverjar))
+            //        DownloadServerJar(serverjar);
+            //    var run = CommandRunner.RunCommand(ServerJarFolder, $"\"{JavaVersionOLD.JavaPath}\" -cp \"{serverjar}\" net.minecraft.data.Main --reports");
+            //    var outputfolder = Path.Combine(output, "reports");
+            //    Directory.CreateDirectory(outputfolder);
+            //
+            //    Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
+            //}
+            //DecompileMinecraft(Decompiler, Path.Combine(output, "source"));
 
             Console.WriteLine("Extracting jar...");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
@@ -82,7 +83,7 @@ namespace Minecraft_Version_History
                             File.WriteAllText(destination, Util.ToMinecraftJson(table));
                         }
                     }
-                    else if (ReleaseTime > AssetGenerators && Path.GetDirectoryName(entry.FullName) == @"assets\minecraft\blockstates")
+                    //else if (ReleaseTime > AssetGenerators && Path.GetDirectoryName(entry.FullName) == @"assets\minecraft\blockstates")
                     {
                         var blockstate = JObject.Parse(File.ReadAllText(destination));
                         if (blockstate.TryGetValue("variants", out var variants))
@@ -171,8 +172,8 @@ namespace Minecraft_Version_History
             if (decompiler == DecompilerChoice.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
-                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersion.CfrJar}\" \"{jar_path}\" " +
-                    $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
+                //CommandRunner.RunCommand(destination, $"\"{JavaVersionOLD.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersionOLD.CfrJar}\" \"{jar_path}\" " +
+                //    $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
                 string summary_file = Path.Combine(destination, "summary.txt");
                 if (File.Exists(summary_file))
                 {
@@ -186,8 +187,8 @@ namespace Minecraft_Version_History
                 Console.WriteLine($"Decompiling with fernflower...");
                 string output_dir = Path.Combine(destination, "decompiled");
                 Directory.CreateDirectory(output_dir);
-                CommandRunner.RunCommand(destination, $"\"{JavaVersion.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersion.FernflowerJar}\" " +
-                    $"-hes=0 -hdc=0 -dgs=1 -log=WARN \"{jar_path}\" \"{output_dir}\""); ;
+                //CommandRunner.RunCommand(destination, $"\"{JavaVersionOLD.JavaPath}\" -Xmx1200M -Xms200M -jar \"{JavaVersionOLD.FernflowerJar}\" " +
+                //    $"-hes=0 -hdc=0 -dgs=1 -log=WARN \"{jar_path}\" \"{output_dir}\""); ;
                 using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
                 {
                     foreach (var entry in zip.Entries)
@@ -314,8 +315,8 @@ namespace Minecraft_Version_History
         private void RemapJar(string tsrg_path, string output_path)
         {
             Console.WriteLine("Remapping jar...");
-            CommandRunner.RunCommand(Path.GetDirectoryName(output_path), $"\"{JavaVersion.JavaPath}\" -jar \"{JavaVersion.SpecialSourceJar}\" " +
-                $"--in-jar \"{JarPath}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
+            //CommandRunner.RunCommand(Path.GetDirectoryName(output_path), $"\"{JavaVersionOLD.JavaPath}\" -jar \"{JavaVersionOLD.SpecialSourceJar}\" " +
+            //    $"--in-jar \"{JarPath}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
         }
 
         // facts of versions
@@ -330,8 +331,8 @@ namespace Minecraft_Version_History
             // rd-xxxx      Classic
             // yywxxl       (needs lookup)
 
-            if ((ReleasesMap["special"] as JObject).TryGetValue(versionname, out var release))
-                return (string)release;
+            //if ((ReleasesMap["special"] as JObject).TryGetValue(versionname, out var release))
+            //    return (string)release;
 
             // real versions
             if (versionname.StartsWith("1."))
@@ -355,14 +356,14 @@ namespace Minecraft_Version_History
                 int year = int.Parse(match.Groups[1].Value);
                 int week = int.Parse(match.Groups[2].Value);
 
-                foreach (var snapshot in (JObject)ReleasesMap["snapshots"])
-                {
-                    string[] parts = snapshot.Key.Split('.');
-                    int template_year = int.Parse(parts[0]);
-                    int template_week = int.Parse(parts[1]);
-                    if (year == template_year && week <= template_week)
-                        return (string)snapshot.Value;
-                }
+                //foreach (var snapshot in (JObject)ReleasesMap["snapshots"])
+                //{
+                //    string[] parts = snapshot.Key.Split('.');
+                //    int template_year = int.Parse(parts[0]);
+                //    int template_week = int.Parse(parts[1]);
+                //    if (year == template_year && week <= template_week)
+                //        return (string)snapshot.Value;
+                //}
             }
             throw new ArgumentException($"Could not determine the version to which {versionname} belongs");
         }

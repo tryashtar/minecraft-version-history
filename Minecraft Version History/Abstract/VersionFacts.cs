@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,21 +21,24 @@ namespace Minecraft_Version_History
             ReleasesMap = yaml["releases"].ToDictionary(x => new Regex((string)x), x => (string)x);
         }
 
-        public bool ShouldSkip(IVersionInfo version)
+        public bool ShouldSkip(Version version)
         {
             foreach (var item in SkipVersions)
             {
-                if (item.IsMatch(version.VersionName))
+                if (item.IsMatch(version.Name))
                     return true;
             }
             return false;
         }
 
-        public string GetSpecialParent(Version version)
+        public string GetReleaseName(Version version)
         {
-            if (ParentsMap.TryGetValue(version.Name, out var result))
-                return result;
-            return null;
+            foreach (var item in ReleasesMap)
+            {
+                if (item.Key.IsMatch(version.Name))
+                    return item.Value;
+            }
+            throw new ArgumentException($"What release is {version} for?");
         }
     }
 }

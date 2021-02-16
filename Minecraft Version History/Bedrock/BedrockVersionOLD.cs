@@ -10,30 +10,30 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class BedrockVersion : Version
+    public class BedrockVersionOLD
     {
         private static HashSet<string> UsedNames = new HashSet<string>();
         private readonly string ZipPath;
-        public BedrockVersion(string zippath)
+        public BedrockVersionOLD(string zippath)
         {
-            using (ZipArchive zip = ZipFile.OpenRead(zippath))
-            {
-                ZipPath = zippath;
-                var mainappx = GetMainAppx(zip);
-                var base_name = Path.GetFileName(mainappx.FullName).Split('_')[1];
-                var name = base_name;
-                for (int i = 2; UsedNames.Contains(name); i++)
-                {
-                    name = $"{base_name} (v{i})";
-                }
-                Name = name;
-                UsedNames.Add(name);
-                ReleaseName = Name.Substring(0, Name.IndexOf('.', Name.IndexOf('.') + 1));
-                ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
-            }
+            //using (ZipArchive zip = ZipFile.OpenRead(zippath))
+            //{
+            //    ZipPath = zippath;
+            //    var mainappx = GetMainAppx(zip);
+            //    var base_name = Path.GetFileName(mainappx.FullName).Split('_')[1];
+            //    var name = base_name;
+            //    for (int i = 2; UsedNames.Contains(name); i++)
+            //    {
+            //        name = $"{base_name} (v{i})";
+            //    }
+            //    Name = name;
+            //    UsedNames.Add(name);
+            //    ReleaseName = Name.Substring(0, Name.IndexOf('.', Name.IndexOf('.') + 1));
+            //    ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
+            //}
         }
 
-        public override void ExtractData(string output)
+        public void ExtractData(string output)
         {
             string appxpath = Path.Combine(output, "appx.appx");
             using (ZipArchive zip = ZipFile.OpenRead(ZipPath))

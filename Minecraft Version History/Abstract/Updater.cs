@@ -72,7 +72,7 @@ namespace Minecraft_Version_History
                 Directory.Delete(workspace, true);
             Directory.CreateDirectory(workspace);
             Console.WriteLine($"Extracting {version}");
-            version.ExtractData(workspace);
+            //version.ExtractData(workspace);
             MergeWithWorkspace(RepoFolder, workspace);
             Directory.Delete(workspace, true);
             Util.RemoveEmptyFolders(RepoFolder);
