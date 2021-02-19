@@ -19,16 +19,7 @@ namespace Minecraft_Version_History
 
         private void BuildGraph()
         {
-            var graph = new VersionGraph(Config);
-            foreach (var folder in Directory.EnumerateDirectories(Config.InputFolder))
-            {
-                var version = new BedrockVersion(folder);
-                if (Config.VersionFacts.ShouldSkip(version))
-                    continue;
-                var release = Config.VersionFacts.GetReleaseName(version);
-                graph.Add(version, release);
-            }
-            Graph = graph;
+            
         }
 
         public void Perform()

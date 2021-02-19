@@ -19,19 +19,17 @@ namespace Minecraft_Version_History
 
         private void BuildGraph()
         {
-            var graph = new VersionGraph(Config);
+            var versions = new List<Version>();
             foreach (var folder in Directory.EnumerateDirectories(Config.InputFolder))
             {
                 var version = new JavaVersion(folder);
-                if (Config.VersionFacts.ShouldSkip(version))
-                    continue;
-                var release = Config.VersionFacts.GetReleaseName(version);
-                graph.Add(version, release);
+                if (!Config.VersionFacts.ShouldSkip(version))
+                    versions.Add(version);
             }
-            Graph = graph;
+            Graph = new VersionGraph(Config, versions);
 #if DEBUG
             Console.WriteLine("New graph:");
-            Console.WriteLine(graph.ToString());
+            Console.WriteLine(Graph.ToString());
             Console.ReadLine();
 #endif
         }

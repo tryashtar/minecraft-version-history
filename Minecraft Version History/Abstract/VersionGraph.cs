@@ -11,35 +11,23 @@ namespace Minecraft_Version_History
     public class VersionGraph
     {
         private VersionNode Root;
-        private readonly Dictionary<string, ReleaseBranch> Branches = new Dictionary<string, ReleaseBranch>();
+        private readonly List<ReleaseBranch> Branches = new List<ReleaseBranch>();
         private readonly Config Config;
-        public VersionGraph(Config config)
+        public VersionGraph(Config config, IEnumerable<Version> versions)
         {
             Config = config;
-        }
-
-        private void OrderBranches()
-        {
-            var branches = Branches.Values.OrderBy(x => x.Earliest);
-            foreach (var branch in branches)
+            var releases = versions.GroupBy(x => config.VersionFacts.GetReleaseName(x));
+            foreach (var branch in releases)
             {
-
+                Branches.Add(new ReleaseBranch(this, branch.Key, branch));
             }
-        }
-
-        public void Add(Version version, string release)
-        {
-            var node = new VersionNode(version, release);
-            if (Branches.TryGetValue(release, out var branch))
+            var sorter = new BranchSorter();
+            Branches.Sort(sorter);
+            Root = Branches.First().Versions.First();
+            for (int i = Branches.Count - 1; i >= 1; i--)
             {
-                branch.InsertVersion(node);
+                Branches[i].Versions.First().SetParent(Branches[i - 1].Versions.Last());
             }
-            else
-            {
-                Branches[release] = new ReleaseBranch(this, release);
-                Branches[release].InsertVersion(node);
-            }
-            OrderBranches();
         }
 
         public override string ToString()
@@ -50,40 +38,32 @@ namespace Minecraft_Version_History
         private class ReleaseBranch
         {
             private readonly VersionGraph Graph;
-            private readonly List<VersionNode> VersionList = new List<VersionNode>();
+            private readonly List<VersionNode> VersionList;
             public ReadOnlyCollection<VersionNode> Versions => VersionList.AsReadOnly();
             public readonly string Name;
-            public DateTime Earliest = DateTime.MaxValue;
-            public DateTime Latest = DateTime.MinValue;
-            public ReleaseBranch(VersionGraph graph, string name)
+            public ReleaseBranch(VersionGraph graph, string name, IEnumerable<Version> versions)
             {
                 Graph = graph;
                 Name = name;
-            }
-
-            public void InsertVersion(VersionNode node)
-            {
-                if (node.Version.ReleaseTime < Earliest)
-                    Earliest = node.Version.ReleaseTime;
-                if (node.Version.ReleaseTime > Latest)
-                    Latest = node.Version.ReleaseTime;
-                VersionNode before = null;
-                var after = Enumerable.Empty<VersionNode>();
-                if (VersionList.Any())
+                var sorter = new BranchVersionSorter();
+                VersionList = versions.Select(x => new VersionNode(x, name)).OrderBy(x => x, sorter).ToList();
+                for (int i = VersionList.Count - 1; i >= 1; i--)
                 {
-                    before = VersionList.First().Parent;
-                    after = VersionList.Last().Children;
+                    VersionList[i].SetParent(VersionList[i - 1]);
                 }
-                VersionList.Add(node);
-                VersionList.Sort(BranchVersionSorter.Instance);
+            }
+        }
+
+        private class BranchSorter : IComparer<ReleaseBranch>
+        {
+            public int Compare(ReleaseBranch x, ReleaseBranch y)
+            {
+                return x.Versions.First().Version.ReleaseTime.CompareTo(y.Versions.First().Version.ReleaseTime);
             }
         }
 
         private class BranchVersionSorter : IComparer<VersionNode>
         {
-            private BranchVersionSorter() { }
-            public static BranchVersionSorter Instance = new BranchVersionSorter();
-
             public int Compare(VersionNode x, VersionNode y)
             {
                 return x.Version.ReleaseTime.CompareTo(y.Version.ReleaseTime);
