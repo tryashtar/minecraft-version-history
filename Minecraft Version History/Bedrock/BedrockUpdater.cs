@@ -7,24 +7,23 @@ using System.Threading.Tasks;
 
 namespace Minecraft_Version_History
 {
-    public class BedrockUpdater
+    public class BedrockUpdater : Updater
     {
         public readonly BedrockConfig Config;
-        public VersionGraph Graph { get; private set; }
         public BedrockUpdater(BedrockConfig config)
         {
             Config = config;
-            BuildGraph();
         }
 
-        private void BuildGraph()
+        protected override VersionGraph CreateGraph()
         {
-            
-        }
-
-        public void Perform()
-        {
-
+            var versions = new List<Version>();
+            foreach (var zip in Directory.EnumerateFiles(Config.InputFolder))
+            {
+                if (Path.GetExtension(zip) == ".zip")
+                    versions.Add(new BedrockVersion(zip));
+            }
+            return new VersionGraph(Config.VersionFacts, versions);
         }
     }
 }

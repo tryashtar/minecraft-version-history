@@ -32,6 +32,9 @@ namespace Minecraft_Version_History
                 bedrock.Perform();
 
                 Console.WriteLine("All done!");
+#if DEBUG
+                Console.ReadLine();
+#endif
             }
 #if !DEBUG
             catch (Exception ex)

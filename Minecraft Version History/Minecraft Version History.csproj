@@ -53,6 +53,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Abstract\Updater.cs" />
     <Compile Include="Abstract\Config.cs" />
     <Compile Include="Bedrock\BedrockConfig.cs" />
     <Compile Include="Bedrock\BedrockVersionOLD.cs" />
@@ -66,7 +67,7 @@
     <Compile Include="NbtUtil.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Abstract\Updater.cs" />
+    <Compile Include="Abstract\UpdaterOLD.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="Abstract\Version.cs" />
     <Compile Include="Abstract\VersionGraph.cs" />

@@ -12,11 +12,12 @@ namespace Minecraft_Version_History
     {
         private readonly VersionNode Root;
         private readonly List<ReleaseBranch> Branches = new List<ReleaseBranch>();
-        private readonly Config Config;
-        public VersionGraph(Config config, IEnumerable<Version> versions)
+        private readonly VersionFacts Facts;
+        public VersionGraph(VersionFacts facts, IEnumerable<Version> versions)
         {
-            Config = config;
-            var releases = versions.GroupBy(x => config.VersionFacts.GetReleaseName(x));
+            Facts = facts;
+            versions = versions.Where(x => !facts.ShouldSkip(x));
+            var releases = versions.GroupBy(x => Facts.GetReleaseName(x));
             foreach (var branch in releases)
             {
                 Branches.Add(new ReleaseBranch(this, branch.Key, branch));
@@ -30,13 +31,13 @@ namespace Minecraft_Version_History
                 // pick the last version in the previous branch that's older than the first version in this branch
                 // skip "insane" branches (like april fools versions)
                 var start = Branches[i].Versions.First();
-                var sane_parent = Branches.Take(i).Last(x => !config.VersionFacts.IsInsaneRelease(x.Name)).Versions
-                    .Last(x => !config.VersionFacts.IsInsaneVersion(x.Version) && x.Version.ReleaseTime <= start.Version.ReleaseTime);
+                var sane_parent = Branches.Take(i).Last(x => !Facts.IsInsaneRelease(x.Name)).Versions
+                    .Last(x => !Facts.IsInsaneVersion(x.Version) && x.Version.ReleaseTime <= start.Version.ReleaseTime);
                 start.SetParent(sane_parent);
             }
             foreach (var version in versions)
             {
-                string special = config.VersionFacts.SpecialParent(version);
+                string special = Facts.SpecialParent(version);
                 if (special != null)
                 {
                     var found = versions.FirstOrDefault(x => x.Name == special);
@@ -52,7 +53,7 @@ namespace Minecraft_Version_History
 
         private VersionNode FindNode(Version version)
         {
-            var release = Config.VersionFacts.GetReleaseName(version);
+            var release = Facts.GetReleaseName(version);
             var branch = Branches.First(x => x.Name == release);
             return branch.Versions.First(x => x.Version == version);
         }
