@@ -12,12 +12,14 @@ namespace Minecraft_Version_History
     public class VersionFacts
     {
         private readonly List<Regex> SkipVersions;
+        private readonly List<Regex> InsaneBranches;
         private readonly Dictionary<string, string> ParentsMap;
         private readonly Dictionary<Regex, string> RegexReleases;
         private readonly List<SnapshotSpec> SnapshotReleases;
         public VersionFacts(YamlMappingNode yaml)
         {
             SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x));
+            InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x));
             ParentsMap = yaml.Go("parents").ToStringDictionary();
             RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x);
             SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x));
@@ -31,6 +33,11 @@ namespace Minecraft_Version_History
                     return true;
             }
             return false;
+        }
+
+        public bool IsInsaneRelease(string release)
+        {
+            return InsaneBranches.Any(x => x.IsMatch(release));
         }
 
         public string GetReleaseName(Version version)

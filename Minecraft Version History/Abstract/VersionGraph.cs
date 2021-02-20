@@ -26,7 +26,9 @@ namespace Minecraft_Version_History
             Root = Branches.First().Versions.First();
             for (int i = Branches.Count - 1; i >= 1; i--)
             {
-                Branches[i].Versions.First().SetParent(Branches[i - 1].Versions.Last());
+                var start = Branches[i].Versions.First();
+                var sane_parent = Branches.Take(i).Last(x => !config.VersionFacts.IsInsaneRelease(x.Name)).Versions.Last(x => x.Version.ReleaseTime <= start.Version.ReleaseTime);
+                start.SetParent(sane_parent);
             }
             foreach (var version in versions)
             {
