@@ -53,6 +53,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Abstract\IVersionNode.cs" />
     <Compile Include="Abstract\Updater.cs" />
     <Compile Include="Abstract\Config.cs" />
     <Compile Include="Bedrock\BedrockConfig.cs" />

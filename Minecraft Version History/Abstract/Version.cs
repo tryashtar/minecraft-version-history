@@ -15,5 +15,7 @@ namespace Minecraft_Version_History
         {
             return $"{this.GetType().Name} {Name}, released {ReleaseTime}";
         }
+
+        public abstract void ExtractData(string folder, Config config);
     }
 }

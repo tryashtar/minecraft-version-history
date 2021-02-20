@@ -33,5 +33,10 @@ namespace Minecraft_Version_History
             }
             throw new FileNotFoundException($"Could not find main APPX");
         }
+
+        public override void ExtractData(string folder, Config config)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

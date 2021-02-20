@@ -51,6 +51,21 @@ namespace Minecraft_Version_History
             }
         }
 
+        public IEnumerable<IVersionNode> Flatten()
+        {
+            var stack = new Stack<IVersionNode>();
+            stack.Push(Root);
+            while (stack.Any())
+            {
+                var node = stack.Pop();
+                yield return node;
+                foreach (var child in node.Children)
+                {
+                    stack.Push(child);
+                }
+            }
+        }
+
         private VersionNode FindNode(Version version)
         {
             var release = Facts.GetReleaseName(version);
@@ -98,12 +113,18 @@ namespace Minecraft_Version_History
             }
         }
 
-        private class VersionNode
+        private class VersionNode : IVersionNode
         {
             public readonly Version Version;
             public readonly string ReleaseName;
             public VersionNode Parent { get; private set; }
             public ReadOnlyCollection<VersionNode> Children => ChildNodes.AsReadOnly();
+
+            IVersionNode IVersionNode.Parent => Parent;
+            Version IVersionNode.Version => Version;
+            string IVersionNode.ReleaseName => ReleaseName;
+            IEnumerable<IVersionNode> IVersionNode.Children => Children;
+
             private readonly List<VersionNode> ChildNodes = new List<VersionNode>();
             public VersionNode(Version version, string release)
             {

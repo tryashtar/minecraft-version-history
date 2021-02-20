@@ -19,5 +19,10 @@ namespace Minecraft_Version_History
             ServerJarURL = (string)json["downloads"]?["server"]?["url"];
             MappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
         }
+
+        public override void ExtractData(string folder, Config config)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
