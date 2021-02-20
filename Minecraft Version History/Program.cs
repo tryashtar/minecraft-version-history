@@ -22,7 +22,7 @@ namespace Minecraft_Version_History
 #endif
             {
                 var config_file = Util.ParseYamlFile(@"..\config.yaml");
-                var java_config = new JavaConfig(config_file["java"] as YamlMappingNode);
+                var java_config = new JavaConfig(Path.GetFullPath(".."), config_file["java"] as YamlMappingNode);
                 var bedrock_config = new BedrockConfig(config_file["bedrock"] as YamlMappingNode);
 
                 var java = new JavaUpdater(java_config);

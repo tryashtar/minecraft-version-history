@@ -20,13 +20,13 @@ namespace Minecraft_Version_History
         public readonly DecompilerType? Decompiler;
         private readonly Dictionary<string, JsonSorter> JsonSorters;
         private readonly List<Regex> ExcludeJarEntries;
-        public JavaConfig(YamlMappingNode yaml) : base(yaml)
+        public JavaConfig(string folder, YamlMappingNode yaml) : base(yaml)
         {
-            JavaInstallationPath = (string)yaml["java install"];
-            FernflowerPath = (string)yaml["fernflower jar"];
-            CfrPath = (string)yaml["cfr jar"];
-            SpecialSourcePath = (string)yaml["special source jar"];
-            ServerJarFolder = (string)yaml["server jars"];
+            JavaInstallationPath = Path.Combine(folder, (string)yaml["java install"]);
+            FernflowerPath = Path.Combine(folder, (string)yaml["fernflower jar"]);
+            CfrPath = Path.Combine(folder, (string)yaml["cfr jar"]);
+            SpecialSourcePath = Path.Combine(folder, (string)yaml["special source jar"]);
+            ServerJarFolder = Path.Combine(folder, (string)yaml["server jars"]);
             Decompiler = ParseDecompiler((string)yaml["decompiler"]);
             DataGenerators = DateTime.Parse((string)yaml["data generators"]);
             AssetGenerators = DateTime.Parse((string)yaml["asset generators"]);

@@ -51,8 +51,7 @@ namespace Minecraft_Version_History
             {
                 foreach (var entry in zip.Entries)
                 {
-                    string filename = Path.GetFileName(entry.FullName);
-                    if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(filename))
+                    if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(entry.FullName))
                         continue;
                     Directory.CreateDirectory(Path.Combine(folder, "jar", Path.GetDirectoryName(entry.FullName)));
                     var destination = Path.Combine(folder, "jar", entry.FullName);
