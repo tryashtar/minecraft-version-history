@@ -50,6 +50,8 @@ namespace Minecraft_Version_History
 
         private void Commit(IVersionNode version)
         {
+            if (VersionToCommit.ContainsKey(version))
+                return;
             if (version.Parent == null)
             {
                 Console.WriteLine($"{version.Version.Name} is the first version in the history!");
