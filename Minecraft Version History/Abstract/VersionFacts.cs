@@ -13,16 +13,18 @@ namespace Minecraft_Version_History
     {
         private readonly List<Regex> SkipVersions;
         private readonly List<Regex> InsaneBranches;
+        private readonly List<Regex> InsaneVersions;
         private readonly Dictionary<string, string> ParentsMap;
         private readonly Dictionary<Regex, string> RegexReleases;
         private readonly List<SnapshotSpec> SnapshotReleases;
         public VersionFacts(YamlMappingNode yaml)
         {
-            SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x));
-            InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x));
-            ParentsMap = yaml.Go("parents").ToStringDictionary();
-            RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x);
-            SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x));
+            SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+            InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+            InsaneVersions = yaml.Go("insane", "versions").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+            ParentsMap = yaml.Go("parents").ToStringDictionary() ?? new Dictionary<string, string>();
+            RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new Dictionary<Regex, string>();
+            SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new List<SnapshotSpec>();
         }
 
         public bool ShouldSkip(Version version)
@@ -38,6 +40,11 @@ namespace Minecraft_Version_History
         public bool IsInsaneRelease(string release)
         {
             return InsaneBranches.Any(x => x.IsMatch(release));
+        }
+
+        public bool IsInsaneVersion(Version version)
+        {
+            return InsaneVersions.Any(x => x.IsMatch(version.Name));
         }
 
         public string GetReleaseName(Version version)

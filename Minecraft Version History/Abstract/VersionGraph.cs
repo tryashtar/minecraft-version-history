@@ -26,8 +26,12 @@ namespace Minecraft_Version_History
             Root = Branches.First().Versions.First();
             for (int i = Branches.Count - 1; i >= 1; i--)
             {
+                // set cross-branch parents with educated guesses
+                // pick the last version in the previous branch that's older than the first version in this branch
+                // skip "insane" branches (like april fools versions)
                 var start = Branches[i].Versions.First();
-                var sane_parent = Branches.Take(i).Last(x => !config.VersionFacts.IsInsaneRelease(x.Name)).Versions.Last(x => x.Version.ReleaseTime <= start.Version.ReleaseTime);
+                var sane_parent = Branches.Take(i).Last(x => !config.VersionFacts.IsInsaneRelease(x.Name)).Versions
+                    .Last(x => !config.VersionFacts.IsInsaneVersion(x.Version) && x.Version.ReleaseTime <= start.Version.ReleaseTime);
                 start.SetParent(sane_parent);
             }
             foreach (var version in versions)
