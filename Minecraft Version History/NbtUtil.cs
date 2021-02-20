@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using fNbt;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public static class NbtUtil
     {

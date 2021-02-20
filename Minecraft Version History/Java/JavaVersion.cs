@@ -7,7 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public class JavaVersion : Version
     {

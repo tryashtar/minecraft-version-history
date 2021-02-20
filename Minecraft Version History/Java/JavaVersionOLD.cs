@@ -9,7 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public class JavaVersionOLD
     {

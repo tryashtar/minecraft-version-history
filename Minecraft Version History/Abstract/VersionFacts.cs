@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public class VersionFacts
     {

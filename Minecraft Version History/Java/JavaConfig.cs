@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using YamlDotNet.RepresentationModel;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public class JavaConfig : Config
     {

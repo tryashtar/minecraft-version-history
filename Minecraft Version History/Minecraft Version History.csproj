@@ -6,7 +6,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{72B2765F-9241-4D00-9D40-98E006FE9B92}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Minecraft_Version_History</RootNamespace>
+    <RootNamespace>MinecraftVersionHistory</RootNamespace>
     <AssemblyName>Minecraft Version History</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

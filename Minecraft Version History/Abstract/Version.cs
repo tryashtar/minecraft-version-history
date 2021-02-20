@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public abstract class Version
     {

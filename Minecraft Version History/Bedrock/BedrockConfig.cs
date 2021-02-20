@@ -1,6 +1,6 @@
 ﻿using YamlDotNet.RepresentationModel;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public class BedrockConfig : Config
     {

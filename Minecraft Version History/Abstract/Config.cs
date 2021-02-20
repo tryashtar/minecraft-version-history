@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public abstract class Config
     {

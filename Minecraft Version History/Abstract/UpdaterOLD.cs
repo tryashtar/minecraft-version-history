@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     // hard things right now:
     // - how to get release name from version? should involve config regex thing
