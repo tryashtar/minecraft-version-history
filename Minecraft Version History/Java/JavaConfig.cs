@@ -67,45 +67,6 @@ namespace MinecraftVersionHistory
                 return DecompilerType.Cfr;
             return null;
         }
-
-        private class JsonSorter
-        {
-            private readonly NodeMatcher[] Path;
-            private readonly SortOperation Operation;
-            public JsonSorter(YamlMappingNode node)
-            {
-                Path = node.Go("path").ToList(x => new NodeMatcher(x)).ToArray();
-                Operation = ParseOperation((string)node["operation"]);
-            }
-
-            public void Sort(JObject json)
-            {
-
-            }
-
-            private static SortOperation ParseOperation(string input)
-            {
-                if (String.Equals(input, "sort_keys", StringComparison.OrdinalIgnoreCase))
-                    return SortOperation.SortKeys;
-                if (String.Equals(input, "sort_by", StringComparison.OrdinalIgnoreCase))
-                    return SortOperation.SortBy;
-                throw new ArgumentException(input);
-            }
-
-            private enum SortOperation
-            {
-                SortKeys,
-                SortBy
-            }
-        }
-
-        private class NodeMatcher
-        {
-            public NodeMatcher(YamlNode node)
-            {
-
-            }
-        }
     }
 
     public enum DecompilerType

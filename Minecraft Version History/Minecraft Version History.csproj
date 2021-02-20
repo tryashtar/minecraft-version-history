@@ -65,7 +65,9 @@
     <Compile Include="Java\JavaUpdater.cs" />
     <Compile Include="Java\JavaVersionOLD.cs" />
     <Compile Include="Java\JavaVersion.cs" />
+    <Compile Include="JsonSorter.cs" />
     <Compile Include="NbtUtil.cs" />
+    <Compile Include="NodeMatcher.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Abstract\UpdaterOLD.cs" />
