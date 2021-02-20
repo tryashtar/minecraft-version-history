@@ -13,23 +13,14 @@ namespace Minecraft_Version_History
     {
         private readonly List<Regex> SkipVersions;
         private readonly Dictionary<string, string> ParentsMap;
-        private readonly List<(string name, List<Regex> matches)> Releases;
+        private readonly Dictionary<Regex, string> RegexReleases;
+        private readonly List<SnapshotSpec> SnapshotReleases;
         public VersionFacts(YamlMappingNode yaml)
         {
-            SkipVersions = yaml["skip"].ToList(x => new Regex((string)x));
-            ParentsMap = yaml["parents"].ToStringDictionary();
-            Releases = yaml["releases"].ToList(x => ParseReleaseEntry((YamlMappingNode)x));
-        }
-
-        private (string name, List<Regex> matches) ParseReleaseEntry(YamlMappingNode node)
-        {
-            var single = node.Children.Single();
-            List<Regex> matches;
-            if (single.Value is YamlSequenceNode sequence)
-                matches = sequence.ToList(x => new Regex((string)x));
-            else
-                matches = new List<Regex> { new Regex((string)single.Value) };
-            return ((string)single.Key, matches);
+            SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x));
+            ParentsMap = yaml.Go("parents").ToStringDictionary();
+            RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x);
+            SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x));
         }
 
         public bool ShouldSkip(Version version)
@@ -44,13 +35,69 @@ namespace Minecraft_Version_History
 
         public string GetReleaseName(Version version)
         {
-            foreach (var candidate in Releases)
+            foreach (var candidate in RegexReleases)
             {
-                if (candidate.matches.Any(x => x.IsMatch(version.Name)))
-                    return candidate.name;
+                if (candidate.Key.IsMatch(version.Name))
+                    return candidate.Key.Replace(version.Name, candidate.Value);
             }
-            return "UNKNOWN";
-            throw new ArgumentException($"What release is {version} for?");
+            if (SnapshotSpec.IsSnapshot(version, out var match))
+            {
+                foreach (var candidate in SnapshotReleases)
+                {
+                    if (candidate.Matches(match))
+                        return candidate.Release;
+                }
+            }
+            throw new KeyNotFoundException($"What release is {version} for?");
+        }
+
+        public string SpecialParent(Version version)
+        {
+            ParentsMap.TryGetValue(version.Name, out var result);
+            return result;
+        }
+
+        private class SnapshotSpec
+        {
+            private static readonly Regex SnapshotRegex = new Regex(@"(?<year>\d\d)w(?<week>\d\d).");
+            public readonly string Release;
+            private readonly int Year;
+            private readonly int FirstWeek;
+            private readonly int LastWeek;
+            private readonly bool HasWeeks;
+            public SnapshotSpec(YamlMappingNode node)
+            {
+                Year = int.Parse((string)node["year"]);
+                Release = (string)node["release"];
+                var weeks = node.TryGet("weeks") as YamlSequenceNode;
+                if (weeks == null)
+                    HasWeeks = false;
+                else
+                {
+                    HasWeeks = true;
+                    FirstWeek = int.Parse((string)weeks.First());
+                    LastWeek = int.Parse((string)weeks.Last());
+                }
+            }
+
+            public static bool IsSnapshot(Version version, out Match match)
+            {
+                match = SnapshotRegex.Match(version.Name);
+                return match.Success;
+            }
+
+            public bool Matches(Match match)
+            {
+                int year = int.Parse(match.Groups["year"].Value) + 2000;
+                int week = int.Parse(match.Groups["week"].Value);
+                if (year == Year)
+                {
+                    if (!HasWeeks)
+                        return true;
+                    return week >= FirstWeek && week <= LastWeek;
+                }
+                return false;
+            }
         }
     }
 }

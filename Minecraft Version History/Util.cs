@@ -25,8 +25,33 @@ namespace Minecraft_Version_History
             }
         }
 
+        public static YamlNode Go(this YamlNode node, params string[] path)
+        {
+            foreach (var item in path)
+            {
+                node = TryGet(node, item);
+                if (node == null)
+                    return null;
+            }
+            return node;
+        }
+
+        public static YamlNode TryGet(this YamlNode node, string key)
+        {
+            try
+            {
+                return node[key];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null;
+            }
+        }
+
         public static List<TValue> ToList<TValue>(this YamlNode node, Func<YamlNode, TValue> value)
         {
+            if (node == null)
+                return new List<TValue>();
             if (node is YamlSequenceNode sequence)
             {
                 return sequence.Select(value).ToList();
@@ -41,6 +66,8 @@ namespace Minecraft_Version_History
 
         public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this YamlNode node, Func<YamlNode, TKey> key, Func<YamlNode, TValue> value)
         {
+            if (node == null)
+                return new Dictionary<TKey, TValue>();
             if (node is YamlMappingNode map)
             {
                 var dict = new Dictionary<TKey, TValue>();

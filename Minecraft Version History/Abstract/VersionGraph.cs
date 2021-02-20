@@ -10,7 +10,7 @@ namespace Minecraft_Version_History
 {
     public class VersionGraph
     {
-        private VersionNode Root;
+        private readonly VersionNode Root;
         private readonly List<ReleaseBranch> Branches = new List<ReleaseBranch>();
         private readonly Config Config;
         public VersionGraph(Config config, IEnumerable<Version> versions)
@@ -28,6 +28,27 @@ namespace Minecraft_Version_History
             {
                 Branches[i].Versions.First().SetParent(Branches[i - 1].Versions.Last());
             }
+            foreach (var version in versions)
+            {
+                string special = config.VersionFacts.SpecialParent(version);
+                if (special != null)
+                {
+                    var found = versions.FirstOrDefault(x => x.Name == special);
+                    if (found != null)
+                    {
+                        var node1 = FindNode(version);
+                        var node2 = FindNode(found);
+                        node1.SetParent(node2);
+                    }
+                }
+            }
+        }
+
+        private VersionNode FindNode(Version version)
+        {
+            var release = Config.VersionFacts.GetReleaseName(version);
+            var branch = Branches.First(x => x.Name == release);
+            return branch.Versions.First(x => x.Version == version);
         }
 
         public override string ToString()
@@ -97,33 +118,23 @@ namespace Minecraft_Version_History
                 other.SetParent(this);
             }
 
-            public IEnumerable<string> ToStringRecursive() => ToStringRecursive("", true);
+            public IEnumerable<string> ToStringRecursive() => ToStringRecursive("");
 
-            private IEnumerable<string> ToStringRecursive(string indent, bool last)
+            private IEnumerable<string> ToStringRecursive(string prefix)
             {
-                var builder = new StringBuilder();
-                builder.Append(indent);
-                if (last)
-                {
-                    builder.Append("└");
-                    if (ChildNodes.Count > 1)
-                        indent += "  ";
-                }
-                else
-                {
-                    builder.Append("|-");
-                    if (ChildNodes.Count > 1)
-                        indent += "| ";
-                }
-                builder.Append($"{Version} ({ReleaseName})");
-                yield return builder.ToString();
-
+                string pointer = ChildNodes.Any() ? "│" : "└";
+                yield return $"{prefix} {pointer} {Version} ({ReleaseName})";
+                var paths = new List<List<string>>();
                 for (int i = 0; i < ChildNodes.Count; i++)
                 {
-                    foreach (var item in ChildNodes[i].ToStringRecursive(indent, i == ChildNodes.Count - 1))
-                    {
-                        yield return item;
-                    }
+                    var rest = ChildNodes[i].ToStringRecursive(prefix);
+                    paths.Add(rest.ToList());
+                }
+                var sorted = paths.OrderBy(x => x.Count).ToList();
+                for (int i = 0; i < sorted.Count; i++)
+                {
+                    string extra = sorted.Count > 1 ? String.Concat(Enumerable.Repeat(" │", sorted.Count - i - 1)) : "";
+                    foreach (var item in sorted[i]) yield return extra + item;
                 }
             }
         }
