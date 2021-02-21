@@ -36,7 +36,34 @@ namespace MinecraftVersionHistory
 
         public override void ExtractData(string folder, Config config)
         {
-            throw new NotImplementedException();
+            var bedrock_config = (BedrockConfig)config;
+            string appxpath = Path.Combine(folder, "appx.appx");
+            using (ZipArchive zip = ZipFile.OpenRead(ZipPath))
+            {
+                var appx = GetMainAppx(zip);
+                appx.ExtractToFile(appxpath);
+            }
+
+            using (ZipArchive zip = ZipFile.OpenRead(appxpath))
+            {
+                foreach (var entry in zip.Entries)
+                {
+                    if (entry.FullName.StartsWith("data/") && Path.GetExtension(entry.FullName) != ".zip")
+                    {
+                        Directory.CreateDirectory(Path.Combine(folder, Path.GetDirectoryName(entry.FullName)));
+                        entry.ExtractToFile(Path.Combine(folder, entry.FullName));
+                    }
+                }
+            }
+            var merged = Path.Combine(folder, "latest_packs");
+            var latest_behavior = Path.Combine(merged, "behavior_pack");
+            var latest_resource = Path.Combine(merged, "resource_pack");
+            Directory.CreateDirectory(merged);
+            Directory.CreateDirectory(latest_behavior);
+            Directory.CreateDirectory(latest_resource);
+            bedrock_config.BehaviorMerger.Merge(Path.Combine(folder, "data", "behavior_packs"), latest_behavior);
+            bedrock_config.ResourceMerger.Merge(Path.Combine(folder, "data", "resource_packs"), latest_resource);
+            File.Delete(appxpath);
         }
     }
 }

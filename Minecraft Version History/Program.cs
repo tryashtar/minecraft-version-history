@@ -28,8 +28,8 @@ namespace MinecraftVersionHistory
                 var java = new JavaUpdater(java_config);
                 java.Perform();
 
-                //var bedrock = new BedrockUpdater(bedrock_config);
-                //bedrock.Perform();
+                var bedrock = new BedrockUpdater(bedrock_config);
+                bedrock.Perform();
 
                 Console.WriteLine("All done!");
 #if DEBUG

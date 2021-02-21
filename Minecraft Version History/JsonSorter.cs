@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using YamlDotNet.RepresentationModel;
 
 namespace MinecraftVersionHistory
@@ -9,10 +10,14 @@ namespace MinecraftVersionHistory
     {
         private readonly NodeMatcher[] Path;
         private readonly SortOperation Operation;
+        private readonly string SortBy;
         public JsonSorter(YamlMappingNode node)
         {
             Path = node.Go("path").ToList(x => NodeMatcher.Create(x)).ToArray();
             Operation = ParseOperation((string)node["operation"]);
+            var by = node.TryGet("by");
+            if (by != null)
+                SortBy = (string)by;
         }
 
         public void Sort(JObject root)
@@ -28,6 +33,18 @@ namespace MinecraftVersionHistory
                 {
                     if (item is JObject obj)
                         Util.SortKeys(obj);
+                }
+            }
+            else if (Operation == SortOperation.SortBy)
+            {
+                foreach (var item in selected)
+                {
+                    if (item is JArray arr)
+                    {
+                        var sorted = arr.OrderBy(x => x[SortBy]).ToList();
+                        arr.Clear();
+                        foreach (var entry in sorted) arr.Add(entry);
+                    }
                 }
             }
         }

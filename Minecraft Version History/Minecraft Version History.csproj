@@ -54,23 +54,23 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Abstract\IVersionNode.cs" />
+    <Compile Include="Bedrock\MergingSpec.cs" />
+    <Compile Include="Abstract\SnapshotSpec.cs" />
     <Compile Include="Abstract\Updater.cs" />
     <Compile Include="Abstract\Config.cs" />
     <Compile Include="Bedrock\BedrockConfig.cs" />
-    <Compile Include="Bedrock\BedrockVersionOLD.cs" />
+    <Compile Include="Bedrock\PackMerger.cs" />
     <Compile Include="CommandRunner.cs" />
     <Compile Include="Abstract\VersionFacts.cs" />
     <Compile Include="Java\JavaConfig.cs" />
     <Compile Include="Bedrock\BedrockUpdater.cs" />
     <Compile Include="Java\JavaUpdater.cs" />
-    <Compile Include="Java\JavaVersionOLD.cs" />
     <Compile Include="Java\JavaVersion.cs" />
     <Compile Include="JsonSorter.cs" />
     <Compile Include="NbtUtil.cs" />
     <Compile Include="NodeMatcher.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Abstract\UpdaterOLD.cs" />
     <Compile Include="Util.cs" />
     <Compile Include="Abstract\Version.cs" />
     <Compile Include="Abstract\VersionGraph.cs" />
