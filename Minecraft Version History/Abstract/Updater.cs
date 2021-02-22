@@ -1,4 +1,5 @@
-﻿using System;
+﻿using fNbt;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -128,6 +129,8 @@ namespace MinecraftVersionHistory
             Directory.CreateDirectory(workspace);
             Console.WriteLine($"Extracting {version.Version}");
             version.Version.ExtractData(workspace, Config);
+            Console.WriteLine($"Translating NBT files...");
+            TranslateNbtFiles(workspace);
             MergeWithWorkspace(Config.OutputRepo, workspace);
             Directory.Delete(workspace, true);
             Util.RemoveEmptyFolders(Config.OutputRepo);
@@ -144,6 +147,54 @@ namespace MinecraftVersionHistory
             VersionToCommit.Add(version, hash);
             CommandRunner.RunCommand(Config.OutputRepo, $"git gc --prune=now --aggressive");
             CommandRunner.RunCommand(Config.OutputRepo, $"git repack");
+        }
+
+        // read all NBT files in the version and write textual copies
+        private void TranslateNbtFiles(string root_folder)
+        {
+            string translations_path = Path.Combine(root_folder, "nbt_translations");
+            Directory.CreateDirectory(translations_path);
+            // don't enumerate because we're creating new directories as we go
+            foreach (var directory in Directory.GetDirectories(root_folder, "*", SearchOption.AllDirectories))
+            {
+                string dest_folder = Path.Combine(translations_path, directory.Substring(root_folder.Length + 1));
+                // bool any_nbts = false;
+
+                foreach (var nbtpath in Directory.EnumerateFiles(directory, "*.nbt", SearchOption.TopDirectoryOnly))
+                {
+                    // any_nbts = true;
+                    // remove DataVersion that makes diffs hard to read
+                    var file = new NbtFile(nbtpath);
+                    file.RootTag.Remove("DataVersion");
+                    file.SaveToFile(nbtpath, file.FileCompression);
+
+                    // custom method (matches vanilla really well, maintains order)
+                    Directory.CreateDirectory(dest_folder);
+                    File.WriteAllText(Path.Combine(dest_folder, Path.ChangeExtension(Path.GetFileName(nbtpath), ".snbt")), file.RootTag.ToSnbt(true) + "\n");
+                }
+
+                foreach (var bedrock_structure in Directory.EnumerateFiles(directory, "*.mcstructure", SearchOption.TopDirectoryOnly))
+                {
+                    // any_nbts = true;
+                    var file = new NbtFile();
+                    file.BigEndian = false;
+                    file.LoadFromFile(bedrock_structure);
+                    Directory.CreateDirectory(dest_folder);
+                    File.WriteAllText(Path.Combine(dest_folder, Path.ChangeExtension(Path.GetFileName(bedrock_structure), ".mcstructure_str")), file.RootTag.ToSnbt(true) + "\n");
+                }
+
+                // data generator method (has annoying arbitrary order that doesn't match actual file)
+                // if (any_nbts)
+                // {
+                //     Console.WriteLine($"Translating NBT files in top-level of {directory}");
+                //     Directory.CreateDirectory(dest_folder);
+                //     CommandRunner.RunCommand(Path.GetDirectoryName(JavaVersion.NbtTranslationJar), $"\"{JavaVersion.JavaPath}\" -cp \"{JavaVersion.NbtTranslationJar}\" net.minecraft.data.Main --dev --input \"{directory}\"");
+                //     foreach (var item in Directory.GetFiles(Path.Combine(Path.GetDirectoryName(JavaVersion.NbtTranslationJar), "generated"), "*.snbt", SearchOption.TopDirectoryOnly))
+                //     {
+                //         File.Move(item, Path.Combine(dest_folder, Path.GetFileName(item)));
+                //     }
+                // }
+            }
         }
 
         private void MergeWithWorkspace(string base_folder, string workspace)
