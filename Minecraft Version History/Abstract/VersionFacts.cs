@@ -9,7 +9,7 @@ using YamlDotNet.RepresentationModel;
 
 namespace MinecraftVersionHistory
 {
-    public class VersionFacts
+    public class VersionFacts : IComparer<Version>
     {
         private readonly List<Regex> SkipVersions;
         private readonly List<Regex> InsaneBranches;
@@ -17,6 +17,7 @@ namespace MinecraftVersionHistory
         private readonly Dictionary<string, string> ParentsMap;
         private readonly Dictionary<Regex, string> RegexReleases;
         private readonly List<SnapshotSpec> SnapshotReleases;
+        private readonly List<string> VersionOrder;
         public VersionFacts(YamlMappingNode yaml)
         {
             SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x)) ?? new List<Regex>();
@@ -25,6 +26,7 @@ namespace MinecraftVersionHistory
             ParentsMap = yaml.Go("parents").ToStringDictionary() ?? new Dictionary<string, string>();
             RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new Dictionary<Regex, string>();
             SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new List<SnapshotSpec>();
+            VersionOrder = yaml.Go("ordering", "versions").ToStringList() ?? new List<string>();
         }
 
         public bool ShouldSkip(Version version)
@@ -69,6 +71,15 @@ namespace MinecraftVersionHistory
         {
             ParentsMap.TryGetValue(version.Name, out var result);
             return result;
+        }
+
+        public int Compare(Version x, Version y)
+        {
+            int x_index = VersionOrder.IndexOf(x.Name);
+            int y_index = VersionOrder.IndexOf(y.Name);
+            if (x_index != -1 && y_index != -1)
+                return x_index.CompareTo(y_index);
+            return x.ReleaseTime.CompareTo(y.ReleaseTime);
         }
     }
 }

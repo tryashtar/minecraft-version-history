@@ -20,9 +20,9 @@ namespace MinecraftVersionHistory
             var releases = versions.GroupBy(x => Facts.GetReleaseName(x));
             foreach (var branch in releases)
             {
-                Branches.Add(new ReleaseBranch(this, branch.Key, branch));
+                Branches.Add(new ReleaseBranch(facts, branch.Key, branch));
             }
-            var sorter = new BranchSorter();
+            var sorter = new BranchSorter(facts);
             Branches.Sort(sorter);
             Root = Branches.First().Versions.First();
             for (int i = Branches.Count - 1; i >= 1; i--)
@@ -80,16 +80,18 @@ namespace MinecraftVersionHistory
 
         private class ReleaseBranch
         {
-            private readonly VersionGraph Graph;
             private readonly List<VersionNode> VersionList;
             public ReadOnlyCollection<VersionNode> Versions => VersionList.AsReadOnly();
             public readonly string Name;
-            public ReleaseBranch(VersionGraph graph, string name, IEnumerable<Version> versions)
+            public ReleaseBranch(VersionFacts facts, string name, IEnumerable<Version> versions)
             {
-                Graph = graph;
                 Name = name;
-                var sorter = new BranchVersionSorter();
-                VersionList = versions.Select(x => new VersionNode(x, name)).OrderBy(x => x, sorter).ToList();
+                VersionList = versions.Select(x => new VersionNode(x, name)).OrderBy(x => x.Version, facts).ToList();
+                for (int i = 0; i < VersionList.Count-1; i++)
+                {
+                    if (facts.Compare(VersionList[i].Version, VersionList[i + 1].Version) == 0)
+                        throw new ArgumentException($"Can't disambiguate order of {VersionList[i].Version} and {VersionList[i + 1].Version}");
+                }
                 for (int i = VersionList.Count - 1; i >= 1; i--)
                 {
                     VersionList[i].SetParent(VersionList[i - 1]);
@@ -99,17 +101,15 @@ namespace MinecraftVersionHistory
 
         private class BranchSorter : IComparer<ReleaseBranch>
         {
+            private readonly VersionFacts Facts;
+            public BranchSorter(VersionFacts facts)
+            {
+                Facts = facts;
+            }
+
             public int Compare(ReleaseBranch x, ReleaseBranch y)
             {
-                return x.Versions.First().Version.ReleaseTime.CompareTo(y.Versions.First().Version.ReleaseTime);
-            }
-        }
-
-        private class BranchVersionSorter : IComparer<VersionNode>
-        {
-            public int Compare(VersionNode x, VersionNode y)
-            {
-                return x.Version.ReleaseTime.CompareTo(y.Version.ReleaseTime);
+                return Facts.Compare(x.Versions.First().Version, y.Versions.First().Version);
             }
         }
 

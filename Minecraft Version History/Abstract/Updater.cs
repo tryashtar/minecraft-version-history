@@ -149,6 +149,7 @@ namespace MinecraftVersionHistory
         private void MergeWithWorkspace(string base_folder, string workspace)
         {
             // delete files that are not present in workspace
+            Console.WriteLine("Deleting...");
             foreach (var item in Directory.GetFiles(base_folder, "*", SearchOption.AllDirectories))
             {
                 string relative = Util.RelativePath(base_folder, item);
@@ -160,6 +161,7 @@ namespace MinecraftVersionHistory
             }
 
             // copy new/changed files from workspace
+            Console.WriteLine("Copying...");
             foreach (var item in Directory.GetFiles(workspace, "*", SearchOption.AllDirectories))
             {
                 string relative = Util.RelativePath(workspace, item);
