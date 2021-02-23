@@ -8,11 +8,95 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using YamlDotNet.RepresentationModel;
 
-namespace Minecraft_Version_History
+namespace MinecraftVersionHistory
 {
     public static class Util
     {
+        public static IEnumerable<IVersionNode> OrderedChildren(this IVersionNode node)
+        {
+            return node.Children.OrderBy(x => Depth(x));
+        }
+
+        public static int Depth(this IVersionNode node)
+        {
+            if (!node.Children.Any())
+                return 1;
+            return 1 + node.Children.Max(x => Depth(x));
+        }
+
+        public static YamlNode ParseYamlFile(string file_path)
+        {
+            using (var reader = new StreamReader(File.OpenRead(file_path)))
+            {
+                var stream = new YamlStream();
+                stream.Load(reader);
+                var root = stream.Documents.SingleOrDefault()?.RootNode;
+                return root;
+            }
+        }
+
+        public static YamlNode Go(this YamlNode node, params string[] path)
+        {
+            foreach (var item in path)
+            {
+                node = TryGet(node, item);
+                if (node == null)
+                    return null;
+            }
+            return node;
+        }
+
+        public static YamlNode TryGet(this YamlNode node, string key)
+        {
+            try
+            {
+                return node[key];
+            }
+            catch (KeyNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        public static List<TValue> ToList<TValue>(this YamlNode node, Func<YamlNode, TValue> value)
+        {
+            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
+                return null;
+            if (node is YamlSequenceNode sequence)
+            {
+                return sequence.Select(value).ToList();
+            }
+            throw new ArgumentException();
+        }
+
+        public static List<string> ToStringList(this YamlNode node)
+        {
+            return ToList(node, x => (string)x);
+        }
+
+        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this YamlNode node, Func<YamlNode, TKey> key, Func<YamlNode, TValue> value)
+        {
+            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
+                return null;
+            if (node is YamlMappingNode map)
+            {
+                var dict = new Dictionary<TKey, TValue>();
+                foreach (var child in map)
+                {
+                    dict[key(child.Key)] = value(child.Value);
+                }
+                return dict;
+            }
+            throw new ArgumentException();
+        }
+
+        public static Dictionary<string, string> ToStringDictionary(this YamlNode node)
+        {
+            return ToDictionary(node, x => (string)x, x => (string)x);
+        }
+
         public static string RelativePath(string fromDir, string toPath)
         {
             Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromDir));
@@ -55,6 +139,21 @@ namespace Minecraft_Version_History
 
             return path;
         }
+
+        private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T : JToken
+        {
+            JToken start = root;
+            foreach (var item in path)
+            {
+                start = start[item];
+                if (start == null)
+                    return create_default();
+            }
+            return start as T ?? create_default();
+        }
+
+        public static JObject PathToObject(JObject root, params string[] path) => PathToThing(root, () => new JObject(), path);
+        public static JArray PathToArray(JObject root, params string[] path) => PathToThing(root, () => new JArray(), path);
 
         public static void RemoveEmptyFolders(string root)
         {
