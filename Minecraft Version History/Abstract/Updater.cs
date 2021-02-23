@@ -166,7 +166,7 @@ namespace MinecraftVersionHistory
                     // any_nbts = true;
                     // remove DataVersion that makes diffs hard to read
                     var file = new NbtFile(nbtpath);
-                    file.RootTag.Remove("DataVersion");
+                    ((NbtCompound)file.RootTag).Remove("DataVersion");
                     file.SaveToFile(nbtpath, file.FileCompression);
 
                     // custom method (matches vanilla really well, maintains order)
