@@ -59,7 +59,7 @@ namespace MinecraftVersionHistory
             {
                 var node = stack.Pop();
                 yield return node;
-                foreach (var child in node.Children)
+                foreach (var child in node.OrderedChildren().Reverse())
                 {
                     stack.Push(child);
                 }
@@ -87,7 +87,7 @@ namespace MinecraftVersionHistory
             {
                 Name = name;
                 VersionList = versions.Select(x => new VersionNode(x, name)).OrderBy(x => x.Version, facts).ToList();
-                for (int i = 0; i < VersionList.Count-1; i++)
+                for (int i = 0; i < VersionList.Count - 1; i++)
                 {
                     if (facts.Compare(VersionList[i].Version, VersionList[i + 1].Version) == 0)
                         throw new ArgumentException($"Can't disambiguate order of {VersionList[i].Version} and {VersionList[i + 1].Version}");
@@ -153,16 +153,15 @@ namespace MinecraftVersionHistory
                 string pointer = ChildNodes.Any() ? "│" : "└";
                 yield return $"{prefix} {pointer} {Version} ({ReleaseName})";
                 var paths = new List<List<string>>();
-                for (int i = 0; i < ChildNodes.Count; i++)
+                foreach (VersionNode item in this.OrderedChildren())
                 {
-                    var rest = ChildNodes[i].ToStringRecursive(prefix);
+                    var rest = item.ToStringRecursive(prefix);
                     paths.Add(rest.ToList());
                 }
-                var sorted = paths.OrderBy(x => x.Count).ToList();
-                for (int i = 0; i < sorted.Count; i++)
+                for (int i = 0; i < paths.Count; i++)
                 {
-                    string extra = sorted.Count > 1 ? String.Concat(Enumerable.Repeat(" │", sorted.Count - i - 1)) : "";
-                    foreach (var item in sorted[i]) yield return extra + item;
+                    string extra = paths.Count > 1 ? String.Concat(Enumerable.Repeat(" │", paths.Count - i - 1)) : "";
+                    foreach (var item in paths[i]) yield return extra + item;
                 }
             }
         }

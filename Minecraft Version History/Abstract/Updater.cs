@@ -131,6 +131,7 @@ namespace MinecraftVersionHistory
             version.Version.ExtractData(workspace, Config);
             Console.WriteLine($"Translating NBT files...");
             TranslateNbtFiles(workspace);
+            Console.WriteLine($"Merging... ({version.Version})");
             MergeWithWorkspace(Config.OutputRepo, workspace);
             Directory.Delete(workspace, true);
             Util.RemoveEmptyFolders(Config.OutputRepo);
@@ -140,7 +141,7 @@ namespace MinecraftVersionHistory
             CommandRunner.RunCommand(Config.OutputRepo, $"git add -A");
             CommandRunner.RunCommand(Config.OutputRepo, $"set GIT_COMMITTER_DATE={version.Version.ReleaseTime} & git commit --date=\"{version.Version.ReleaseTime}\" -m \"{version.Version.Name}\"");
             // cleanup
-            Console.WriteLine($"Cleaning up...");
+            Console.WriteLine($"Cleaning up... ({version.Version})");
             string hash = CommandRunner.RunCommand(Config.OutputRepo, $"git rev-parse HEAD", output: true).Output;
             hash = hash.Substring(0, 40);
             CommitToVersion.Add(hash, version);

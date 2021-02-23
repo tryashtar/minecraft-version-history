@@ -46,7 +46,7 @@ namespace MinecraftVersionHistory
             }
             DecompileMinecraft(java_config, Path.Combine(folder, "source"));
 
-            Console.WriteLine("Extracting jar...");
+            Console.WriteLine($"Extracting jar... ({this})");
             using (ZipArchive zip = ZipFile.OpenRead(JarPath))
             {
                 foreach (var entry in zip.Entries)
@@ -95,8 +95,10 @@ namespace MinecraftVersionHistory
             if (config.Decompiler == DecompilerType.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
-                CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx1200M -Xms200M -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx1000M -Xms200M -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
+                if (result.ExitCode != 0)
+                    throw new ApplicationException("Failed to decompile");
                 string summary_file = Path.Combine(destination, "summary.txt");
                 if (File.Exists(summary_file))
                 {

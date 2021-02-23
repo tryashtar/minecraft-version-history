@@ -14,6 +14,18 @@ namespace MinecraftVersionHistory
 {
     public static class Util
     {
+        public static IEnumerable<IVersionNode> OrderedChildren(this IVersionNode node)
+        {
+            return node.Children.OrderBy(x => Depth(x));
+        }
+
+        public static int Depth(this IVersionNode node)
+        {
+            if (!node.Children.Any())
+                return 1;
+            return 1 + node.Children.Max(x => Depth(x));
+        }
+
         public static YamlNode ParseYamlFile(string file_path)
         {
             using (var reader = new StreamReader(File.OpenRead(file_path)))
