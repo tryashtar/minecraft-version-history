@@ -95,7 +95,7 @@ namespace MinecraftVersionHistory
             if (config.Decompiler == DecompilerType.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
-                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx{config.DecompilerXmx} -Xms{config.DecompilerXmx} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx{config.DecompilerXmx} -Xms{config.DecompilerXms} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
                 if (result.ExitCode != 0)
                     throw new ApplicationException("Failed to decompile");
@@ -112,7 +112,7 @@ namespace MinecraftVersionHistory
                 Console.WriteLine($"Decompiling with fernflower...");
                 string output_dir = Path.Combine(destination, "decompiled");
                 Directory.CreateDirectory(output_dir);
-                CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx1200M -Xms200M -jar \"{config.FernflowerPath}\" " +
+                CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx{config.DecompilerXmx} -Xms{config.DecompilerXms} -jar \"{config.FernflowerPath}\" " +
                     $"-hes=0 -hdc=0 -dgs=1 -log=WARN \"{jar_path}\" \"{output_dir}\""); ;
                 using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
                 {

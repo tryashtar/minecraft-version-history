@@ -38,8 +38,8 @@ namespace MinecraftVersionHistory
                     var specs = MergingSpecs.Where(x => x.Matches(relative));
                     if (specs.Any() && File.Exists(dest))
                     {
-                        var current = JObject.Parse(File.ReadAllText(dest));
-                        var newer = JObject.Parse(File.ReadAllText(file));
+                        var current = JToken.Parse(File.ReadAllText(dest));
+                        var newer = JToken.Parse(File.ReadAllText(file));
                         foreach (var spec in specs)
                         {
                             spec.Merge(current, newer);

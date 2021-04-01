@@ -29,7 +29,15 @@ namespace MinecraftVersionHistory
             return true;
         }
 
-        public void Merge(JObject current, JObject newer)
+        public void Merge(JToken current, JToken newer)
+        {
+            if (current is JObject cj && newer is JObject nj)
+                MergeObjects(cj, nj);
+            else if (current is JArray ca && newer is JArray na)
+                MergeArrays(ca, na);
+        }
+
+        public void MergeObjects(JObject current, JObject newer)
         {
             foreach (var item in newer)
             {
@@ -38,16 +46,19 @@ namespace MinecraftVersionHistory
                     current[item.Key] = item.Value;
                 else
                 {
-                    if (item.Value is JArray array)
-                    {
-                        var existing_array = (JArray)existing;
-                        foreach (var sub in item.Value) existing_array.Add(sub);
-                    }
-                    else if (item.Value is JObject obj)
-                        Merge((JObject)existing, obj);
+                    if (item.Value is JObject || item.Value is JArray)
+                        Merge(existing, item.Value);
                     else
                         current[item.Key] = item.Value;
                 }
+            }
+        }
+
+        public void MergeArrays(JArray current, JArray newer)
+        {
+            foreach (var sub in newer)
+            {
+                current.Add(sub);
             }
         }
     }
