@@ -95,7 +95,7 @@ namespace MinecraftVersionHistory
             if (config.Decompiler == DecompilerType.Cfr)
             {
                 Console.WriteLine($"Decompiling with CFR...");
-                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx1000M -Xms200M -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" -Xmx{config.DecompilerXmx} -Xms{config.DecompilerXmx} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                     $"--outputdir {destination} --caseinsensitivefs true --comments false --showversion false");
                 if (result.ExitCode != 0)
                     throw new ApplicationException("Failed to decompile");

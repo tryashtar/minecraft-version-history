@@ -15,6 +15,8 @@ namespace MinecraftVersionHistory
         public readonly string CfrPath;
         public readonly string SpecialSourcePath;
         public readonly string ServerJarFolder;
+        public readonly string DecompilerXmx;
+        public readonly string DecompilerXms;
         public readonly DateTime DataGenerators;
         public readonly DateTime AssetGenerators;
         public readonly DecompilerType? Decompiler;
@@ -28,6 +30,8 @@ namespace MinecraftVersionHistory
             SpecialSourcePath = Path.Combine(folder, (string)yaml["special source jar"]);
             ServerJarFolder = Path.Combine(folder, (string)yaml["server jars"]);
             Decompiler = ParseDecompiler((string)yaml["decompiler"]);
+            DecompilerXmx = (string)yaml["decompiler xmx"];
+            DecompilerXms = (string)yaml["decompiler xms"];
             DataGenerators = DateTime.Parse((string)yaml["data generators"]);
             AssetGenerators = DateTime.Parse((string)yaml["asset generators"]);
             JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, x => new JsonSorter((YamlMappingNode)x)) ?? new Dictionary<string, JsonSorter>();
