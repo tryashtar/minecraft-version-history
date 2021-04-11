@@ -2,7 +2,7 @@
 
 namespace MinecraftVersionHistory
 {
-    public class BedrockConfig : Config
+    public class BedrockConfig : VersionConfig
     {
         public readonly PackMerger BehaviorMerger;
         public readonly PackMerger ResourceMerger;

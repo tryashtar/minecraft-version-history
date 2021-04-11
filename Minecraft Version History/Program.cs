@@ -21,14 +21,13 @@ namespace MinecraftVersionHistory
             try
 #endif
             {
-                var config_file = Util.ParseYamlFile(@"..\config.yaml");
-                var java_config = new JavaConfig(Path.GetFullPath(".."), config_file["java"] as YamlMappingNode);
-                var bedrock_config = new BedrockConfig(config_file["bedrock"] as YamlMappingNode);
+                var config_file = (YamlMappingNode)Util.ParseYamlFile(@"..\config.yaml");
+                var config = new AppConfig(Path.GetFullPath(".."), config_file);
 
-                var java = new JavaUpdater(java_config);
+                var java = new JavaUpdater(config);
                 java.Perform();
 
-                var bedrock = new BedrockUpdater(bedrock_config);
+                var bedrock = new BedrockUpdater(config);
                 bedrock.Perform();
 
                 Console.WriteLine("All done!");

@@ -7,12 +7,12 @@ using YamlDotNet.RepresentationModel;
 
 namespace MinecraftVersionHistory
 {
-    public abstract class Config
+    public abstract class VersionConfig
     {
         public readonly string InputFolder;
         public readonly string OutputRepo;
         public readonly VersionFacts VersionFacts;
-        public Config(YamlMappingNode yaml)
+        public VersionConfig(YamlMappingNode yaml)
         {
             InputFolder = (string)yaml["version folder"];
             OutputRepo = (string)yaml["repo"];

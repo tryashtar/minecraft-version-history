@@ -9,21 +9,19 @@ namespace MinecraftVersionHistory
 {
     public class JavaUpdater : Updater
     {
-        public readonly JavaConfig JavaConfig;
-        protected override Config Config => JavaConfig;
-        public JavaUpdater(JavaConfig config)
-        {
-            JavaConfig = config;
-        }
+        public JavaUpdater(AppConfig config) : base(config)
+        { }
+
+        protected override VersionConfig VersionConfig => Config.Java;
 
         protected override VersionGraph CreateGraph()
         {
             var versions = new List<Version>();
-            foreach (var folder in Directory.EnumerateDirectories(JavaConfig.InputFolder))
+            foreach (var folder in Directory.EnumerateDirectories(VersionConfig.InputFolder))
             {
                 versions.Add(new JavaVersion(folder));
             }
-            return new VersionGraph(JavaConfig.VersionFacts, versions);
+            return new VersionGraph(VersionConfig.VersionFacts, versions);
         }
     }
 }

@@ -34,9 +34,9 @@ namespace MinecraftVersionHistory
             throw new FileNotFoundException($"Could not find main APPX");
         }
 
-        public override void ExtractData(string folder, Config config)
+        public override void ExtractData(string folder, AppConfig config)
         {
-            var bedrock_config = (BedrockConfig)config;
+            var bedrock_config = config.Bedrock;
             string appxpath = Path.Combine(folder, "appx.appx");
             using (ZipArchive zip = ZipFile.OpenRead(ZipPath))
             {

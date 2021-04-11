@@ -54,10 +54,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Abstract\IVersionNode.cs" />
+    <Compile Include="AppConfig.cs" />
     <Compile Include="Bedrock\MergingSpec.cs" />
     <Compile Include="Abstract\SnapshotSpec.cs" />
     <Compile Include="Abstract\Updater.cs" />
-    <Compile Include="Abstract\Config.cs" />
+    <Compile Include="Abstract\VersionConfig.cs" />
     <Compile Include="Bedrock\BedrockConfig.cs" />
     <Compile Include="Bedrock\PackMerger.cs" />
     <Compile Include="CommandRunner.cs" />

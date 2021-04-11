@@ -8,15 +8,16 @@ using YamlDotNet.RepresentationModel;
 
 namespace MinecraftVersionHistory
 {
-    public class JavaConfig : Config
+    public class JavaConfig : VersionConfig
     {
         public readonly string JavaInstallationPath;
         public readonly string FernflowerPath;
         public readonly string CfrPath;
         public readonly string SpecialSourcePath;
         public readonly string ServerJarFolder;
-        public readonly string DecompilerXmx;
-        public readonly string DecompilerXms;
+        public readonly string DecompilerArgs;
+        public readonly string CfrArgs;
+        public readonly string FernflowerArgs;
         public readonly DateTime DataGenerators;
         public readonly DateTime AssetGenerators;
         public readonly DecompilerType? Decompiler;
@@ -30,8 +31,9 @@ namespace MinecraftVersionHistory
             SpecialSourcePath = Path.Combine(folder, (string)yaml["special source jar"]);
             ServerJarFolder = Path.Combine(folder, (string)yaml["server jars"]);
             Decompiler = ParseDecompiler((string)yaml["decompiler"]);
-            DecompilerXmx = (string)yaml["decompiler xmx"];
-            DecompilerXms = (string)yaml["decompiler xms"];
+            DecompilerArgs = (string)yaml["decompiler args"];
+            CfrArgs = (string)yaml["cfr args"];
+            FernflowerArgs = (string)yaml["fernflower args"];
             DataGenerators = DateTime.Parse((string)yaml["data generators"]);
             AssetGenerators = DateTime.Parse((string)yaml["asset generators"]);
             JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, x => new JsonSorter((YamlMappingNode)x)) ?? new Dictionary<string, JsonSorter>();

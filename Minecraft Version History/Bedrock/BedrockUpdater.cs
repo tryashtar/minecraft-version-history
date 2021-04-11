@@ -9,22 +9,20 @@ namespace MinecraftVersionHistory
 {
     public class BedrockUpdater : Updater
     {
-        public readonly BedrockConfig BedrockConfig;
-        protected override Config Config => BedrockConfig;
-        public BedrockUpdater(BedrockConfig config)
-        {
-            BedrockConfig = config;
-        }
+        public BedrockUpdater(AppConfig config) : base(config)
+        { }
+
+        protected override VersionConfig VersionConfig => Config.Bedrock;
 
         protected override VersionGraph CreateGraph()
         {
             var versions = new List<Version>();
-            foreach (var zip in Directory.EnumerateFiles(BedrockConfig.InputFolder))
+            foreach (var zip in Directory.EnumerateFiles(VersionConfig.InputFolder))
             {
                 if (Path.GetExtension(zip) == ".zip")
                     versions.Add(new BedrockVersion(zip));
             }
-            return new VersionGraph(BedrockConfig.VersionFacts, versions);
+            return new VersionGraph(VersionConfig.VersionFacts, versions);
         }
     }
 }
