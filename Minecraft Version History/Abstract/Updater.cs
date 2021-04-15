@@ -157,8 +157,6 @@ namespace MinecraftVersionHistory
             hash = hash.Substring(0, 40);
             CommitToVersion.Add(hash, version);
             VersionToCommit.Add(version, hash);
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} gc --prune=now --aggressive");
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} repack");
         }
 
         // read all NBT files in the version and write textual copies
