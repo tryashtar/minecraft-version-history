@@ -24,6 +24,21 @@ namespace MinecraftVersionHistory
                 var config_file = (YamlMappingNode)Util.ParseYamlFile(@"..\..\config.yaml");
                 var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
 
+                var downloader = new JavaVersionDownloader();
+#if !DEBUG
+                try
+#endif
+                {
+                    downloader.DownloadTo(config.Java.InputFolder);
+                }
+#if !DEBUG
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Java version downloader failed!");
+                    Console.WriteLine(ex.ToString());
+                }
+#endif
+
                 var java = new JavaUpdater(config);
                 java.Perform();
 

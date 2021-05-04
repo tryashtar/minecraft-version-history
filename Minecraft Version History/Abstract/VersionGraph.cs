@@ -32,7 +32,7 @@ namespace MinecraftVersionHistory
                 // skip "insane" branches (like april fools versions)
                 var start = Branches[i].Versions.First();
                 var sane_parent = Branches.Take(i).Last(x => !Facts.IsInsaneRelease(x.Name)).Versions
-                    .Last(x => !Facts.IsInsaneVersion(x.Version) && x.Version.ReleaseTime <= start.Version.ReleaseTime);
+                    .Last(x => !Facts.IsInsaneVersion(x.Version) && Facts.Compare(start.Version, x.Version) > 0);
                 start.SetParent(sane_parent);
             }
             foreach (var version in versions)

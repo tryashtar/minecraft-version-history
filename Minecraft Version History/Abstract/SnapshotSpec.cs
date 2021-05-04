@@ -6,7 +6,7 @@ namespace MinecraftVersionHistory
 {
     public class SnapshotSpec
     {
-        private static readonly Regex SnapshotRegex = new Regex(@"(?<year>\d\d)w(?<week>\d\d).");
+        private static readonly Regex SnapshotRegex = new(@"(?<year>\d\d)w(?<week>\d\d)(?<sub>.)");
         public readonly string Release;
         private readonly int Year;
         private readonly int FirstWeek;
@@ -27,23 +27,35 @@ namespace MinecraftVersionHistory
             }
         }
 
-        public static bool IsSnapshot(Version version, out Match match)
+        public static bool IsSnapshot(Version version, out Snapshot snap)
         {
-            match = SnapshotRegex.Match(version.Name);
+            var match = SnapshotRegex.Match(version.Name);
+            snap = match.Success ? new Snapshot(match) : null;
             return match.Success;
         }
 
-        public bool Matches(Match match)
+        public bool Matches(Snapshot snapshot)
         {
-            int year = int.Parse(match.Groups["year"].Value) + 2000;
-            int week = int.Parse(match.Groups["week"].Value);
-            if (year == Year)
+            if (snapshot.Year == this.Year)
             {
-                if (!HasWeeks)
+                if (!this.HasWeeks)
                     return true;
-                return week >= FirstWeek && week <= LastWeek;
+                return snapshot.Week >= this.FirstWeek && snapshot.Week <= this.LastWeek;
             }
             return false;
+        }
+    }
+
+    public class Snapshot
+    {
+        public readonly int Year;
+        public readonly int Week;
+        public readonly char Subversion;
+        public Snapshot(Match match)
+        {
+            Year = int.Parse(match.Groups["year"].Value) + 2000;
+            Week = int.Parse(match.Groups["week"].Value);
+            Subversion = match.Groups["sub"].Value.Single();
         }
     }
 }

@@ -56,11 +56,11 @@ namespace MinecraftVersionHistory
                 if (candidate.Key.IsMatch(version.Name))
                     return candidate.Key.Replace(version.Name, candidate.Value);
             }
-            if (SnapshotSpec.IsSnapshot(version, out var match))
+            if (SnapshotSpec.IsSnapshot(version, out var snap))
             {
                 foreach (var candidate in SnapshotReleases)
                 {
-                    if (candidate.Matches(match))
+                    if (candidate.Matches(snap))
                         return candidate.Release;
                 }
             }
@@ -75,11 +75,77 @@ namespace MinecraftVersionHistory
 
         public int Compare(Version x, Version y)
         {
+            if (x == y)
+                return 0;
             int x_index = VersionOrder.IndexOf(x.Name);
             int y_index = VersionOrder.IndexOf(y.Name);
             if (x_index != -1 && y_index != -1)
                 return x_index.CompareTo(y_index);
-            return x.ReleaseTime.CompareTo(y.ReleaseTime);
+            int compare_dates = x.ReleaseTime.CompareTo(y.ReleaseTime);
+            if (compare_dates != 0)
+                return compare_dates;
+            return BestGuessCompare(x, y);
+        }
+
+        private static readonly char[] TypicalSplits = new char[] { ' ', '-', '.', '_' };
+        private int BestGuessCompare(Version n1, Version n2)
+        {
+            bool is_snap1 = SnapshotSpec.IsSnapshot(n1, out var snap1);
+            bool is_snap2 = SnapshotSpec.IsSnapshot(n2, out var snap2);
+            // if they're both snapshots, compare snapshot data
+            if (is_snap1 && is_snap2)
+            {
+                int year_compare = snap1.Year.CompareTo(snap2.Year);
+                if (year_compare != 0)
+                    return year_compare;
+                int week_compare = snap1.Week.CompareTo(snap2.Week);
+                if (week_compare != 0)
+                    return week_compare;
+                int sub_compare = snap1.Subversion.CompareTo(snap2.Subversion);
+                if (sub_compare != 0)
+                    return sub_compare;
+            }
+            // assume releases always follow snapshots
+            if (is_snap1 && !is_snap2)
+                return 1;
+            if (is_snap2 && !is_snap1)
+                return -1;
+            string[] n1_split = n1.Name.Split(TypicalSplits, StringSplitOptions.RemoveEmptyEntries);
+            string[] n2_split = n2.Name.Split(TypicalSplits, StringSplitOptions.RemoveEmptyEntries);
+            int[] n1_nums = n1_split.Select(x => FindNumber(x)).ToArray();
+            int[] n2_nums = n2_split.Select(x => FindNumber(x)).ToArray();
+            for (int i = 0; i < Math.Min(n1_nums.Length, n2_nums.Length); i++)
+            {
+                if (n1_nums[i] == -1 && n2_nums[i] == -1)
+                    continue;
+                if (n1_nums[i] == -1)
+                    return 1;
+                if (n2_nums[i] == -1)
+                    return -1;
+                int compare = n1_nums[i].CompareTo(n2_nums[i]);
+                if (compare != 0)
+                    return compare;
+            }
+            for (int i = 0; i < Math.Min(n1_split.Length, n2_split.Length); i++)
+            {
+                int compare = n1_split[i].CompareTo(n2_split[i]);
+                if (compare != 0)
+                    return compare;
+            }
+            // assume shorter strings come first, e.g. 1.2.3-ex > 1.2.3
+            int size_compare = n1_split.Length.CompareTo(n2_split.Length);
+            if (size_compare != 0)
+                return size_compare;
+            throw new ArgumentException($"Can't tell which came first: {n1} or {n2}");
+        }
+
+        private static readonly Regex NumberFinder = new(@"\d+");
+        private static int FindNumber(string str)
+        {
+            var match = NumberFinder.Match(str);
+            if (!match.Success)
+                return -1;
+            return int.Parse(match.Value);
         }
     }
 }
