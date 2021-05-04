@@ -21,8 +21,8 @@ namespace MinecraftVersionHistory
             try
 #endif
             {
-                var config_file = (YamlMappingNode)Util.ParseYamlFile(@"..\config.yaml");
-                var config = new AppConfig(Path.GetFullPath(".."), config_file);
+                var config_file = (YamlMappingNode)Util.ParseYamlFile(@"..\..\config.yaml");
+                var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
 
                 var java = new JavaUpdater(config);
                 java.Perform();
@@ -31,9 +31,6 @@ namespace MinecraftVersionHistory
                 bedrock.Perform();
 
                 Console.WriteLine("All done!");
-#if DEBUG
-                Console.ReadLine();
-#endif
             }
 #if !DEBUG
             catch (Exception ex)

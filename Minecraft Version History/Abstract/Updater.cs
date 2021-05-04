@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TryashtarUtils.Nbt;
 
 namespace MinecraftVersionHistory
 {
@@ -171,7 +172,7 @@ namespace MinecraftVersionHistory
                     var file = new NbtFile(nbtpath);
                     ((NbtCompound)file.RootTag).Remove("DataVersion");
                     file.SaveToFile(nbtpath, file.FileCompression);
-                    File.WriteAllText(Path.ChangeExtension(nbtpath, ".snbt"), file.RootTag.ToSnbt(true) + "\n");
+                    File.WriteAllText(Path.ChangeExtension(nbtpath, ".snbt"), file.RootTag.ToSnbt(SnbtOptions.DefaultExpanded) + "\n");
                 }
 
                 foreach (var bedrock_structure in Directory.EnumerateFiles(directory, "*.mcstructure", SearchOption.TopDirectoryOnly))
@@ -179,7 +180,7 @@ namespace MinecraftVersionHistory
                     var file = new NbtFile();
                     file.BigEndian = false;
                     file.LoadFromFile(bedrock_structure);
-                    File.WriteAllText(Path.ChangeExtension(bedrock_structure, ".snbt"), file.RootTag.ToSnbt(true) + "\n");
+                    File.WriteAllText(Path.ChangeExtension(bedrock_structure, ".snbt"), file.RootTag.ToSnbt(SnbtOptions.DefaultExpanded) + "\n");
                 }
             }
         }

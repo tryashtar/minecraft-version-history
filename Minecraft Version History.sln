@@ -7,7 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Minecraft Version History",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{EB3E5FF1-3411-4693-AAD0-0549341E5647}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fNbt", "fNbt\fNbt\fNbt.csproj", "{4488498D-976D-4DA3-BF72-109531AF0488}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Nbt", "..\NbtStudio\utils\Nbt\TryashtarUtils.Nbt.csproj", "{9642FB93-26D9-4FB9-A5A9-A8EE35E7BA7D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "fNbt", "..\NbtStudio\utils\fNbt\fNbt\fNbt.csproj", "{4488498D-976D-4DA3-BF72-109531AF0488}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Utility", "..\NbtStudio\utils\Utility\TryashtarUtils.Utility.csproj", "{EAE1B14D-D7AC-4860-B46E-5E6C5A0D64A8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +27,18 @@ Global
 		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9642FB93-26D9-4FB9-A5A9-A8EE35E7BA7D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9642FB93-26D9-4FB9-A5A9-A8EE35E7BA7D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9642FB93-26D9-4FB9-A5A9-A8EE35E7BA7D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9642FB93-26D9-4FB9-A5A9-A8EE35E7BA7D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4488498D-976D-4DA3-BF72-109531AF0488}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4488498D-976D-4DA3-BF72-109531AF0488}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4488498D-976D-4DA3-BF72-109531AF0488}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4488498D-976D-4DA3-BF72-109531AF0488}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAE1B14D-D7AC-4860-B46E-5E6C5A0D64A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAE1B14D-D7AC-4860-B46E-5E6C5A0D64A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAE1B14D-D7AC-4860-B46E-5E6C5A0D64A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAE1B14D-D7AC-4860-B46E-5E6C5A0D64A8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
