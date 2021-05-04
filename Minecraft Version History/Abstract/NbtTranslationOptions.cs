@@ -23,7 +23,7 @@ namespace MinecraftVersionHistory
             if (!Extension.StartsWith('.'))
                 Extension = "." + Extension;
             RemoveKeys = node.Go("remove keys").ToStringList() ?? new List<string>();
-            var endian_node = node.TryGet("endianness");
+            var endian_node = node.TryGet("endian");
             if (endian_node == null)
                 Endianness = Endianness.Big;
             else

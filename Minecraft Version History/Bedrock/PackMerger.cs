@@ -31,20 +31,17 @@ namespace MinecraftVersionHistory
                     continue;
                 }
                 Console.WriteLine($"Applying {layer}");
-                foreach (var file in Directory.GetFiles(pack, "*.*", SearchOption.AllDirectories))
+                foreach (var file in Directory.GetFiles(pack, "*", SearchOption.AllDirectories))
                 {
                     var relative = Util.RelativePath(pack, file);
                     var dest = Path.Combine(output_folder, relative);
                     var specs = MergingSpecs.Where(x => x.Matches(relative));
                     if (specs.Any() && File.Exists(dest))
                     {
-                        var current = JToken.Parse(File.ReadAllText(dest));
-                        var newer = JToken.Parse(File.ReadAllText(file));
                         foreach (var spec in specs)
                         {
-                            spec.Merge(current, newer);
+                            spec.MergeFiles(dest, file);
                         }
-                        File.WriteAllText(dest, Util.ToMinecraftJson(current));
                     }
                     else
                         Util.Copy(file, dest);

@@ -3,30 +3,77 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using YamlDotNet.RepresentationModel;
+using System.IO;
+using System;
 
 namespace MinecraftVersionHistory
 {
     public class MergingSpec
     {
+        private readonly string Extension;
         private readonly string[] Path;
         private readonly List<string> OverwriteKeys;
+        public readonly MergeOperation Operation;
         public MergingSpec(YamlMappingNode node)
         {
-            Path = Util.Split((string)node["path"]);
+            var path_node = node.TryGet("path");
+            if (path_node == null)
+                Path = null;
+            else
+                Path = Util.Split((string)path_node);
+            var ext_node = node.TryGet("extension");
+            if (ext_node == null)
+                Extension = null;
+            else
+            {
+                Extension = (string)ext_node;
+                if (!Extension.StartsWith('.'))
+                    Extension = "." + Extension;
+            }
             OverwriteKeys = node.Go("overwrite").ToStringList() ?? new List<string>();
+            var operation_node = node.TryGet("operation");
+            if (operation_node == null)
+                Operation = MergeOperation.MergeJson;
+            else
+                Operation = ParseMergeOperation((string)operation_node);
         }
 
         public bool Matches(string path)
         {
-            var split = Util.Split(path);
-            if (split.Length != Path.Length)
-                return false;
-            for (int i = 0; i < split.Length; i++)
+            if (Path != null)
             {
-                if (split[i] != Path[i])
+                var split = Util.Split(path);
+                if (split.Length != Path.Length)
+                    return false;
+                for (int i = 0; i < split.Length; i++)
+                {
+                    if (split[i] != Path[i])
+                        return false;
+                }
+            }
+            if (Extension != null)
+            {
+                if (System.IO.Path.GetExtension(path) != Extension)
                     return false;
             }
             return true;
+        }
+
+        public void MergeFiles(string current_path, string newer_path)
+        {
+            if (Operation == MergeOperation.MergeJson)
+            {
+                var current = JToken.Parse(File.ReadAllText(current_path));
+                var newer = JToken.Parse(File.ReadAllText(newer_path));
+                Merge(current, newer);
+                File.WriteAllText(current_path, Util.ToMinecraftJson(current));
+            }
+            else if (Operation == MergeOperation.AppendLines)
+            {
+                using Stream input = File.OpenRead(newer_path);
+                using Stream output = new FileStream(current_path, FileMode.Append, FileAccess.Write, FileShare.None);
+                input.CopyTo(output);
+            }
         }
 
         public void Merge(JToken current, JToken newer)
@@ -61,5 +108,20 @@ namespace MinecraftVersionHistory
                 current.Add(sub);
             }
         }
+
+        private static MergeOperation ParseMergeOperation(string str)
+        {
+            if (String.Equals(str, "append_lines", StringComparison.OrdinalIgnoreCase))
+                return MergeOperation.AppendLines;
+            else if (String.Equals(str, "merge_json", StringComparison.OrdinalIgnoreCase))
+                return MergeOperation.MergeJson;
+            throw new ArgumentException($"Unknown merge operation: {str}");
+        }
+    }
+
+    public enum MergeOperation
+    {
+        AppendLines,
+        MergeJson
     }
 }
