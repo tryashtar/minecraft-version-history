@@ -163,25 +163,10 @@ namespace MinecraftVersionHistory
         // read all NBT files in the version and write textual copies
         private void TranslateNbtFiles(string root_folder)
         {
-            // don't enumerate because we're creating new directories as we go
-            foreach (var directory in Directory.GetDirectories(root_folder, "*", SearchOption.AllDirectories))
+            // don't enumerate because we're creating new files as we go
+            foreach (var path in Directory.GetFiles(root_folder, "*", SearchOption.AllDirectories))
             {
-                foreach (var nbtpath in Directory.EnumerateFiles(directory, "*.nbt", SearchOption.TopDirectoryOnly))
-                {
-                    // remove DataVersion that makes diffs hard to read
-                    var file = new NbtFile(nbtpath);
-                    ((NbtCompound)file.RootTag).Remove("DataVersion");
-                    file.SaveToFile(nbtpath, file.FileCompression);
-                    File.WriteAllText(Path.ChangeExtension(nbtpath, ".snbt"), file.RootTag.ToSnbt(SnbtOptions.DefaultExpanded) + "\n");
-                }
-
-                foreach (var bedrock_structure in Directory.EnumerateFiles(directory, "*.mcstructure", SearchOption.TopDirectoryOnly))
-                {
-                    var file = new NbtFile();
-                    file.BigEndian = false;
-                    file.LoadFromFile(bedrock_structure);
-                    File.WriteAllText(Path.ChangeExtension(bedrock_structure, ".snbt"), file.RootTag.ToSnbt(SnbtOptions.DefaultExpanded) + "\n");
-                }
+                VersionConfig.TranslateNbt(path);
             }
         }
 
