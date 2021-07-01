@@ -27,15 +27,17 @@ namespace MinecraftVersionHistory
                 var name = (string)version["id"];
                 var url = (string)version["url"];
                 string destination = Path.Combine(folder, name);
-                if (Directory.Exists(destination))
+                string json_file = Path.Combine(destination, name + ".json");
+                string jar_file = Path.Combine(destination, name + ".jar");
+                if (File.Exists(json_file) && File.Exists(jar_file))
                     continue;
                 Console.WriteLine($"Downloading new version: {name}");
                 Directory.CreateDirectory(destination);
-                string json_file = Path.Combine(destination, name + ".json");
-                string jar_file = Path.Combine(destination, name + ".jar");
-                client.DownloadFile(url, json_file);
+                if (!File.Exists(json_file))
+                    client.DownloadFile(url, json_file);
                 var client_jar = (string)JObject.Parse(File.ReadAllText(json_file))["downloads"]["client"]["url"];
-                client.DownloadFile(client_jar, jar_file);
+                if (!File.Exists(jar_file))
+                    client.DownloadFile(client_jar, jar_file);
             }
         }
     }
