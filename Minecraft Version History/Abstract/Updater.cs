@@ -34,6 +34,14 @@ namespace MinecraftVersionHistory
             }
         }
 
+        private VersionGraph CreateGraph()
+        {
+            var versions = FindVersions().ToList();
+            var git_versions = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath).Select(x => new GitVersion(x));
+            versions.AddRange(git_versions.Where(x => !versions.Any(y => x.Name == y.Name)));
+            return new VersionGraph(VersionConfig.VersionFacts, versions);
+        }
+
         protected abstract VersionConfig VersionConfig { get; }
         protected string OutputRepo => VersionConfig.OutputRepo;
 
@@ -43,18 +51,14 @@ namespace MinecraftVersionHistory
             CommitToVersion = new Dictionary<string, IVersionNode>();
             VersionToCommit = new Dictionary<IVersionNode, string>();
             Console.WriteLine("Loading commits...");
-            string[] all = CommandRunner.RunCommand(OutputRepo, $"{GIT} log --all --pretty=\"%H %s\"", output: true).Output.Split('\n');
-            foreach (var entry in all)
+            var commits = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath);
+            foreach (var entry in commits)
             {
-                if (String.IsNullOrEmpty(entry))
-                    continue;
-                string hash = entry.Substring(0, 40);
-                string message = entry.Substring(41);
-                var version = versions.FirstOrDefault(x => x.Version.Name == message);
+                var version = versions.FirstOrDefault(x => x.Version.Name == entry.Message);
                 if (version != null)
                 {
-                    CommitToVersion[hash] = version;
-                    VersionToCommit[version] = hash;
+                    CommitToVersion[entry.Hash] = version;
+                    VersionToCommit[version] = entry.Hash;
                 }
             }
         }
@@ -196,6 +200,6 @@ namespace MinecraftVersionHistory
             }
         }
 
-        protected abstract VersionGraph CreateGraph();
+        protected abstract IEnumerable<Version> FindVersions();
     }
 }

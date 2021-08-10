@@ -14,15 +14,13 @@ namespace MinecraftVersionHistory
 
         protected override VersionConfig VersionConfig => Config.Bedrock;
 
-        protected override VersionGraph CreateGraph()
+        protected override IEnumerable<Version> FindVersions()
         {
-            var versions = new List<Version>();
             foreach (var zip in Directory.EnumerateFiles(VersionConfig.InputFolder))
             {
                 if (Path.GetExtension(zip) == ".zip")
-                    versions.Add(new BedrockVersion(zip));
+                    yield return new BedrockVersion(zip);
             }
-            return new VersionGraph(VersionConfig.VersionFacts, versions);
         }
     }
 }

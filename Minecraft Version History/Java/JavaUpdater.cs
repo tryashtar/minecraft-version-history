@@ -14,14 +14,12 @@ namespace MinecraftVersionHistory
 
         protected override VersionConfig VersionConfig => Config.Java;
 
-        protected override VersionGraph CreateGraph()
+        protected override IEnumerable<Version> FindVersions()
         {
-            var versions = new List<Version>();
             foreach (var folder in Directory.EnumerateDirectories(VersionConfig.InputFolder))
             {
-                versions.Add(new JavaVersion(folder));
+                yield return new JavaVersion(folder);
             }
-            return new VersionGraph(VersionConfig.VersionFacts, versions);
         }
     }
 }

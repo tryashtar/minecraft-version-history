@@ -18,4 +18,20 @@ namespace MinecraftVersionHistory
 
         public abstract void ExtractData(string folder, AppConfig config);
     }
+
+    public class GitVersion : Version
+    {
+        public readonly GitCommit Commit;
+        public GitVersion(GitCommit commit)
+        {
+            Commit = commit;
+            ReleaseTime = Commit.CommitTime;
+            Name = Commit.Message;
+        }
+
+        public override void ExtractData(string folder, AppConfig config)
+        {
+            throw new InvalidOperationException();
+        }
+    }
 }
