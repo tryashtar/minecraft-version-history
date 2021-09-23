@@ -1,3 +1,9 @@
-[submodule "utils"]
-	path = utils
-	url = https://github.com/tryashtar/utils
+[submodule "fNbt"]
+	path = fNbt
+	url = https://github.com/tryashtar/fNbt
+[submodule "utils.nbt"]
+	path = utils.nbt
+	url = https://github.com/tryashtar/utils.nbt
+[submodule "utils.utility"]
+	path = utils.utility
+	url = https://github.com/tryashtar/utils.utility
