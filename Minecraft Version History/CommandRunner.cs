@@ -14,6 +14,7 @@ namespace MinecraftVersionHistory
 #if DEBUG
             Console.WriteLine($"Running this command: {input}");
 #endif
+            Console.ForegroundColor = ConsoleColor.DarkGray;
             var cmd = new Process();
             cmd.StartInfo.FileName = "cmd.exe";
             cmd.StartInfo.WorkingDirectory = cd;
@@ -27,6 +28,7 @@ namespace MinecraftVersionHistory
             if (output)
                 result = cmd.StandardOutput.ReadToEnd();
             cmd.WaitForExit();
+            Console.ResetColor();
             return new CommandResult { ExitCode = cmd.ExitCode, Output = result };
         }
 

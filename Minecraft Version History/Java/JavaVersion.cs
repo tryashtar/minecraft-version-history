@@ -11,18 +11,21 @@ namespace MinecraftVersionHistory
 {
     public class JavaVersion : Version
     {
-        public readonly string JarPath;
+        public readonly string ClientJarPath;
+        public string ServerJarPath { get; private set; }
         public readonly string ServerJarURL;
-        public readonly string MappingsURL;
+        public readonly string ClientMappingsURL;
+        public readonly string ServerMappingsURL;
         public JavaVersion(string folder)
         {
             Name = Path.GetFileName(folder);
             string jsonpath = Path.Combine(folder, Name + ".json");
-            JarPath = Path.Combine(folder, Name + ".jar");
+            ClientJarPath = Path.Combine(folder, Name + ".jar");
             var json = JObject.Parse(File.ReadAllText(jsonpath));
             ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
             ServerJarURL = (string)json["downloads"]?["server"]?["url"];
-            MappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
+            ClientMappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
+            ServerMappingsURL = (string)json["downloads"]?["server_mappings"]?["url"];
         }
 
         public override void ExtractData(string folder, AppConfig config)
@@ -35,10 +38,8 @@ namespace MinecraftVersionHistory
                 if (Directory.Exists(reports_path))
                     Directory.Delete(reports_path, true);
 
-                var serverjar = Path.Combine(java_config.ServerJarFolder, Name + ".jar");
-                if (!File.Exists(serverjar))
-                    DownloadServerJar(serverjar);
-                CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{serverjar}\" net.minecraft.data.Main --reports");
+                DownloadServerJar(java_config);
+                CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{ServerJarPath}\" net.minecraft.data.Main --reports");
                 var outputfolder = Path.Combine(folder, "reports");
                 Directory.CreateDirectory(outputfolder);
 
@@ -47,17 +48,15 @@ namespace MinecraftVersionHistory
             DecompileMinecraft(java_config, Path.Combine(folder, "source"));
 
             Console.WriteLine($"Extracting jar... ({this})");
-            using (ZipArchive zip = ZipFile.OpenRead(JarPath))
+            using ZipArchive zip = ZipFile.OpenRead(ClientJarPath);
+            foreach (var entry in zip.Entries)
             {
-                foreach (var entry in zip.Entries)
-                {
-                    if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(entry.FullName))
-                        continue;
-                    Directory.CreateDirectory(Path.Combine(folder, "jar", Path.GetDirectoryName(entry.FullName)));
-                    var destination = Path.Combine(folder, "jar", entry.FullName);
-                    entry.ExtractToFile(destination);
-                    DoJsonSorting(entry.FullName, destination, java_config);
-                }
+                if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(entry.FullName))
+                    continue;
+                Directory.CreateDirectory(Path.Combine(folder, "jar", Path.GetDirectoryName(entry.FullName)));
+                var destination = Path.Combine(folder, "jar", entry.FullName);
+                entry.ExtractToFile(destination);
+                DoJsonSorting(entry.FullName, destination, java_config);
             }
         }
 
@@ -71,67 +70,107 @@ namespace MinecraftVersionHistory
             }
         }
 
-        private void DecompileMinecraft(JavaConfig config, string destination)
+        private string MapJar(JavaConfig config, string jar_path, string mappings_url, string side, string folder)
         {
-            Directory.CreateDirectory(destination);
-            string jar_path = JarPath;
-            Action cleanup = null;
-            if (MappingsURL != null)
+            if (mappings_url == null)
+                return null;
+            string mappings_path = Path.Combine(Path.GetDirectoryName(folder), $"mappings_{side}.txt");
+            string tsrg_path = Path.Combine(folder, $"tsrg_{side}.tsrg");
+            string mapped_jar_path = Path.Combine(folder, $"mapped_{side}.jar");
+            DownloadThing(mappings_url, mappings_path, $"{side} mappings");
+            ConvertMappings(mappings_path, tsrg_path);
+            RemapJar(config, jar_path, tsrg_path, mapped_jar_path);
+            File.Delete(tsrg_path);
+            return mapped_jar_path;
+        }
+
+        private void CombineJars(string destination, params string[] paths)
+        {
+            Console.WriteLine($"Combining {paths.Length} jar files...");
+            using var archive = ZipFile.Open(destination, ZipArchiveMode.Create);
+            foreach (var path in paths)
             {
-                string mappings_path = Path.Combine(Path.GetDirectoryName(destination), "mappings.txt");
-                string tsrg_path = Path.Combine(destination, "tsrg.tsrg");
-                string mapped_jar_path = Path.Combine(destination, "mapped.jar");
-                DownloadMappings(mappings_path);
-                ConvertMappings(mappings_path, tsrg_path);
-                RemapJar(config, tsrg_path, mapped_jar_path);
-                jar_path = mapped_jar_path;
-                cleanup = () =>
+                using ZipArchive zip = ZipFile.OpenRead(path);
+                foreach (var entry in zip.Entries)
                 {
-                    File.Delete(tsrg_path);
-                    File.Delete(mapped_jar_path);
-                };
+                    var file = archive.CreateEntry(entry.FullName);
+                    using var stream = file.Open();
+                    using var writer = new StreamWriter(stream);
+                    writer.Write(entry.Open());
+                }
             }
+        }
+
+        private void Decompile(JavaConfig config, string jar_path, string mappings_url, string side, string folder)
+        {
+            string mapped_jar = MapJar(config, jar_path, mappings_url, side, folder);
+            jar_path = mapped_jar ?? jar_path;
 
             if (config.Decompiler == DecompilerType.Cfr)
             {
-                Console.WriteLine($"Decompiling with CFR...");
-                var result = CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
-                    $"--outputdir {destination} {config.CfrArgs}");
+                Console.WriteLine($"Decompiling {side} with CFR...");
+                var result = CommandRunner.RunCommand(folder, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+                    $"--outputdir \"{folder}\" {config.CfrArgs}");
                 if (result.ExitCode != 0)
                     throw new ApplicationException("Failed to decompile");
-                string summary_file = Path.Combine(destination, "summary.txt");
+                string summary_file = Path.Combine(folder, "summary.txt");
                 if (File.Exists(summary_file))
                 {
                     Console.WriteLine("Summary:");
                     Console.WriteLine(File.ReadAllText(summary_file));
-                    cleanup += () => File.Delete(summary_file);
+                    File.Delete(summary_file);
                 }
             }
             else if (config.Decompiler == DecompilerType.Fernflower)
             {
-                Console.WriteLine($"Decompiling with fernflower...");
-                string output_dir = Path.Combine(destination, "decompiled");
+                Console.WriteLine($"Decompiling {side} with fernflower...");
+                string output_dir = Path.Combine(folder, "decompiled");
                 Directory.CreateDirectory(output_dir);
-                CommandRunner.RunCommand(destination, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
+                CommandRunner.RunCommand(folder, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
                     $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\""); ;
                 using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
                 {
                     foreach (var entry in zip.Entries)
                     {
-                        Directory.CreateDirectory(Path.Combine(destination, Path.GetDirectoryName(entry.FullName)));
-                        entry.ExtractToFile(Path.Combine(destination, entry.FullName));
+                        Directory.CreateDirectory(Path.Combine(folder, Path.GetDirectoryName(entry.FullName)));
+                        entry.ExtractToFile(Path.Combine(folder, entry.FullName));
                     }
                 }
-                cleanup += () => Directory.Delete(output_dir, true);
+                Directory.Delete(output_dir, true);
             }
             else
                 throw new ArgumentException(nameof(config.Decompiler));
 
-            cleanup?.Invoke();
+            Console.WriteLine("Removing unwanted files...");
+            if (mapped_jar is not null)
+                File.Delete(mapped_jar);
+            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+            {
+                var relative_path = Util.RelativePath(folder, file).Replace('\\', '/');
+                if (config.ExcludeDecompiledEntry(relative_path))
+                    File.Delete(file);
+            }
         }
 
-        private void DownloadMappings(string path) => DownloadThing(MappingsURL, path, "mappings");
-        private void DownloadServerJar(string path) => DownloadThing(ServerJarURL, path, "server jar");
+        private void DecompileMinecraft(JavaConfig config, string destination)
+        {
+            Directory.CreateDirectory(destination);
+            DownloadServerJar(config);
+            Decompile(config, ClientJarPath, ClientMappingsURL, "client", destination);
+            Decompile(config, ServerJarPath, ServerMappingsURL, "server", destination);
+        }
+
+        private void DownloadServerJar(JavaConfig config)
+        {
+            string path = Path.Combine(config.ServerJarFolder, Name + ".jar");
+            if (ServerJarPath is null)
+                ServerJarPath = path;
+            if (!File.Exists(path))
+            {
+                DownloadThing(ServerJarURL, path, "server jar");
+                ServerJarPath = path;
+            }
+        }
 
         private static void DownloadThing(string url, string path, string thing)
         {
@@ -226,11 +265,11 @@ namespace MinecraftVersionHistory
             File.WriteAllLines(output_path, output);
         }
 
-        private void RemapJar(JavaConfig config, string tsrg_path, string output_path)
+        private void RemapJar(JavaConfig config, string jar_path, string tsrg_path, string output_path)
         {
             Console.WriteLine("Remapping jar...");
             CommandRunner.RunCommand(Path.GetDirectoryName(output_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
-                $"--in-jar \"{JarPath}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
+                $"--in-jar \"{jar_path}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
         }
     }
 }

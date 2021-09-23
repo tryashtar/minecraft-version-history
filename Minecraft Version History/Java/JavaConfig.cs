@@ -23,6 +23,7 @@ namespace MinecraftVersionHistory
         public readonly DecompilerType? Decompiler;
         private readonly Dictionary<string, JsonSorter> JsonSorters;
         private readonly List<Regex> ExcludeJarEntries;
+        private readonly List<Regex> ExcludeDecompiledEntries;
         public JavaConfig(string folder, YamlMappingNode yaml) : base(yaml)
         {
             JavaInstallationPath = Path.Combine(folder, (string)yaml["java install"]);
@@ -38,6 +39,7 @@ namespace MinecraftVersionHistory
             AssetGenerators = DateTime.Parse((string)yaml["asset generators"]);
             JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, x => new JsonSorter((YamlMappingNode)x)) ?? new Dictionary<string, JsonSorter>();
             ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+            ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
         }
 
         protected override VersionFacts CreateVersionFacts(YamlMappingNode yaml)
@@ -51,6 +53,12 @@ namespace MinecraftVersionHistory
             if (IllegalNames.Contains(Path.GetFileNameWithoutExtension(name).ToLower()))
                 return true;
             if (ExcludeJarEntries.Any(x => x.IsMatch(name)))
+                return true;
+            return false;
+        }
+        public bool ExcludeDecompiledEntry(string name)
+        {
+            if (ExcludeDecompiledEntries.Any(x => x.IsMatch(name)))
                 return true;
             return false;
         }
