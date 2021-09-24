@@ -71,6 +71,11 @@ namespace MinecraftVersionHistory
             throw new ArgumentException();
         }
 
+        public static string FilePath(string base_folder, YamlNode node)
+        {
+            return Path.Combine(base_folder, Environment.ExpandEnvironmentVariables((string)node));
+        }
+
         public static List<string> ToStringList(this YamlNode node)
         {
             return ToList(node, x => (string)x);

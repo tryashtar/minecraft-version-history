@@ -6,7 +6,7 @@ namespace MinecraftVersionHistory
     {
         public readonly PackMerger BehaviorMerger;
         public readonly PackMerger ResourceMerger;
-        public BedrockConfig(YamlMappingNode yaml) : base(yaml)
+        public BedrockConfig(string folder, YamlMappingNode yaml) : base(folder, yaml)
         {
             BehaviorMerger = new PackMerger((YamlMappingNode)yaml.Go("pack merging", "behavior"));
             ResourceMerger = new PackMerger((YamlMappingNode)yaml.Go("pack merging", "resource"));

@@ -13,10 +13,10 @@ namespace MinecraftVersionHistory
         public readonly string OutputRepo;
         public readonly VersionFacts VersionFacts;
         public readonly List<NbtTranslationOptions> NbtTranslations;
-        public VersionConfig(YamlMappingNode yaml)
+        public VersionConfig(string folder, YamlMappingNode yaml)
         {
-            InputFolders = yaml.Go("version folders").ToStringList();
-            OutputRepo = (string)yaml["repo"];
+            InputFolders = yaml.Go("version folders").ToList(x => Util.FilePath(folder, x));
+            OutputRepo = Util.FilePath(folder, yaml["repo"]);
             VersionFacts = CreateVersionFacts(yaml["version facts"] as YamlMappingNode);
             NbtTranslations = yaml.Go("nbt translations").ToList(x => new NbtTranslationOptions((YamlMappingNode)x)) ?? new List<NbtTranslationOptions>();
         }
