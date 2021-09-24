@@ -12,6 +12,7 @@ namespace MinecraftVersionHistory
         public static CommandResult RunCommand(string cd, string input, bool output = false, bool suppress_errors = false)
         {
 #if DEBUG
+            Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine($"Running this command: {input}");
 #endif
             Console.ForegroundColor = ConsoleColor.DarkGray;

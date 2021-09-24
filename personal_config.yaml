@@ -16,8 +16,8 @@ java:
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
   cfr jar: cfr-0.151.jar
-  # I got specialsource from https://github.com/hube12/DecompilerMC/blob/master/lib/SpecialSource-1.9.1.jar
-  special source jar: SpecialSource-1.9.1.jar
+  # I got specialsource from https://ci.md-5.net/job/SpecialSource/148/
+  special source jar: SpecialSource-1.10.0-shaded.jar
   # folder to store downloaded server jars
   server jars: D:\Minecraft\Java Storage\Server Jars
   # choose 'cfr' or 'fernflower'

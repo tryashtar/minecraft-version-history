@@ -119,7 +119,6 @@ namespace MinecraftVersionHistory
 
         private void InsertCommit(IVersionNode version)
         {
-            Profiler.Start($"Commit of {version.Version}");
             // find commit hash for existing version
             string hash = VersionToCommit[version.Parent];
             // create branch
@@ -149,12 +148,11 @@ namespace MinecraftVersionHistory
                 // need to rescan since commit hashes change after a rebase
                 LoadCommits();
             }
-            Profiler.Stop();
         }
 
         private void DoCommit(IVersionNode version)
         {
-            Profiler.Start("Performing commit");
+            Profiler.Start($"Adding commit for {version.Version}");
             // extract
             string workspace = Path.Combine(Path.GetTempPath(), "mc_version_history_workspace");
             if (Directory.Exists(workspace))

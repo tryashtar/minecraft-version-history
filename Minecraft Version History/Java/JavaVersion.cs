@@ -41,7 +41,6 @@ namespace MinecraftVersionHistory
             var java_config = config.Java;
             if (ReleaseTime > java_config.DataGenerators)
             {
-                Profiler.Start("Fetching data reports");
                 string reports_path = Path.Combine(java_config.ServerJarFolder, "generated");
                 if (Directory.Exists(reports_path))
                     Directory.Delete(reports_path, true);
@@ -49,17 +48,17 @@ namespace MinecraftVersionHistory
                 DownloadServerJar(java_config);
                 if (ServerJarPath is not null)
                 {
+                    Profiler.Start("Fetching data reports");
                     CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{ServerJarPath}\" net.minecraft.data.Main --reports");
                     var outputfolder = Path.Combine(folder, "reports");
                     Directory.CreateDirectory(outputfolder);
-
                     Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
+                    Profiler.Stop();
                 }
-                Profiler.Stop();
             }
             DecompileMinecraft(java_config, Path.Combine(folder, "source"));
 
-            Console.WriteLine($"Extracting jar... ({this})");
+            Profiler.Start($"Extracting jar");
             using ZipArchive zip = ZipFile.OpenRead(ClientJarPath);
             foreach (var entry in zip.Entries)
             {
@@ -70,6 +69,7 @@ namespace MinecraftVersionHistory
                 entry.ExtractToFile(destination);
                 DoJsonSorting(entry.FullName, destination, java_config);
             }
+            Profiler.Stop();
         }
 
         private void DoJsonSorting(string name, string path, JavaConfig config)
@@ -87,36 +87,33 @@ namespace MinecraftVersionHistory
             if (mappings_url == null)
                 return null;
             string mappings_path = Path.Combine(Path.GetDirectoryName(folder), $"mappings_{side}.txt");
-            string tsrg_path = Path.Combine(folder, $"tsrg_{side}.tsrg");
             string mapped_jar_path = Path.Combine(folder, $"mapped_{side}.jar");
             DownloadThing(mappings_url, mappings_path, $"{side} mappings");
-            ConvertMappings(mappings_path, tsrg_path);
-            RemapJar(config, jar_path, tsrg_path, mapped_jar_path);
-            File.Delete(tsrg_path);
+            Profiler.Start("Remapping jar with SpecialSource");
+            CommandRunner.RunCommand(Path.GetDirectoryName(mapped_jar_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
+                $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\"");
+            Profiler.Stop();
             return mapped_jar_path;
-        }
-
-        private void CombineJars(string destination, params string[] paths)
-        {
-            Console.WriteLine($"Combining {paths.Length} jar files...");
-            using var archive = ZipFile.Open(destination, ZipArchiveMode.Create);
-            foreach (var path in paths)
-            {
-                using ZipArchive zip = ZipFile.OpenRead(path);
-                foreach (var entry in zip.Entries)
-                {
-                    var file = archive.CreateEntry(entry.FullName);
-                    using var stream = file.Open();
-                    using var writer = new StreamWriter(stream);
-                    writer.Write(entry.Open());
-                }
-            }
         }
 
         private void Decompile(JavaConfig config, string jar_path, string mappings_url, string side, string folder)
         {
             string mapped_jar = MapJar(config, jar_path, mappings_url, side, folder);
             jar_path = mapped_jar ?? jar_path;
+
+            Profiler.Start("Removing unwanted files");
+            // use the old-style using since the zip needs to dispose before decompiling starts
+            using (ZipArchive archive = ZipFile.Open(jar_path, ZipArchiveMode.Update))
+            {
+                foreach (var entry in archive.Entries.ToList())
+                {
+                    if (entry.FullName.EndsWith("/"))
+                        continue;
+                    if (config.ExcludeDecompiledEntry(entry.FullName))
+                        entry.Delete();
+                }
+            }
+            Profiler.Stop();
 
             Profiler.Start($"Decompiling {side}");
             if (config.Decompiler == DecompilerType.Cfr)
@@ -152,17 +149,8 @@ namespace MinecraftVersionHistory
             else
                 throw new ArgumentException(nameof(config.Decompiler));
             Profiler.Stop();
-
-            Profiler.Start("Removing unwanted files");
             if (mapped_jar is not null)
                 File.Delete(mapped_jar);
-            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
-            {
-                var relative_path = Util.RelativePath(folder, file).Replace('\\', '/');
-                if (config.ExcludeDecompiledEntry(relative_path))
-                    File.Delete(file);
-            }
-            Profiler.Stop();
         }
 
         private void DecompileMinecraft(JavaConfig config, string destination)
@@ -196,97 +184,6 @@ namespace MinecraftVersionHistory
             {
                 client.DownloadFile(url, path);
             }
-            Profiler.Stop();
-        }
-
-        private static readonly Dictionary<string, string> PrimitiveMappings = new Dictionary<string, string>
-        {
-            { "int", "I" },
-            { "double", "D" },
-            { "boolean", "Z" },
-            { "float", "F" },
-            { "long", "J" },
-            { "byte", "B" },
-            { "short", "S" },
-            { "char", "C" },
-            { "void", "V" }
-        };
-        private static string RemapIdentifier(string identifier)
-        {
-            if (PrimitiveMappings.TryGetValue(identifier, out string result))
-                return result;
-            return "L" + String.Join("/", identifier.Split('.')) + ";";
-        }
-        private string ConvertMapping(string mapping, Dictionary<string, string> obfuscation_map)
-        {
-            int array_length_type = Regex.Matches(mapping, Regex.Escape("[]")).Count;
-            mapping = mapping.Replace("[]", "");
-            mapping = RemapIdentifier(mapping);
-            if (obfuscation_map.TryGetValue(mapping, out var mapped))
-                mapping = "L" + mapped + ";";
-            mapping = mapping.Replace('.', '/');
-            mapping = new string('[', array_length_type) + mapping;
-            return mapping;
-        }
-        private void ConvertMappings(string mappings_path, string output_path)
-        {
-            Profiler.Start("Converting mappings to TSRG");
-            var lines = File.ReadAllLines(mappings_path).Where(x => !x.StartsWith("#"));
-            var output = new List<string>();
-            var class_maps = new Dictionary<string, string>();
-            foreach (var line in lines)
-            {
-                if (line.StartsWith("    "))
-                    continue;
-                string[] names = line.Split(new[] { " -> " }, StringSplitOptions.None);
-                string obfuscated_name = names[1].Split(':')[0];
-                string deobfuscated_name = names[0];
-                class_maps[RemapIdentifier(deobfuscated_name)] = obfuscated_name;
-            }
-            foreach (var line in lines)
-            {
-                string[] names = line.Split(new[] { " -> " }, StringSplitOptions.None);
-                if (line.StartsWith("    "))
-                {
-                    string obfuscated_name = names[1].TrimEnd();
-                    string deobfuscated_name = names[0].TrimStart();
-                    string[] type_name = deobfuscated_name.Split(' ');
-                    string method_name = type_name[1];
-                    string method_type = type_name[0].Split(':').Last();
-                    if (method_name.Contains("(") && method_name.Contains(")"))
-                    {
-                        string variables = method_name.Split('(').Last().Split(')')[0];
-                        string function_name = method_name.Split('(')[0];
-                        method_type = ConvertMapping(method_type, class_maps);
-                        if (variables != "")
-                        {
-                            string[] variable_list = variables.Split(',');
-                            variable_list = variable_list.Select(x => ConvertMapping(x, class_maps)).ToArray();
-                            variables = String.Join("", variable_list);
-                        }
-                        output.Add($"\t{obfuscated_name} ({variables}){method_type} {function_name}");
-                    }
-                    else
-                        output.Add($"\t{obfuscated_name} {method_name}");
-                }
-                else
-                {
-                    string obfuscated_name = names[1].Split(':')[0];
-                    string deobfuscated_name = names[0];
-                    obfuscated_name = RemapIdentifier(obfuscated_name);
-                    deobfuscated_name = RemapIdentifier(deobfuscated_name);
-                    output.Add($"{obfuscated_name.Substring(1, obfuscated_name.Length - 2)} {deobfuscated_name.Substring(1, deobfuscated_name.Length - 2)}");
-                }
-            }
-            File.WriteAllLines(output_path, output);
-            Profiler.Stop();
-        }
-
-        private void RemapJar(JavaConfig config, string jar_path, string tsrg_path, string output_path)
-        {
-            Profiler.Start("Remapping jar");
-            CommandRunner.RunCommand(Path.GetDirectoryName(output_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
-                $"--in-jar \"{jar_path}\" --out-jar \"{output_path}\" --srg-in \"{tsrg_path}\" --kill-lvt");
             Profiler.Stop();
         }
     }
