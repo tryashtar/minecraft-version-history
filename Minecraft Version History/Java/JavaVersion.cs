@@ -28,6 +28,14 @@ namespace MinecraftVersionHistory
             ServerMappingsURL = (string)json["downloads"]?["server_mappings"]?["url"];
         }
 
+        public static bool LooksValid(string folder)
+        {
+            string name = Path.GetFileName(folder);
+            string jsonpath = Path.Combine(folder, name + ".json");
+            string jarpath = Path.Combine(folder, name + ".jar");
+            return File.Exists(jsonpath) && File.Exists(jarpath);
+        }
+
         public override void ExtractData(string folder, AppConfig config)
         {
             var java_config = config.Java;

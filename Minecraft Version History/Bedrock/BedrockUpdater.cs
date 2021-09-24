@@ -16,10 +16,13 @@ namespace MinecraftVersionHistory
 
         protected override IEnumerable<Version> FindVersions()
         {
-            foreach (var zip in Directory.EnumerateFiles(VersionConfig.InputFolder))
+            foreach (var folder in VersionConfig.InputFolders)
             {
-                if (Path.GetExtension(zip) == ".zip")
-                    yield return new BedrockVersion(zip);
+                foreach (var zip in Directory.EnumerateFiles(folder))
+                {
+                    if (Path.GetExtension(zip) == ".zip")
+                        yield return new BedrockVersion(zip);
+                }
             }
         }
     }

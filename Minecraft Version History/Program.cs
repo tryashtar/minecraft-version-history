@@ -29,7 +29,7 @@ namespace MinecraftVersionHistory
                 try
 #endif
                 {
-                    downloader.DownloadMissing(config.Java.InputFolder, config);
+                    downloader.DownloadMissing(config.Java.InputFolders[0], config);
                 }
 #if !DEBUG
                 catch (Exception ex)

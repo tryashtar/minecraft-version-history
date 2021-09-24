@@ -16,9 +16,13 @@ namespace MinecraftVersionHistory
 
         protected override IEnumerable<Version> FindVersions()
         {
-            foreach (var folder in Directory.EnumerateDirectories(VersionConfig.InputFolder))
+            foreach (var folder in VersionConfig.InputFolders)
             {
-                yield return new JavaVersion(folder);
+                foreach (var version in Directory.EnumerateDirectories(folder))
+                {
+                    if (JavaVersion.LooksValid(version))
+                        yield return new JavaVersion(version);
+                }
             }
         }
     }

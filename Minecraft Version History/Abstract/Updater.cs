@@ -1,6 +1,7 @@
 ﻿using fNbt;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -36,10 +37,23 @@ namespace MinecraftVersionHistory
 
         private VersionGraph CreateGraph()
         {
-            var versions = FindVersions().ToList();
+            var versions = FindVersions().Distinct(new DuplicateRemover()).ToList();
             var git_versions = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath).Select(x => new GitVersion(x));
             versions.AddRange(git_versions.Where(x => !versions.Any(y => x.Name == y.Name)));
             return new VersionGraph(VersionConfig.VersionFacts, versions);
+        }
+
+        private class DuplicateRemover : IEqualityComparer<Version>
+        {
+            public bool Equals(Version x, Version y)
+            {
+                return x.Name == y.Name && x.ReleaseTime == y.ReleaseTime;
+            }
+
+            public int GetHashCode([DisallowNull] Version obj)
+            {
+                return obj.Name.GetHashCode();
+            }
         }
 
         protected abstract VersionConfig VersionConfig { get; }
