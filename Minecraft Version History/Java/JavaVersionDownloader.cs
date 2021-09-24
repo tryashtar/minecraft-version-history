@@ -21,7 +21,7 @@ namespace MinecraftVersionHistory
         public void DownloadMissing(List<string> folders, AppConfig config)
         {
             using var client = new WebClient();
-            Console.WriteLine("Checking for new versions...");
+            Profiler.Start("Checking for new versions");
             var versions = JObject.Parse(client.DownloadString(LAUNCHER_MANIFEST))["versions"];
             var commits = GitWrapper.CommittedVersions(config.Java.OutputRepo, config.GitInstallationPath).ToList();
             foreach (var version in versions)
@@ -52,6 +52,7 @@ namespace MinecraftVersionHistory
                     client.DownloadFile(client_jar, download_location.jar_file);
                 end: { }
             }
+            Profiler.Stop();
         }
     }
 }

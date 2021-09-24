@@ -21,7 +21,7 @@ namespace MinecraftVersionHistory
 
         public void Merge(string layer_folder, string output_folder)
         {
-            Console.WriteLine("Merging vanilla packs");
+            Profiler.Start("Merging vanilla packs");
             foreach (var layer in Layers)
             {
                 var pack = Path.Combine(layer_folder, layer);
@@ -47,6 +47,7 @@ namespace MinecraftVersionHistory
                         Util.Copy(file, dest);
                 }
             }
+            Profiler.Stop();
         }
     }
 }

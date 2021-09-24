@@ -64,7 +64,7 @@ namespace MinecraftVersionHistory
             var versions = Graph.Flatten();
             CommitToVersion = new Dictionary<string, IVersionNode>();
             VersionToCommit = new Dictionary<IVersionNode, string>();
-            Console.WriteLine("Loading commits...");
+            Profiler.Start("Loading commits");
             var commits = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath);
             foreach (var entry in commits)
             {
@@ -75,6 +75,7 @@ namespace MinecraftVersionHistory
                     VersionToCommit[version] = entry.Hash;
                 }
             }
+            Profiler.Stop();
         }
 
         private void Commit(IVersionNode version)
@@ -104,7 +105,7 @@ namespace MinecraftVersionHistory
 
         private void InitialCommit(IVersionNode version)
         {
-            Console.WriteLine("Initializing repo...");
+            Profiler.Start("Initializing repo");
             CommandRunner.RunCommand(OutputRepo, $"{GIT} init");
             File.WriteAllText(Path.Combine(OutputRepo, ".gitignore"), Config.GitIgnoreContents);
             CommandRunner.RunCommand(OutputRepo, $"{GIT} add -A");
@@ -112,12 +113,13 @@ namespace MinecraftVersionHistory
             // create branch
             CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{GetBranchName(version)}\"");
             CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{GetBranchName(version)}\"");
+            Profiler.Stop();
             DoCommit(version);
         }
 
         private void InsertCommit(IVersionNode version)
         {
-            Console.WriteLine($"Starting commit of {version.Version}");
+            Profiler.Start($"Commit of {version.Version}");
             // find commit hash for existing version
             string hash = VersionToCommit[version.Parent];
             // create branch
@@ -128,7 +130,6 @@ namespace MinecraftVersionHistory
             tophash = tophash.Substring(0, 40);
             if (hash == tophash)
             {
-                Console.WriteLine($"On top, ready to go");
                 CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{branchname}\"");
                 DoCommit(version);
             }
@@ -140,42 +141,46 @@ namespace MinecraftVersionHistory
                 CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{branchname}\"");
                 DoCommit(version);
                 // insert
-                Console.WriteLine($"Commit done, beginning rebase");
+                Profiler.Start($"Rebasing");
                 CommandRunner.RunCommand(OutputRepo, $"{GIT} rebase temp \"{branchname}\" -X theirs");
                 CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{branchname}\"");
                 CommandRunner.RunCommand(OutputRepo, $"{GIT} branch -d temp");
-                Console.WriteLine($"Rebase complete");
+                Profiler.Stop();
                 // need to rescan since commit hashes change after a rebase
                 LoadCommits();
             }
+            Profiler.Stop();
         }
 
         private void DoCommit(IVersionNode version)
         {
+            Profiler.Start("Performing commit");
             // extract
             string workspace = Path.Combine(Path.GetTempPath(), "mc_version_history_workspace");
             if (Directory.Exists(workspace))
                 Directory.Delete(workspace, true);
             Directory.CreateDirectory(workspace);
-            Console.WriteLine($"Extracting {version.Version}");
-            version.Version.ExtractData(workspace, Config);
-            Console.WriteLine($"Translating NBT files...");
-            TranslateNbtFiles(workspace);
-            Console.WriteLine($"Merging... ({version.Version})");
-            MergeWithWorkspace(OutputRepo, workspace);
-            Directory.Delete(workspace, true);
-            Util.RemoveEmptyFolders(OutputRepo);
-            File.WriteAllText(Path.Combine(OutputRepo, "version.txt"), version.Version.Name);
+            Profiler.Run("Extracting", () =>
+            { version.Version.ExtractData(workspace, Config); });
+            Profiler.Run("Translating NBT Files", () =>
+            { TranslateNbtFiles(workspace); });
+            Profiler.Run($"Merging", ()=>
+            {
+                MergeWithWorkspace(OutputRepo, workspace);
+                Directory.Delete(workspace, true);
+                Util.RemoveEmptyFolders(OutputRepo);
+                File.WriteAllText(Path.Combine(OutputRepo, "version.txt"), version.Version.Name);
+            });
             // commit
-            Console.WriteLine($"Committing...");
+            Profiler.Start($"Running git commit");
             CommandRunner.RunCommand(OutputRepo, $"{GIT} add -A");
             CommandRunner.RunCommand(OutputRepo, $"set GIT_COMMITTER_DATE={version.Version.ReleaseTime} & {GIT} commit --date=\"{version.Version.ReleaseTime}\" -m \"{version.Version.Name}\"");
-            // cleanup
-            Console.WriteLine($"Cleaning up... ({version.Version})");
             string hash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse HEAD", output: true).Output;
             hash = hash.Substring(0, 40);
             CommitToVersion.Add(hash, version);
             VersionToCommit.Add(version, hash);
+            Profiler.Stop(); // git commit
+            Profiler.Stop(); // top commit
         }
 
         // read all NBT files in the version and write textual copies
@@ -191,7 +196,7 @@ namespace MinecraftVersionHistory
         private void MergeWithWorkspace(string base_folder, string workspace)
         {
             // delete files that are not present in workspace
-            Console.WriteLine("Deleting...");
+            Profiler.Start("Deleting");
             foreach (var item in Directory.GetFiles(base_folder, "*", SearchOption.AllDirectories))
             {
                 string relative = Util.RelativePath(base_folder, item);
@@ -201,9 +206,10 @@ namespace MinecraftVersionHistory
                 if (!File.Exists(workspace_version))
                     File.Delete(item);
             }
+            Profiler.Stop();
 
             // copy new/changed files from workspace
-            Console.WriteLine("Copying...");
+            Profiler.Start("Copying");
             foreach (var item in Directory.GetFiles(workspace, "*", SearchOption.AllDirectories))
             {
                 string relative = Util.RelativePath(workspace, item);
@@ -212,6 +218,7 @@ namespace MinecraftVersionHistory
                     Util.Copy(item, base_version);
                 File.Delete(item);
             }
+            Profiler.Stop();
         }
 
         protected abstract IEnumerable<Version> FindVersions();
