@@ -22,4 +22,8 @@
     <ProjectReference Include="..\utils.nbt\TryashtarUtils.Nbt.csproj" />
     <ProjectReference Include="..\utils.utility\TryashtarUtils.Utility.csproj" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y &quot;$(TargetDir)..\..\config.yaml&quot; &quot;$(SolutionDir)personal_config.yaml&quot;" />
+  </Target>
 </Project>

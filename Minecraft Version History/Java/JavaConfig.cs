@@ -19,7 +19,6 @@ namespace MinecraftVersionHistory
         public readonly string CfrArgs;
         public readonly string FernflowerArgs;
         public readonly DateTime DataGenerators;
-        public readonly DateTime AssetGenerators;
         public readonly DecompilerType? Decompiler;
         private readonly Dictionary<string, JsonSorter> JsonSorters;
         private readonly List<Regex> ExcludeJarEntries;
@@ -36,7 +35,6 @@ namespace MinecraftVersionHistory
             CfrArgs = (string)yaml["cfr args"];
             FernflowerArgs = (string)yaml["fernflower args"];
             DataGenerators = DateTime.Parse((string)yaml["data generators"]);
-            AssetGenerators = DateTime.Parse((string)yaml["asset generators"]);
             JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, x => new JsonSorter((YamlMappingNode)x)) ?? new Dictionary<string, JsonSorter>();
             ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
             ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
