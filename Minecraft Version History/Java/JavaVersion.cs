@@ -91,31 +91,14 @@ namespace MinecraftVersionHistory
             DownloadThing(mappings_url, mappings_path, $"{side} mappings");
             Profiler.Start("Remapping jar with SpecialSource");
             CommandRunner.RunCommand(Path.GetDirectoryName(mapped_jar_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
-                $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\"");
+                $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
             Profiler.Stop();
             return mapped_jar_path;
         }
 
-        private void Decompile(JavaConfig config, string jar_path, string mappings_url, string side, string folder)
+        private void DecompileJar(JavaConfig config, string jar_path, string folder)
         {
-            string mapped_jar = MapJar(config, jar_path, mappings_url, side, folder);
-            jar_path = mapped_jar ?? jar_path;
-
-            Profiler.Start("Removing unwanted files");
-            // use the old-style using since the zip needs to dispose before decompiling starts
-            using (ZipArchive archive = ZipFile.Open(jar_path, ZipArchiveMode.Update))
-            {
-                foreach (var entry in archive.Entries.ToList())
-                {
-                    if (entry.FullName.EndsWith("/"))
-                        continue;
-                    if (config.ExcludeDecompiledEntry(entry.FullName))
-                        entry.Delete();
-                }
-            }
-            Profiler.Stop();
-
-            Profiler.Start($"Decompiling {side}");
+            Profiler.Start($"Decompiling");
             if (config.Decompiler == DecompilerType.Cfr)
             {
                 var result = CommandRunner.RunCommand(folder, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
@@ -149,17 +132,64 @@ namespace MinecraftVersionHistory
             else
                 throw new ArgumentException(nameof(config.Decompiler));
             Profiler.Stop();
-            if (mapped_jar is not null)
-                File.Delete(mapped_jar);
         }
 
         private void DecompileMinecraft(JavaConfig config, string destination)
         {
             Directory.CreateDirectory(destination);
+            string final_jar = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(ClientJarPath)}_final.jar");
+            string mapped_client = MapJar(config, ClientJarPath, ClientMappingsURL, "client", destination);
+            string used_client = mapped_client ?? ClientJarPath;
+            string mapped_server = null;
             DownloadServerJar(config);
-            Decompile(config, ClientJarPath, ClientMappingsURL, "client", destination);
             if (ServerJarPath is not null)
-                Decompile(config, ServerJarPath, ServerMappingsURL, "server", destination);
+            {
+                mapped_server = MapJar(config, ServerJarPath, ServerMappingsURL, "server", destination);
+                string used_server = mapped_server ?? ServerJarPath;
+                CombineJars(final_jar, used_client, used_server);
+            }
+            else
+                File.Copy(used_client, final_jar);
+
+            Profiler.Start("Removing unwanted files");
+            // use the old-style using since the zip needs to dispose before decompiling starts
+            using (ZipArchive archive = ZipFile.Open(final_jar, ZipArchiveMode.Update))
+            {
+                foreach (var entry in archive.Entries.ToList())
+                {
+                    if (entry.FullName.EndsWith("/"))
+                        continue;
+                    if (config.ExcludeDecompiledEntry(entry.FullName))
+                        entry.Delete();
+                }
+            }
+            Profiler.Stop();
+
+            DecompileJar(config, final_jar, destination);
+
+            if (mapped_client is not null)
+                File.Delete(mapped_client);
+            if (mapped_server is not null)
+                File.Delete(mapped_server);
+            File.Delete(final_jar);
+        }
+
+        private void CombineJars(string destination, params string[] paths)
+        {
+            Profiler.Start($"Combining {paths.Length} jar files");
+            using var archive = ZipFile.Open(destination, ZipArchiveMode.Create);
+            foreach (var path in paths)
+            {
+                using ZipArchive zip = ZipFile.OpenRead(path);
+                foreach (var entry in zip.Entries)
+                {
+                    var file = archive.CreateEntry(entry.FullName);
+                    using var source = entry.Open();
+                    using var dest = file.Open();
+                    source.CopyTo(dest);
+                }
+            }
+            Profiler.Stop();
         }
 
         private void DownloadServerJar(JavaConfig config)
