@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TryashtarUtils.Utility;
 using YamlDotNet.RepresentationModel;
 
 namespace MinecraftVersionHistory
@@ -18,15 +19,17 @@ namespace MinecraftVersionHistory
         private readonly Dictionary<Regex, string> RegexReleases;
         private readonly List<SnapshotSpec> SnapshotReleases;
         private readonly List<string> VersionOrder;
+        private readonly List<OrderMethod> OrderPriority;
         public VersionFacts(YamlMappingNode yaml)
         {
-            SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x)) ?? new List<Regex>();
-            InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x)) ?? new List<Regex>();
-            InsaneVersions = yaml.Go("insane", "versions").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+            SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x)) ?? new();
+            InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x)) ?? new();
+            InsaneVersions = yaml.Go("insane", "versions").ToList(x => new Regex((string)x)) ?? new();
             ParentsMap = yaml.Go("parents").ToStringDictionary() ?? new Dictionary<string, string>();
-            RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new Dictionary<Regex, string>();
-            SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new List<SnapshotSpec>();
-            VersionOrder = yaml.Go("ordering", "versions").ToStringList() ?? new List<string>();
+            RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new();
+            SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new();
+            VersionOrder = yaml.Go("ordering", "versions").ToStringList() ?? new();
+            OrderPriority = yaml.Go("ordering", "priority").ToList(x => StringUtils.ParseUnderscoredEnum<OrderMethod>((string)x)) ?? new() { OrderMethod.ListedOrder, OrderMethod.ReleaseTime, OrderMethod.BestGuess };
         }
 
         public bool ShouldSkip(Version version)
@@ -73,18 +76,35 @@ namespace MinecraftVersionHistory
             return result;
         }
 
+        private enum OrderMethod
+        {
+            ReleaseTime,
+            BestGuess,
+            ListedOrder
+        }
+
         public int Compare(Version x, Version y)
         {
             if (x == y)
                 return 0;
-            int x_index = VersionOrder.IndexOf(x.Name);
-            int y_index = VersionOrder.IndexOf(y.Name);
-            if (x_index != -1 && y_index != -1)
-                return x_index.CompareTo(y_index);
-            int compare_dates = x.ReleaseTime.CompareTo(y.ReleaseTime);
-            if (compare_dates != 0)
-                return compare_dates;
-            return BestGuessCompare(x, y);
+            foreach (var method in OrderPriority)
+            {
+                int order = 0;
+                if (method == OrderMethod.BestGuess)
+                    order = BestGuessCompare(x, y);
+                else if (method == OrderMethod.ReleaseTime)
+                    order = x.ReleaseTime.CompareTo(y.ReleaseTime);
+                else if (method == OrderMethod.ListedOrder)
+                {
+                    int x_index = VersionOrder.IndexOf(x.Name);
+                    int y_index = VersionOrder.IndexOf(y.Name);
+                    if (x_index != -1 && y_index != -1)
+                        order = x_index.CompareTo(y_index);
+                }
+                if (order != 0)
+                    return order;
+            }
+            throw new ArgumentException($"Can't tell which came first: {x} or {y}");
         }
 
         private static readonly char[] TypicalSplits = new char[] { ' ', '-', '.', '_' };
@@ -136,7 +156,7 @@ namespace MinecraftVersionHistory
             int size_compare = n1_split.Length.CompareTo(n2_split.Length);
             if (size_compare != 0)
                 return size_compare;
-            throw new ArgumentException($"Can't tell which came first: {n1} or {n2}");
+            return 0;
         }
 
         private static readonly Regex NumberFinder = new(@"\d+");

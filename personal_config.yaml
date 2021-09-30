@@ -70,9 +70,11 @@ java:
     - (?i)optifine
     - ^a1\.0\.6$ # can't unzip
     ordering:
-      releases:
-      # some versions have a low-precision release time, so we need to manually say the order
-      # in the future, the program will be smarter and guess really obvious ones
+      priority:
+      - listed order
+      - release time
+      - best guess
+      # some versions have a low-precision or completely wrong release time, so we need to manually say the order
       versions:
       - c0.0.11a
       - c0.0.12a_03
@@ -240,6 +242,10 @@ bedrock:
     - 1.1.0.0
     - 1.7.5.0
     ordering:
+      priority:
+      - listed order
+      - best guess
+      - release time
       versions:
       - 1.16.22002.0
       - 1.16.22101.0
