@@ -49,7 +49,11 @@ namespace MinecraftVersionHistory
                 if (ServerJarPath is not null)
                 {
                     Profiler.Start("Fetching data reports");
-                    CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{ServerJarPath}\" net.minecraft.data.Main --reports");
+                    var result = CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{ServerJarPath}\" net.minecraft.data.Main --reports");
+                    if (result.ExitCode != 0)
+                        result = CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -DbundlerMainClass=net.minecraft.data.Main -jar \"{ServerJarPath}\" --reports");
+                    if (result.ExitCode != 0)
+                        throw new ApplicationException("Failed to get data reports");
                     var outputfolder = Path.Combine(folder, "reports");
                     Directory.CreateDirectory(outputfolder);
                     Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
@@ -134,6 +138,19 @@ namespace MinecraftVersionHistory
             Profiler.Stop();
         }
 
+        private string[] ReadClassPath(ZipArchive archive)
+        {
+            var entry = archive.GetEntry("META-INF/classpath-joined");
+            if (entry != null)
+            {
+                using var stream = entry.Open();
+                using var reader = new StreamReader(stream);
+                var files = reader.ReadToEnd().Split(";");
+                return files;
+            }
+            return null;
+        }
+
         private void DecompileMinecraft(JavaConfig config, string destination)
         {
             Directory.CreateDirectory(destination);
@@ -141,17 +158,47 @@ namespace MinecraftVersionHistory
             string mapped_client = MapJar(config, ClientJarPath, ClientMappingsURL, "client", destination);
             string used_client = mapped_client ?? ClientJarPath;
             string mapped_server = null;
+            string unbundled_server_path = null;
             DownloadServerJar(config);
+            string final_server_jar = ServerJarPath;
             if (ServerJarPath is not null)
             {
-                mapped_server = MapJar(config, ServerJarPath, ServerMappingsURL, "server", destination);
-                string used_server = mapped_server ?? ServerJarPath;
+                using (ZipArchive archive = ZipFile.Open(ServerJarPath, ZipArchiveMode.Read))
+                {
+                    var libraries = ReadClassPath(archive);
+                    if (libraries != null)
+                    {
+                        Profiler.Start("Unbundling server");
+
+                        unbundled_server_path = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(ServerJarPath)}_unbundled.jar");
+                        final_server_jar = unbundled_server_path;
+                        using ZipArchive unbundled = ZipFile.Open(unbundled_server_path, ZipArchiveMode.Create);
+
+                        foreach (var library in libraries)
+                        {
+                            var bundled_jar = archive.GetEntry("META-INF/" + library);
+                            using var jar_stream = bundled_jar.Open();
+                            using var jar_archive = new ZipArchive(jar_stream);
+                            CombineArchives(jar_archive, unbundled);
+                        }
+
+                        foreach (var entry in archive.Entries)
+                        {
+                            if (!entry.FullName.StartsWith("META-INF/"))
+                                CopyEntry(entry, unbundled);
+                        }
+
+                        Profiler.Stop();
+                    }
+                }
+                mapped_server = MapJar(config, final_server_jar, ServerMappingsURL, "server", destination);
+                string used_server = mapped_server ?? final_server_jar;
                 CombineJars(final_jar, used_client, used_server);
             }
             else
                 File.Copy(used_client, final_jar);
 
-            Profiler.Start("Removing unwanted files");
+            Profiler.Start("Processing final jar files");
             // use the old-style using since the zip needs to dispose before decompiling starts
             using (ZipArchive archive = ZipFile.Open(final_jar, ZipArchiveMode.Update))
             {
@@ -171,7 +218,25 @@ namespace MinecraftVersionHistory
                 File.Delete(mapped_client);
             if (mapped_server is not null)
                 File.Delete(mapped_server);
+            if (unbundled_server_path is not null)
+                File.Delete(unbundled_server_path);
             File.Delete(final_jar);
+        }
+
+        private void CombineArchives(ZipArchive source_zip, ZipArchive destination)
+        {
+            foreach (var item in source_zip.Entries)
+            {
+                CopyEntry(item, destination);
+            }
+        }
+
+        private void CopyEntry(ZipArchiveEntry entry, ZipArchive destination)
+        {
+            var file = destination.CreateEntry(entry.FullName);
+            using var source = entry.Open();
+            using var dest = file.Open();
+            source.CopyTo(dest);
         }
 
         private void CombineJars(string destination, params string[] paths)
@@ -181,13 +246,7 @@ namespace MinecraftVersionHistory
             foreach (var path in paths)
             {
                 using ZipArchive zip = ZipFile.OpenRead(path);
-                foreach (var entry in zip.Entries)
-                {
-                    var file = archive.CreateEntry(entry.FullName);
-                    using var source = entry.Open();
-                    using var dest = file.Open();
-                    source.CopyTo(dest);
-                }
+                CombineArchives(zip, archive);
             }
             Profiler.Stop();
         }
