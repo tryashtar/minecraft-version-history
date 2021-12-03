@@ -51,16 +51,38 @@ java:
     endian: big
   # these files change constantly due to hash order, so sort them to prevent unneeded diffs
   json sorting:
-    data/minecraft/advancements/nether/all_effects.json:
+    jar/data/minecraft/advancements/nether/all_effects.json:
       path: [criteria, all_effects, conditions, effects]
       operation: sort_keys
-    data/minecraft/advancements/nether/all_potions.json:
+    jar/data/minecraft/advancements/nether/all_potions.json:
       path: [criteria, all_effects, conditions, effects]
       operation: sort_keys
-    data/minecraft/loot_tables/chests/shipwreck_supply.json:
+    jar/data/minecraft/loot_tables/chests/shipwreck_supply.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       operation: sort_by
       by: type
+    reports/worldgen/minecraft/worldgen/noise_settings/overworld.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/nether.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/large_biomes.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/floating_islands.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/end.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/caves.json:
+      path: [structures, structures]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/noise_settings/amplified.json:
+      path: [structures, structures]
+      operation: sort_keys
+
     # this functionality was removed and hasn't been readded yet, so commented out for now
     #assets/minecraft/blockstates:
     #- path: [variants, {}]

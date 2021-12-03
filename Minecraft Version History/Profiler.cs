@@ -19,7 +19,7 @@ namespace MinecraftVersionHistory
         public static void Start(string name)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"@ {name}");
+            Console.WriteLine($"{new String(' ', TimerStack.Count * 2)}@ {name}");
             Console.ResetColor();
             var timer = new Stopwatch();
             timer.Start();
@@ -31,7 +31,7 @@ namespace MinecraftVersionHistory
             var (timer, name) = TimerStack.Pop();
             timer.Stop();
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"@ {name}: {timer.Elapsed}");
+            Console.WriteLine($"{new String(' ', TimerStack.Count * 2)}@ {name}: {timer.Elapsed}");
             Console.ResetColor();
         }
 

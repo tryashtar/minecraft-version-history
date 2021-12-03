@@ -61,9 +61,9 @@ namespace MinecraftVersionHistory
             return false;
         }
 
-        public bool NeedsJsonSorting(string name)
+        public IEnumerable<string> NeedsJsonSorting()
         {
-            return JsonSorters.ContainsKey(name);
+            return JsonSorters.Keys;
         }
 
         public void JsonSort(string name, JObject json)

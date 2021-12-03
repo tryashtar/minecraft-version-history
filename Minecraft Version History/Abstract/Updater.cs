@@ -212,8 +212,7 @@ namespace MinecraftVersionHistory
             {
                 string relative = Util.RelativePath(workspace, item);
                 string base_version = Path.Combine(base_folder, relative);
-                if (!File.Exists(base_version) || !Util.FilesAreEqual(new FileInfo(item), new FileInfo(base_version)))
-                    Util.Copy(item, base_version);
+                Util.Copy(item, base_version);
                 File.Delete(item);
             }
             Profiler.Stop();

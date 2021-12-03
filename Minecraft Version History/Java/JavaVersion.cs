@@ -74,18 +74,22 @@ namespace MinecraftVersionHistory
                 Directory.CreateDirectory(Path.Combine(folder, "jar", Path.GetDirectoryName(entry.FullName)));
                 var destination = Path.Combine(folder, "jar", entry.FullName);
                 entry.ExtractToFile(destination);
-                DoJsonSorting(entry.FullName, destination, java_config);
             }
+            DoJsonSorting(folder, java_config);
             Profiler.Stop();
         }
 
-        private void DoJsonSorting(string name, string path, JavaConfig config)
+        private void DoJsonSorting(string folder, JavaConfig config)
         {
-            if (config.NeedsJsonSorting(name))
+            foreach (var file in config.NeedsJsonSorting())
             {
-                var json = JObject.Parse(File.ReadAllText(path));
-                config.JsonSort(name, json);
-                File.WriteAllText(path, Util.ToMinecraftJson(json));
+                var path = Path.Combine(folder, file);
+                if (File.Exists(path))
+                {
+                    var json = JObject.Parse(File.ReadAllText(path));
+                    config.JsonSort(file, json);
+                    File.WriteAllText(path, Util.ToMinecraftJson(json));
+                }
             }
         }
 
