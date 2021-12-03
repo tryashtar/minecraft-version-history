@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using Microsoft.VisualBasic.FileIO;
 
 namespace MinecraftVersionHistory
 {
@@ -56,7 +57,9 @@ namespace MinecraftVersionHistory
                         throw new ApplicationException("Failed to get data reports");
                     var outputfolder = Path.Combine(folder, "reports");
                     Directory.CreateDirectory(outputfolder);
-                    Microsoft.VisualBasic.FileIO.FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
+                    FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
+                    if (Directory.Exists(reports_path))
+                        Directory.Delete(reports_path, true);
                     Profiler.Stop();
                 }
             }

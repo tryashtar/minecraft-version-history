@@ -11,7 +11,7 @@ java:
   - '%appdata%\.minecraft\versions'
   - '%appdata%\.minecraft\versions\~ARCHIVE'
   # Minecraft builtin java, seems to work well
-  java install: C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-alpha\windows-x64\java-runtime-alpha\bin\java.exe
+  java install: C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
@@ -90,10 +90,10 @@ java:
       - c0.0.21a
       - c0.0.22a_05
       - c0.0.23a_01
-      - a1.1.0,
+      - a1.1.0
       - a1.1.0-1
       - a1.1.0-2
-      - 1.0.0-rc1,
+      - 1.0.0-rc1
       - 1.0.0-rc2-1
       - 1.0.0-rc2-2
       - 1.0.0-rc2-3
@@ -198,6 +198,9 @@ bedrock:
       - vanilla_1.17.20
       - vanilla_1.17.30
       - vanilla_1.17.40
+      - vanilla_1.18.0
+      - vanilla_1.18.10
+      - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
     resource:
       layers:
@@ -216,6 +219,9 @@ bedrock:
       - vanilla_1.17.20
       - vanilla_1.17.30
       - vanilla_1.17.40
+      - vanilla_1.18.0
+      - vanilla_1.18.10
+      - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
       merging:
       - path: biomes_client.json
@@ -244,8 +250,8 @@ bedrock:
     ordering:
       priority:
       - listed order
-      - best guess
       - release time
+      - best guess
       versions:
       - 1.16.22002.0
       - 1.16.22101.0
@@ -264,4 +270,5 @@ bedrock:
     parents:
     releases:
       regex:
-        ^(\d+\.\d+).*$: $1
+        ^(\d+\.\d+)\.\d\d?\.0$: $1
+        ^(\d+\.\d+\.\d\d)\d\d?\d?\.0$: $1
