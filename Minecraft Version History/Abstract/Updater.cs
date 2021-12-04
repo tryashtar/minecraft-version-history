@@ -162,7 +162,7 @@ namespace MinecraftVersionHistory
             { version.Version.ExtractData(workspace, Config); });
             Profiler.Run("Translating NBT Files", () =>
             { TranslateNbtFiles(workspace); });
-            Profiler.Run($"Merging", ()=>
+            Profiler.Run($"Merging", () =>
             {
                 MergeWithWorkspace(OutputRepo, workspace);
                 Directory.Delete(workspace, true);
@@ -212,7 +212,8 @@ namespace MinecraftVersionHistory
             {
                 string relative = Path.GetRelativePath(workspace, item);
                 string base_version = Path.Combine(base_folder, relative);
-                Util.Copy(item, base_version);
+                if (!Util.FilesAreEqual(new FileInfo(item), new FileInfo(base_version)))
+                    Util.Copy(item, base_version);
                 File.Delete(item);
             }
             Profiler.Stop();

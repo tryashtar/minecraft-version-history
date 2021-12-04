@@ -100,7 +100,7 @@ namespace MinecraftVersionHistory
                 return null;
             string mappings_path = Path.Combine(Path.GetDirectoryName(folder), $"mappings_{side}.txt");
             string mapped_jar_path = Path.Combine(folder, $"mapped_{side}.jar");
-            DownloadThing(mappings_url, mappings_path, $"{side} mappings");
+            Util.DownloadThing(mappings_url, mappings_path, $"{side} mappings");
             Profiler.Start("Remapping jar with SpecialSource");
             CommandRunner.RunCommand(Path.GetDirectoryName(mapped_jar_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
                 $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
@@ -268,22 +268,9 @@ namespace MinecraftVersionHistory
                 ServerJarPath = path;
             if (!File.Exists(path))
             {
-                DownloadThing(ServerJarURL, path, "server jar");
+                Util.DownloadThing(ServerJarURL, path, "server jar");
                 ServerJarPath = path;
             }
-        }
-
-        private static void DownloadThing(string url, string path, string thing)
-        {
-            Profiler.Start($"Downloading {thing}");
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
-            using var client = new HttpClient();
-            using var stream = client.GetStreamAsync(url).Result;
-            using var file = File.Create(path);
-            if (stream.CanSeek)
-                stream.Seek(0, SeekOrigin.Begin);
-            stream.CopyTo(file);
-            Profiler.Stop();
         }
     }
 }

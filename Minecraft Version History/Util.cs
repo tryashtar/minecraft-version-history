@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -137,6 +138,19 @@ namespace MinecraftVersionHistory
             }
 
             return true;
+        }
+
+        public static readonly HttpClient HTTP_CLIENT = new();
+        public static void DownloadThing(string url, string path, string thing)
+        {
+            Profiler.Start($"Downloading {thing}");
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            using var stream = HTTP_CLIENT.GetStreamAsync(url).Result;
+            using var file = File.Create(path);
+            if (stream.CanSeek)
+                stream.Seek(0, SeekOrigin.Begin);
+            stream.CopyTo(file);
+            Profiler.Stop();
         }
     }
 }
