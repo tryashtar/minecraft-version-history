@@ -197,7 +197,7 @@ namespace MinecraftVersionHistory
             Profiler.Start("Deleting");
             foreach (var item in Directory.GetFiles(base_folder, "*", SearchOption.AllDirectories))
             {
-                string relative = Util.RelativePath(base_folder, item);
+                string relative = Path.GetRelativePath(base_folder, item);
                 if (relative.StartsWith(".git"))
                     continue;
                 string workspace_version = Path.Combine(workspace, relative);
@@ -210,7 +210,7 @@ namespace MinecraftVersionHistory
             Profiler.Start("Copying");
             foreach (var item in Directory.GetFiles(workspace, "*", SearchOption.AllDirectories))
             {
-                string relative = Util.RelativePath(workspace, item);
+                string relative = Path.GetRelativePath(workspace, item);
                 string base_version = Path.Combine(base_folder, relative);
                 Util.Copy(item, base_version);
                 File.Delete(item);

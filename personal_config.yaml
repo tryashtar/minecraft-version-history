@@ -140,7 +140,7 @@ java:
       releases:
       - April Fools
       - Combat Test
-      versions:
+      versions: []
     parents:
       1.18_experimental-snapshot-1: 1.17.1-pre1
     releases:
@@ -289,7 +289,7 @@ bedrock:
       - 1.17.2023.0
       - 1.17.3020.0
       - 1.17.3021.0
-    parents:
+    parents: {}
     releases:
       regex:
         ^(\d+\.\d+)\.\d\d?\.0$: $1

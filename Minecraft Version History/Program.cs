@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
+using TryashtarUtils.Utility;
 
 namespace MinecraftVersionHistory
 {
@@ -21,7 +22,7 @@ namespace MinecraftVersionHistory
             try
 #endif
             {
-                var config_file = (YamlMappingNode)Util.ParseYamlFile(@"..\..\config.yaml");
+                var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"..\..\config.yaml");
                 var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
 
                 var downloader = new JavaVersionDownloader();

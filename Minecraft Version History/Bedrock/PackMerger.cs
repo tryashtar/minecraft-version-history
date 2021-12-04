@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using YamlDotNet.RepresentationModel;
+using TryashtarUtils.Utility;
 
 namespace MinecraftVersionHistory
 {
@@ -33,7 +34,7 @@ namespace MinecraftVersionHistory
                 Console.WriteLine($"Applying {layer}");
                 foreach (var file in Directory.GetFiles(pack, "*", SearchOption.AllDirectories))
                 {
-                    var relative = Util.RelativePath(pack, file);
+                    var relative = Path.GetRelativePath(pack, file);
                     var dest = Path.Combine(output_folder, relative);
                     var specs = MergingSpecs.Where(x => x.Matches(relative));
                     if (specs.Any() && File.Exists(dest))

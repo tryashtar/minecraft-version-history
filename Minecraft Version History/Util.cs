@@ -19,103 +19,16 @@ namespace MinecraftVersionHistory
             return node.Children.OrderBy(x => Depth(x));
         }
 
-        public static int Depth(this IVersionNode node)
-        {
-            if (!node.Children.Any())
-                return 1;
-            return 1 + node.Children.Max(x => Depth(x));
-        }
-
-        public static YamlNode ParseYamlFile(string file_path)
-        {
-            using (var reader = new StreamReader(File.OpenRead(file_path)))
-            {
-                var stream = new YamlStream();
-                stream.Load(reader);
-                var root = stream.Documents.SingleOrDefault()?.RootNode;
-                return root;
-            }
-        }
-
-        public static YamlNode Go(this YamlNode node, params string[] path)
-        {
-            foreach (var item in path)
-            {
-                node = TryGet(node, item);
-                if (node == null)
-                    return null;
-            }
-            return node;
-        }
-
-        public static YamlNode TryGet(this YamlNode node, string key)
-        {
-            if (node is YamlMappingNode map && map.Children.TryGetValue(key, out var result))
-                return result;
-            return null;
-        }
-
-        public static List<TValue> ToList<TValue>(this YamlNode node, Func<YamlNode, TValue> value)
-        {
-            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
-                return null;
-            if (node is YamlSequenceNode sequence)
-            {
-                return sequence.Select(value).ToList();
-            }
-            throw new ArgumentException();
-        }
-
         public static string FilePath(string base_folder, YamlNode node)
         {
             return Path.Combine(base_folder, Environment.ExpandEnvironmentVariables((string)node));
         }
 
-        public static List<string> ToStringList(this YamlNode node)
+        public static int Depth(this IVersionNode node)
         {
-            return ToList(node, x => (string)x);
-        }
-
-        public static Dictionary<TKey, TValue> ToDictionary<TKey, TValue>(this YamlNode node, Func<YamlNode, TKey> key, Func<YamlNode, TValue> value)
-        {
-            if (node == null || (node is YamlScalarNode scalar && String.IsNullOrEmpty(scalar.Value)))
-                return null;
-            if (node is YamlMappingNode map)
-            {
-                var dict = new Dictionary<TKey, TValue>();
-                foreach (var child in map)
-                {
-                    dict[key(child.Key)] = value(child.Value);
-                }
-                return dict;
-            }
-            throw new ArgumentException();
-        }
-
-        public static Dictionary<string, string> ToStringDictionary(this YamlNode node)
-        {
-            return ToDictionary(node, x => (string)x, x => (string)x);
-        }
-
-        public static string RelativePath(string fromDir, string toPath)
-        {
-            Uri fromUri = new Uri(AppendDirectorySeparatorChar(fromDir));
-            Uri toUri = new Uri(toPath);
-
-            if (fromUri.Scheme != toUri.Scheme)
-            {
-                return toPath;
-            }
-
-            Uri relativeUri = fromUri.MakeRelativeUri(toUri);
-            string relativePath = Uri.UnescapeDataString(relativeUri.ToString());
-
-            if (string.Equals(toUri.Scheme, Uri.UriSchemeFile, StringComparison.OrdinalIgnoreCase))
-            {
-                relativePath = relativePath.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-            }
-
-            return relativePath;
+            if (!node.Children.Any())
+                return 1;
+            return 1 + node.Children.Max(x => Depth(x));
         }
 
         public static string[] Split(string path)
@@ -127,17 +40,6 @@ namespace MinecraftVersionHistory
         {
             Directory.CreateDirectory(Path.GetDirectoryName(to));
             File.Copy(from, to, true);
-        }
-
-        private static string AppendDirectorySeparatorChar(string path)
-        {
-            // Append a slash only if the path is a directory and does not have a slash.
-            if (!path.EndsWith(Path.DirectorySeparatorChar.ToString()) && !path.EndsWith(Path.AltDirectorySeparatorChar.ToString()))
-            {
-                return path + Path.DirectorySeparatorChar;
-            }
-
-            return path;
         }
 
         private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T : JToken

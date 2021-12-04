@@ -25,7 +25,7 @@ namespace MinecraftVersionHistory
             SkipVersions = yaml.Go("skip").ToList(x => new Regex((string)x)) ?? new();
             InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x)) ?? new();
             InsaneVersions = yaml.Go("insane", "versions").ToList(x => new Regex((string)x)) ?? new();
-            ParentsMap = yaml.Go("parents").ToStringDictionary() ?? new Dictionary<string, string>();
+            ParentsMap = yaml.Go("parents").ToDictionary() ?? new();
             RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new();
             SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new();
             VersionOrder = yaml.Go("ordering", "versions").ToStringList() ?? new();

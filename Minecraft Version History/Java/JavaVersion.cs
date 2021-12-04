@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Microsoft.VisualBasic.FileIO;
+using System.Net.Http;
 
 namespace MinecraftVersionHistory
 {
@@ -276,10 +277,12 @@ namespace MinecraftVersionHistory
         {
             Profiler.Start($"Downloading {thing}");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            using (var client = new WebClient())
-            {
-                client.DownloadFile(url, path);
-            }
+            using var client = new HttpClient();
+            using var stream = client.GetStreamAsync(url).Result;
+            using var file = File.Create(path);
+            if (stream.CanSeek)
+                stream.Seek(0, SeekOrigin.Begin);
+            stream.CopyTo(file);
             Profiler.Stop();
         }
     }
