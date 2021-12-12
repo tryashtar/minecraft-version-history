@@ -13,8 +13,8 @@ namespace MinecraftVersionHistory
     public abstract class Updater
     {
         public VersionGraph Graph { get; private set; }
-        private Dictionary<string, IVersionNode> CommitToVersion;
-        private Dictionary<IVersionNode, string> VersionToCommit;
+        private Dictionary<string, VersionNode> CommitToVersion;
+        private Dictionary<VersionNode, string> VersionToCommit;
         public readonly AppConfig Config;
 
         public Updater(AppConfig config)
@@ -62,8 +62,8 @@ namespace MinecraftVersionHistory
         private void LoadCommits()
         {
             var versions = Graph.Flatten();
-            CommitToVersion = new Dictionary<string, IVersionNode>();
-            VersionToCommit = new Dictionary<IVersionNode, string>();
+            CommitToVersion = new Dictionary<string, VersionNode>();
+            VersionToCommit = new Dictionary<VersionNode, string>();
             Profiler.Start("Loading commits");
             var commits = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath);
             foreach (var entry in commits)
@@ -78,7 +78,7 @@ namespace MinecraftVersionHistory
             Profiler.Stop();
         }
 
-        private void Commit(IVersionNode version)
+        private void Commit(VersionNode version)
         {
             if (VersionToCommit.ContainsKey(version))
                 return;
@@ -99,11 +99,11 @@ namespace MinecraftVersionHistory
             }
         }
 
-        private string GetBranchName(IVersionNode version) => version.ReleaseName.Replace(' ', '-');
+        private string GetBranchName(VersionNode version) => version.ReleaseName.Replace(' ', '-');
 
         private string GIT => $"\"{Config.GitInstallationPath}\"";
 
-        private void InitialCommit(IVersionNode version)
+        private void InitialCommit(VersionNode version)
         {
             Profiler.Start("Initializing repo");
             CommandRunner.RunCommand(OutputRepo, $"{GIT} init");
@@ -117,7 +117,7 @@ namespace MinecraftVersionHistory
             DoCommit(version);
         }
 
-        private void InsertCommit(IVersionNode version)
+        private void InsertCommit(VersionNode version)
         {
             // find commit hash for existing version
             string hash = VersionToCommit[version.Parent];
@@ -150,7 +150,7 @@ namespace MinecraftVersionHistory
             }
         }
 
-        private void DoCommit(IVersionNode version)
+        private void DoCommit(VersionNode version)
         {
             Profiler.Start($"Adding commit for {version.Version}");
             // extract

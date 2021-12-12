@@ -15,7 +15,7 @@ namespace MinecraftVersionHistory
 {
     public static class Util
     {
-        public static IEnumerable<IVersionNode> OrderedChildren(this IVersionNode node)
+        public static IEnumerable<VersionNode> OrderedChildren(this VersionNode node)
         {
             return node.Children.OrderBy(x => Depth(x));
         }
@@ -25,7 +25,7 @@ namespace MinecraftVersionHistory
             return Path.Combine(base_folder, Environment.ExpandEnvironmentVariables((string)node));
         }
 
-        public static int Depth(this IVersionNode node)
+        public static int Depth(this VersionNode node)
         {
             if (!node.Children.Any())
                 return 1;
