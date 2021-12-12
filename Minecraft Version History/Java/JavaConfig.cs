@@ -11,7 +11,7 @@ namespace MinecraftVersionHistory
 {
     public class JavaConfig : VersionConfig
     {
-        public readonly string JavaInstallationPath;
+        public readonly List<string> JavaInstallationPaths;
         public readonly string FernflowerPath;
         public readonly string CfrPath;
         public readonly string SpecialSourcePath;
@@ -26,7 +26,7 @@ namespace MinecraftVersionHistory
         private readonly List<Regex> ExcludeDecompiledEntries;
         public JavaConfig(string folder, YamlMappingNode yaml) : base(folder, yaml)
         {
-            JavaInstallationPath = Util.FilePath(folder, yaml["java install"]);
+            JavaInstallationPaths = yaml.Go("java install").ToList(x => Util.FilePath(folder, x));
             FernflowerPath = Util.FilePath(folder, yaml["fernflower jar"]);
             CfrPath = Util.FilePath(folder, yaml["cfr jar"]);
             SpecialSourcePath = Util.FilePath(folder, yaml["special source jar"]);

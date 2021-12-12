@@ -51,9 +51,13 @@ namespace MinecraftVersionHistory
                 if (ServerJarPath is not null)
                 {
                     Profiler.Start("Fetching data reports");
-                    var result = CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -cp \"{ServerJarPath}\" net.minecraft.data.Main --reports");
-                    if (result.ExitCode != 0)
-                        result = CommandRunner.RunCommand(java_config.ServerJarFolder, $"\"{java_config.JavaInstallationPath}\" -DbundlerMainClass=net.minecraft.data.Main -jar \"{ServerJarPath}\" --reports");
+                    string args1 = $"-cp \"{ServerJarPath}\" net.minecraft.data.Main --reports";
+                    string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{ServerJarPath}\" --reports";
+                    var result = CommandRunner.RunJavaCombos(
+                        java_config.ServerJarFolder,
+                        java_config.JavaInstallationPaths,
+                        new[] { args1, args2 }
+                    );
                     if (result.ExitCode != 0)
                         throw new ApplicationException("Failed to get data reports");
                     var outputfolder = Path.Combine(folder, "reports");
@@ -102,7 +106,7 @@ namespace MinecraftVersionHistory
             string mapped_jar_path = Path.Combine(folder, $"mapped_{side}.jar");
             Util.DownloadThing(mappings_url, mappings_path, $"{side} mappings");
             Profiler.Start("Remapping jar with SpecialSource");
-            CommandRunner.RunCommand(Path.GetDirectoryName(mapped_jar_path), $"\"{config.JavaInstallationPath}\" -jar \"{config.SpecialSourcePath}\" " +
+            CommandRunner.RunJavaCommand(Path.GetDirectoryName(mapped_jar_path), config.JavaInstallationPaths, $"-jar \"{config.SpecialSourcePath}\" " +
                 $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
             Profiler.Stop();
             return mapped_jar_path;
@@ -113,7 +117,7 @@ namespace MinecraftVersionHistory
             Profiler.Start($"Decompiling");
             if (config.Decompiler == DecompilerType.Cfr)
             {
-                var result = CommandRunner.RunCommand(folder, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+                var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                     $"--outputdir \"{folder}\" {config.CfrArgs}");
                 if (result.ExitCode != 0)
                     throw new ApplicationException("Failed to decompile");
@@ -129,7 +133,7 @@ namespace MinecraftVersionHistory
             {
                 string output_dir = Path.Combine(folder, "decompiled");
                 Directory.CreateDirectory(output_dir);
-                CommandRunner.RunCommand(folder, $"\"{config.JavaInstallationPath}\" {config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
+                CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
                     $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\""); ;
                 using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
                 {

@@ -11,11 +11,13 @@ java:
   - '%appdata%\.minecraft\versions'
   - '%appdata%\.minecraft\versions\~ARCHIVE'
   # Minecraft builtin java, seems to work well
-  java install: C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
+  java install:
+  - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
+  - C:\Program Files (x86)\Common Files\Oracle\Java\javapath\java.exe
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
-  cfr jar: cfr-0.151.jar
+  cfr jar: cfr-0.152.jar
   # I got specialsource from https://ci.md-5.net/job/SpecialSource/148/
   special source jar: SpecialSource-1.10.0-shaded.jar
   # folder to store downloaded server jars
@@ -25,7 +27,7 @@ java:
   # arguments passed to java when invoking the decompiler
   decompiler args: -Xmx2400M -Xms600M
   # arguments passed to the decompiler itself
-  cfr args: --caseinsensitivefs true --comments false --showversion false
+  cfr args: --caseinsensitivefs true --comments false --showversion false --sealed true
   fernflower args: -hes=0 -hdc=0 -dgs=1 -log=WARN
   # versions newer than this date will extract data reports
   data generators: 2018-01-01
