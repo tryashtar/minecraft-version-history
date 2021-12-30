@@ -1,37 +1,24 @@
-﻿using fNbt;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using YamlDotNet.RepresentationModel;
-using TryashtarUtils.Utility;
+﻿namespace MinecraftVersionHistory;
 
-namespace MinecraftVersionHistory
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
 #if !DEBUG
             start:
             try
 #endif
-            {
-                var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"..\..\config.yaml");
-                var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
+        {
+            var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"..\..\config.yaml");
+            var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
 
-                var downloader = new JavaVersionDownloader();
+            var downloader = new JavaVersionDownloader();
 #if !DEBUG
                 try
 #endif
-                {
-                    downloader.DownloadMissing(config.Java.InputFolders, config);
-                }
+            {
+                downloader.DownloadMissing(config.Java.InputFolders, config);
+            }
 #if !DEBUG
                 catch (Exception ex)
                 {
@@ -40,14 +27,14 @@ namespace MinecraftVersionHistory
                 }
 #endif
 
-                var java = new JavaUpdater(config);
-                java.Perform();
+            var java = new JavaUpdater(config);
+            java.Perform();
 
-                var bedrock = new BedrockUpdater(config);
-                bedrock.Perform();
+            var bedrock = new BedrockUpdater(config);
+            bedrock.Perform();
 
-                Console.WriteLine("All done!");
-            }
+            Console.WriteLine("All done!");
+        }
 #if !DEBUG
             catch (Exception ex)
             {
@@ -58,6 +45,5 @@ namespace MinecraftVersionHistory
                 goto start;
             }
 #endif
-        }
     }
 }

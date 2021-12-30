@@ -193,7 +193,7 @@ java:
       - {year: 2020, weeks: [6,30], release: 1.16}
       - {year: 2020, weeks: [45,51], release: 1.17}
       - {year: 2021, weeks: [3,36], release: 1.17}
-      - {year: 2021, weeks: [37,999999999], release: 1.18}
+      - {year: 2021, weeks: [37,44], release: 1.18}
 
 bedrock:
   repo: D:\Minecraft\Bedrock Storage\History
