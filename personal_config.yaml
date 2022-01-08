@@ -63,32 +63,28 @@ java:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       operation: sort_by
       by: type
-    reports/worldgen/minecraft/worldgen/noise_settings/overworld.json:
+    reports/worldgen/minecraft/worldgen/noise_settings:
       path: [structures, structures]
       operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/nether.json:
-      path: [structures, structures]
-      operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/large_biomes.json:
-      path: [structures, structures]
-      operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/floating_islands.json:
-      path: [structures, structures]
-      operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/end.json:
-      path: [structures, structures]
-      operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/caves.json:
-      path: [structures, structures]
-      operation: sort_keys
-    reports/worldgen/minecraft/worldgen/noise_settings/amplified.json:
-      path: [structures, structures]
-      operation: sort_keys
-
-    # this functionality was removed and hasn't been readded yet, so commented out for now
-    #assets/minecraft/blockstates:
-    #- path: [variants, {}]
-    #  order: [model, x, y, z, uvlock, weight]
+    jar/assets/minecraft/blockstates:
+      after: 2020-03-04
+      multi:
+      - path: [variants, '@.*', {}]
+        operation: order
+        order: [model, x, y, z, uvlock, weight]
+      - path: [variants, '@.*']
+        operation: order
+        order: [model, x, y, z, uvlock, weight]
+      - path: [multipart, {}, apply]
+        operation: order
+        order: [model, x, y, z, uvlock, weight]
+      - path: [multipart, {}, apply, {}]
+        operation: order
+        order: [model, x, y, z, uvlock, weight]
+      - path: [multipart, {}, when, OR, {}]
+        operation: sort_keys
+      - path: [multipart, {}, when]
+        operation: sort_keys
   version facts:
     skip:
     - (?i)optifine

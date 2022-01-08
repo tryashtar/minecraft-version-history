@@ -17,7 +17,7 @@ public class JsonSorting
             "path", new YamlSequenceNode("criteria", "all_effects", "conditions", "effects"),
             "operation", "sort_keys"
         );
-        var sorter = new JsonSorter(config);
+        var sorter = JsonSorterFactory.Create(config);
         var json = JObject.Parse(File.ReadAllText("all_effects.json"));
         var relevant_object = (JObject)json["criteria"]["all_effects"]["conditions"]["effects"];
         Assert.IsFalse(IsSorted(relevant_object));
@@ -33,7 +33,7 @@ public class JsonSorting
             "operation", "sort_by",
             "by", "type"
         );
-        var sorter = new JsonSorter(config);
+        var sorter = JsonSorterFactory.Create(config);
         var json = JObject.Parse(File.ReadAllText("shipwreck_supply.json"));
         var relevant_object = (JArray)json["pools"][0]["entries"][5]["functions"][0]["effects"];
         Assert.IsFalse(IsSorted(relevant_object, "type"));

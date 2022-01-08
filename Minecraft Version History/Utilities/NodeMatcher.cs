@@ -5,7 +5,12 @@ public abstract class NodeMatcher
     public static NodeMatcher Create(YamlNode node)
     {
         if (node is YamlScalarNode scalar)
-            return new NameNodeMatcher((string)scalar);
+        {
+            string val = scalar.Value;
+            if (val.StartsWith("@"))
+                return new RegexNodeMatcher(new Regex(val[1..]));
+            return new NameNodeMatcher(val);
+        }
         if (node is YamlMappingNode map)
             return new TemplateNodeMatcher(map);
         throw new ArgumentException(nameof(node));
@@ -15,7 +20,8 @@ public abstract class NodeMatcher
     {
         foreach (var start in starts)
         {
-            foreach (var item in Follow(start)) yield return item;
+            foreach (var item in Follow(start))
+                yield return item;
         }
     }
 
@@ -34,6 +40,27 @@ public class NameNodeMatcher : NodeMatcher
     {
         if (start is JObject obj && obj.TryGetValue(Name, out var result))
             yield return result;
+    }
+}
+
+public class RegexNodeMatcher : NodeMatcher
+{
+    public readonly Regex Regex;
+    public RegexNodeMatcher(Regex regex)
+    {
+        Regex = regex;
+    }
+
+    public override IEnumerable<JToken> Follow(JToken start)
+    {
+        if (start is JObject obj)
+        {
+            foreach (var (name, child) in obj)
+            {
+                if (Regex.IsMatch(name))
+                    yield return child;
+            }
+        }
     }
 }
 

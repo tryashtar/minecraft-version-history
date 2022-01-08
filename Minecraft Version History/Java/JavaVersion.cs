@@ -69,22 +69,8 @@ public class JavaVersion : Version
             var destination = Path.Combine(folder, "jar", entry.FullName);
             entry.ExtractToFile(destination);
         }
-        DoJsonSorting(folder, java_config);
+        java_config.JsonSort(folder, this);
         Profiler.Stop();
-    }
-
-    private void DoJsonSorting(string folder, JavaConfig config)
-    {
-        foreach (var file in config.NeedsJsonSorting())
-        {
-            var path = Path.Combine(folder, file);
-            if (File.Exists(path))
-            {
-                var json = JObject.Parse(File.ReadAllText(path));
-                config.JsonSort(file, json);
-                File.WriteAllText(path, Util.ToMinecraftJson(json));
-            }
-        }
     }
 
     private string MapJar(JavaConfig config, string jar_path, string mappings_url, string side, string folder)

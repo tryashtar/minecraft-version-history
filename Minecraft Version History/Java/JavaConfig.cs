@@ -12,7 +12,7 @@ public class JavaConfig : VersionConfig
     public readonly string FernflowerArgs;
     public readonly DateTime DataGenerators;
     public readonly DecompilerType? Decompiler;
-    private readonly Dictionary<string, JsonSorter> JsonSorters;
+    private readonly Dictionary<string, IJsonSorter> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
     public JavaConfig(string folder, YamlMappingNode yaml) : base(folder, yaml)
@@ -27,9 +27,9 @@ public class JavaConfig : VersionConfig
         CfrArgs = (string)yaml["cfr args"];
         FernflowerArgs = (string)yaml["fernflower args"];
         DataGenerators = DateTime.Parse((string)yaml["data generators"]);
-        JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, x => new JsonSorter((YamlMappingNode)x)) ?? new Dictionary<string, JsonSorter>();
-        ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
-        ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new List<Regex>();
+        JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, JsonSorterFactory.Create) ?? new();
+        ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new();
+        ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new();
     }
 
     protected override VersionFacts CreateVersionFacts(YamlMappingNode yaml)
@@ -53,14 +53,37 @@ public class JavaConfig : VersionConfig
         return false;
     }
 
-    public IEnumerable<string> NeedsJsonSorting()
+    public void JsonSort(string folder, Version version)
     {
-        return JsonSorters.Keys;
+        foreach (var (key, sort) in JsonSorters)
+        {
+            if (!sort.ShouldSort(version))
+                continue;
+            var path = Path.Combine(folder, key);
+            if (File.Exists(path))
+            {
+                Console.WriteLine($"Sorting {key}");
+                SortJsonFile(path, sort);
+            }
+            else if (Directory.Exists(path))
+            {
+                var files = Directory.GetFiles(path);
+                Console.WriteLine($"Sorting {files.Length} files in {key}");
+                foreach (var sub in files)
+                {
+                    SortJsonFile(sub, sort);
+                }
+            }
+            else
+                Console.WriteLine($"Not sorting {key}, no file found");
+        }
     }
 
-    public void JsonSort(string name, JObject json)
+    private void SortJsonFile(string path, IJsonSorter sorter)
     {
-        JsonSorters[name].Sort(json);
+        var json = JObject.Parse(File.ReadAllText(path));
+        sorter.Sort(json);
+        File.WriteAllText(path, Util.ToMinecraftJson(json));
     }
 
     private static DecompilerType? ParseDecompiler(string input)
