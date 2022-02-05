@@ -10,6 +10,7 @@ java:
   version folders:
   - '%appdata%\.minecraft\versions'
   - '%appdata%\.minecraft\versions\~ARCHIVE'
+  assets folder: '%appdata%\.minecraft\assets'
   # Minecraft builtin java, seems to work well
   java install:
   - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
@@ -190,6 +191,7 @@ java:
       - {year: 2020, weeks: [45,51], release: 1.17}
       - {year: 2021, weeks: [3,36], release: 1.17}
       - {year: 2021, weeks: [37,44], release: 1.18}
+      - {year: 2022, weeks: [3,44], release: 1.18}
 
 bedrock:
   repo: D:\Minecraft\Bedrock Storage\History

@@ -7,6 +7,7 @@ public class JavaVersion : Version
     public readonly string ServerJarURL;
     public readonly string ClientMappingsURL;
     public readonly string ServerMappingsURL;
+    public readonly string AssetsURL;
     public JavaVersion(string folder)
     {
         Name = Path.GetFileName(folder);
@@ -17,6 +18,7 @@ public class JavaVersion : Version
         ServerJarURL = (string)json["downloads"]?["server"]?["url"];
         ClientMappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
         ServerMappingsURL = (string)json["downloads"]?["server_mappings"]?["url"];
+        AssetsURL = (string)json["assetIndex"]?["url"];
     }
 
     public static bool LooksValid(string folder)
@@ -30,6 +32,7 @@ public class JavaVersion : Version
     public override void ExtractData(string folder, AppConfig config)
     {
         var java_config = config.Java;
+
         if (ReleaseTime > java_config.DataGenerators)
         {
             string reports_path = Path.Combine(java_config.ServerJarFolder, "generated");
@@ -71,6 +74,26 @@ public class JavaVersion : Version
         }
         java_config.JsonSort(folder, this);
         Profiler.Stop();
+
+        if (AssetsURL != null)
+        {
+            Profiler.Start("Fetching assets");
+            var assets_file = Util.DownloadString(AssetsURL);
+            File.WriteAllText(Path.Combine(folder, "assets.json"), assets_file);
+            var json = JObject.Parse(assets_file);
+            foreach ((string path, JToken data) in (JObject)json["objects"])
+            {
+                var hash = (string)data["hash"];
+                var cached = Path.Combine(java_config.AssetsFolder, "objects", hash[0..2], hash);
+                var destination = Path.Combine(folder, "assets", path);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                if (File.Exists(cached))
+                    File.Copy(cached, destination, true);
+                else
+                    Util.DownloadFile($"https://resources.download.minecraft.net/{hash[0..2]}/{hash}", destination);
+            }
+            Profiler.Stop();
+        }
     }
 
     private string MapJar(JavaConfig config, string jar_path, string mappings_url, string side, string folder)

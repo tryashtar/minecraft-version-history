@@ -7,6 +7,7 @@ public class JavaConfig : VersionConfig
     public readonly string CfrPath;
     public readonly string SpecialSourcePath;
     public readonly string ServerJarFolder;
+    public readonly string AssetsFolder;
     public readonly string DecompilerArgs;
     public readonly string CfrArgs;
     public readonly string FernflowerArgs;
@@ -22,6 +23,7 @@ public class JavaConfig : VersionConfig
         CfrPath = Util.FilePath(folder, yaml["cfr jar"]);
         SpecialSourcePath = Util.FilePath(folder, yaml["special source jar"]);
         ServerJarFolder = Util.FilePath(folder, yaml["server jars"]);
+        AssetsFolder = Util.FilePath(folder, yaml["assets folder"]);
         Decompiler = ParseDecompiler((string)yaml["decompiler"]);
         DecompilerArgs = (string)yaml["decompiler args"];
         CfrArgs = (string)yaml["cfr args"];
