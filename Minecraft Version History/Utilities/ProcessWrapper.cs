@@ -38,15 +38,21 @@ public class ProcessWrapper
         var error = new StringBuilder();
         process.OutputDataReceived += (sender, e) =>
         {
-            output.AppendLine(e.Data);
-            if (Output != null)
-                Output.WriteLine(e.Data);
+            if (e.Data != null)
+            {
+                output.AppendLine(e.Data);
+                if (Output != null)
+                    Output.WriteLine(e.Data);
+            }
         };
         process.ErrorDataReceived += (sender, e) =>
         {
-            error.AppendLine(e.Data);
-            if (Error != null)
-                Error.WriteLine(e.Data);
+            if (e.Data != null)
+            {
+                error.AppendLine(e.Data);
+                if (Error != null)
+                    Error.WriteLine(e.Data);
+            }
         };
         process.Start();
         process.BeginOutputReadLine();

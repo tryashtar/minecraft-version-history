@@ -75,7 +75,7 @@ public class JavaConfig : VersionConfig
     public MCP GetBestMCP(JavaVersion version)
     {
         var candidates = MCPs.Where(x => x.ClientVersion == version.Name);
-        return candidates.OrderBy(x => x, MCP.Sorter).FirstOrDefault();
+        return candidates.OrderBy(x => x, MCP.Sorter).LastOrDefault();
     }
 
     public void JsonSort(string folder, Version version)

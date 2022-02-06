@@ -62,7 +62,7 @@ public class GitRepo
 
     public string BranchHash(string branch)
     {
-        return Run($"rev-parse \"{branch}\"").Output[..40];
+        return Run($"rev-parse \"{branch}\"", null, Console.Out).Output[..40];
     }
 
     public void Rebase(string from, string to)
@@ -73,15 +73,13 @@ public class GitRepo
     public IEnumerable<GitCommit> CommittedVersions()
     {
         string[] all = StringUtils.SplitLines(Run(
-            "log --all --pretty=\"%H___%s___%ad___%p\" --date=format:\"%Y/%m/%d\"",
+            "log --exclude=\"refs/notes/*\" --all --pretty=\"%H___%s___%ad___%p\" --date=format:\"%Y/%m/%d\"",
             null, Console.Out).Output).ToArray();
         foreach (var item in all)
         {
             if (String.IsNullOrEmpty(item))
                 continue;
             var entries = item.Split("___");
-            if (String.IsNullOrEmpty(entries[3]))
-                continue;
             yield return new GitCommit(entries[0], entries[1], DateTime.Parse(entries[2]));
         }
     }

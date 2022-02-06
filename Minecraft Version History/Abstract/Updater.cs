@@ -53,7 +53,7 @@ public abstract class Updater
         CommitToVersion = new Dictionary<string, VersionNode>();
         VersionToCommit = new Dictionary<VersionNode, string>();
         Profiler.Start("Loading commits");
-        var commits = VersionConfig.GitRepo.CommittedVersions();
+        var commits = VersionConfig.GitRepo.CommittedVersions().ToList();
         foreach (var entry in commits)
         {
             var version = versions.FirstOrDefault(x => x.Version.Name == entry.Message);
