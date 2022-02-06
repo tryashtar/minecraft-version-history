@@ -12,8 +12,7 @@ public class SnapshotSpec
     {
         Year = int.Parse((string)node["year"]);
         Release = (string)node["release"];
-        var weeks = node.TryGet("weeks") as YamlSequenceNode;
-        if (weeks == null)
+        if (node.TryGet("weeks") is not YamlSequenceNode weeks)
             HasWeeks = false;
         else
         {

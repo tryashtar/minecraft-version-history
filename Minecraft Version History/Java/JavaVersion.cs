@@ -2,22 +2,27 @@
 
 public class JavaVersion : Version
 {
-    public readonly string ClientJarPath;
-    public string ServerJarPath { get; private set; }
-    public readonly string ServerJarURL;
-    public readonly string ClientMappingsURL;
-    public readonly string ServerMappingsURL;
+    public EndpointData Server { get; private set; }
+    public EndpointData Client { get; private set; }
     public readonly string AssetsURL;
+    public readonly string ServerJarURL;
     public JavaVersion(string folder)
     {
         Name = Path.GetFileName(folder);
         string jsonpath = Path.Combine(folder, Name + ".json");
-        ClientJarPath = Path.Combine(folder, Name + ".jar");
         var json = JObject.Parse(File.ReadAllText(jsonpath));
         ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
+        Client = new(
+            "client",
+            Path.Combine(folder, Name + ".jar"),
+            (string)json["downloads"]?["client_mappings"]?["url"]
+        );
+        Server = new(
+            "server",
+            null,
+            (string)json["downloads"]?["server_mappings"]?["url"]
+        );
         ServerJarURL = (string)json["downloads"]?["server"]?["url"];
-        ClientMappingsURL = (string)json["downloads"]?["client_mappings"]?["url"];
-        ServerMappingsURL = (string)json["downloads"]?["server_mappings"]?["url"];
         AssetsURL = (string)json["assetIndex"]?["url"];
     }
 
@@ -40,11 +45,11 @@ public class JavaVersion : Version
                 Directory.Delete(reports_path, true);
 
             DownloadServerJar(java_config);
-            if (ServerJarPath is not null)
+            if (Server.JarPath is not null)
             {
                 Profiler.Start("Fetching data reports");
-                string args1 = $"-cp \"{ServerJarPath}\" net.minecraft.data.Main --reports";
-                string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{ServerJarPath}\" --reports";
+                string args1 = $"-cp \"{Server.JarPath}\" net.minecraft.data.Main --reports";
+                string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{Server.JarPath}\" --reports";
                 var result = CommandRunner.RunJavaCombos(
                     java_config.ServerJarFolder,
                     java_config.JavaInstallationPaths,
@@ -63,7 +68,7 @@ public class JavaVersion : Version
         DecompileMinecraft(java_config, Path.Combine(folder, "source"));
 
         Profiler.Start($"Extracting jar");
-        using ZipArchive zip = ZipFile.OpenRead(ClientJarPath);
+        using ZipArchive zip = ZipFile.OpenRead(Client.JarPath);
         foreach (var entry in zip.Entries)
         {
             if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(entry.FullName))
@@ -96,16 +101,29 @@ public class JavaVersion : Version
         }
     }
 
-    private string MapJar(JavaConfig config, string jar_path, string mappings_url, string side, string folder)
+    public record EndpointData(string Name, string JarPath, string MappingsURL);
+
+    private string MapJar(JavaConfig config, EndpointData side, string folder)
     {
-        if (mappings_url == null)
-            return null;
-        string mappings_path = Path.Combine(Path.GetDirectoryName(folder), $"mappings_{side}.txt");
-        string mapped_jar_path = Path.Combine(folder, $"mapped_{side}.jar");
-        Util.DownloadFile(mappings_url, mappings_path);
+        string mappings_path = Path.Combine(Path.GetDirectoryName(folder), $"mappings_{side.Name}.txt");
+        if (side.MappingsURL != null)
+            Util.DownloadFile(side.MappingsURL, mappings_path);
+        else
+        {
+            var mcp = config.GetBestMCP(this);
+            if (mcp == null)
+                return null;
+            if (side.Name == "server")
+                mcp.CreateServerMappings(this, mappings_path);
+            else if (side.Name == "client")
+                mcp.CreateClientMappings(this, mappings_path);
+            else
+                return null;
+        }
+        string mapped_jar_path = Path.Combine(folder, $"mapped_{side.Name}.jar");
         Profiler.Start("Remapping jar with SpecialSource");
         CommandRunner.RunJavaCommand(Path.GetDirectoryName(mapped_jar_path), config.JavaInstallationPaths, $"-jar \"{config.SpecialSourcePath}\" " +
-            $"--in-jar \"{jar_path}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
+            $"--in-jar \"{side.JarPath}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
         Profiler.Stop();
         return mapped_jar_path;
     }
@@ -164,23 +182,23 @@ public class JavaVersion : Version
     private void DecompileMinecraft(JavaConfig config, string destination)
     {
         Directory.CreateDirectory(destination);
-        string final_jar = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(ClientJarPath)}_final.jar");
-        string mapped_client = MapJar(config, ClientJarPath, ClientMappingsURL, "client", destination);
-        string used_client = mapped_client ?? ClientJarPath;
+        string final_jar = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(Client.JarPath)}_final.jar");
+        string mapped_client = MapJar(config, Client, destination);
+        string used_client = mapped_client ?? Client.JarPath;
         string mapped_server = null;
         string unbundled_server_path = null;
         DownloadServerJar(config);
-        string final_server_jar = ServerJarPath;
-        if (ServerJarPath is not null)
+        string final_server_jar = Server.JarPath;
+        if (Server.JarPath is not null)
         {
-            using (ZipArchive archive = ZipFile.Open(ServerJarPath, ZipArchiveMode.Read))
+            using (ZipArchive archive = ZipFile.Open(Server.JarPath, ZipArchiveMode.Read))
             {
                 var libraries = ReadClassPath(archive);
                 if (libraries != null)
                 {
                     Profiler.Start("Unbundling server");
 
-                    unbundled_server_path = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(ServerJarPath)}_unbundled.jar");
+                    unbundled_server_path = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(Server.JarPath)}_unbundled.jar");
                     final_server_jar = unbundled_server_path;
                     using ZipArchive unbundled = ZipFile.Open(unbundled_server_path, ZipArchiveMode.Create);
 
@@ -201,7 +219,7 @@ public class JavaVersion : Version
                     Profiler.Stop();
                 }
             }
-            mapped_server = MapJar(config, final_server_jar, ServerMappingsURL, "server", destination);
+            mapped_server = MapJar(config, Server with { JarPath = final_server_jar }, destination);
             string used_server = mapped_server ?? final_server_jar;
             CombineJars(final_jar, used_client, used_server);
         }
@@ -266,12 +284,12 @@ public class JavaVersion : Version
         if (ServerJarURL is null)
             return;
         string path = Path.Combine(config.ServerJarFolder, Name + ".jar");
-        if (ServerJarPath is null)
-            ServerJarPath = path;
+        if (Server.JarPath is null)
+            Server = Server with { JarPath = path };
         if (!File.Exists(path))
         {
             Util.DownloadFile(ServerJarURL, path);
-            ServerJarPath = path;
+            Server = Server with { JarPath = path };
         }
     }
 }

@@ -7,8 +7,10 @@ public static class Util
         return node.Children.OrderBy(x => Depth(x));
     }
 
-    public static string FilePath(string base_folder, YamlNode node)
+    public static string FilePath(string base_folder, YamlNode node, bool nullable = false)
     {
+        if (nullable && node == null)
+            return null;
         return Path.Combine(base_folder, Environment.ExpandEnvironmentVariables((string)node));
     }
 

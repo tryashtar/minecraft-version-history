@@ -11,6 +11,14 @@ java:
   - '%appdata%\.minecraft\versions'
   - '%appdata%\.minecraft\versions\~ARCHIVE'
   assets folder: '%appdata%\.minecraft\assets'
+  mcp folder: D:\Minecraft\Java Storage\MCP Mappings
+  mcp versions:
+    1.4: a1.1.2_01
+    1.5: a1.1.2_01
+    1.6: a1.1.2_01
+    3.0: b1.4_01
+    3.1: b1.5_01
+    5.0: 1.0
   # Minecraft builtin java, seems to work well
   java install:
   - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
