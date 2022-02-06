@@ -62,6 +62,16 @@ public class JavaConfig : VersionConfig
         return false;
     }
 
+    public void RemapJar(string in_path, string mappings_path, string out_path)
+    {
+        Profiler.Start("Remapping jar with SpecialSource");
+        var result = CommandRunner.RunJavaCommand(Path.GetDirectoryName(out_path), JavaInstallationPaths, $"-jar \"{SpecialSourcePath}\" " +
+            $"--in-jar \"{in_path}\" --out-jar \"{out_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
+        Profiler.Stop();
+        if (result.ExitCode != 0)
+            throw new ArgumentException($"SpecialSource failed with exit code {result.ExitCode}: {result.Error}");
+    }
+
     public MCP GetBestMCP(JavaVersion version)
     {
         var candidates = MCPs.Where(x => x.ClientVersion == version.Name);

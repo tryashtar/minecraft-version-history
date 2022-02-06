@@ -114,17 +114,14 @@ public class JavaVersion : Version
             if (mcp == null)
                 return null;
             if (side.Name == "server")
-                mcp.CreateServerMappings(this, mappings_path);
+                mcp.CreateServerMappings(mappings_path);
             else if (side.Name == "client")
-                mcp.CreateClientMappings(this, mappings_path);
+                mcp.CreateClientMappings(mappings_path);
             else
                 return null;
         }
         string mapped_jar_path = Path.Combine(folder, $"mapped_{side.Name}.jar");
-        Profiler.Start("Remapping jar with SpecialSource");
-        CommandRunner.RunJavaCommand(Path.GetDirectoryName(mapped_jar_path), config.JavaInstallationPaths, $"-jar \"{config.SpecialSourcePath}\" " +
-            $"--in-jar \"{side.JarPath}\" --out-jar \"{mapped_jar_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
-        Profiler.Stop();
+        config.RemapJar(side.JarPath, mappings_path, mapped_jar_path);
         return mapped_jar_path;
     }
 

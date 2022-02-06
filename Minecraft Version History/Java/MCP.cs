@@ -77,12 +77,17 @@ public class MCP
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
     }
 
-    public void CreateClientMappings(JavaVersion version, string path)
+    public void CreateClientMappings(string path)
     {
-
+        using ZipArchive zip = ZipFile.OpenRead(ZipPath);
+        var client = zip.GetEntry("conf/client.srg");
+        if (client != null)
+            client.ExtractToFile(path, true);
+        else
+            throw new Exception();
     }
 
-    public void CreateServerMappings(JavaVersion version, string path)
+    public void CreateServerMappings(string path)
     {
 
     }

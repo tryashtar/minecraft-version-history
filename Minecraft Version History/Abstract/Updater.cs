@@ -2,7 +2,7 @@
 
 public abstract class Updater
 {
-    public VersionGraph Graph { get; private set; }
+    public readonly VersionGraph Graph;
     private Dictionary<string, VersionNode> CommitToVersion;
     private Dictionary<VersionNode, string> VersionToCommit;
     public readonly AppConfig Config;
@@ -10,11 +10,11 @@ public abstract class Updater
     public Updater(AppConfig config)
     {
         Config = config;
+        Graph = CreateGraph();
     }
 
     public void Perform()
     {
-        Graph = CreateGraph();
         Console.WriteLine("Graph:");
         Console.WriteLine(Graph.ToString());
         var versions = Graph.Flatten();
@@ -115,7 +115,7 @@ public abstract class Updater
         var branchname = GetBranchName(version);
         CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{branchname}\" {hash}");
         // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
-        string tophash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse \"{branchname}\"", output: true).Output;
+        string tophash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse \"{branchname}\"").Output;
         tophash = tophash.Substring(0, 40);
         if (hash == tophash)
         {
@@ -163,7 +163,7 @@ public abstract class Updater
         Profiler.Start($"Running git commit");
         CommandRunner.RunCommand(OutputRepo, $"{GIT} add -A");
         CommandRunner.RunCommand(OutputRepo, $"set GIT_COMMITTER_DATE={version.Version.ReleaseTime} & {GIT} commit --date=\"{version.Version.ReleaseTime}\" -m \"{version.Version.Name}\"");
-        string hash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse HEAD", output: true).Output;
+        string hash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse HEAD").Output;
         hash = hash.Substring(0, 40);
         CommitToVersion.Add(hash, version);
         VersionToCommit.Add(version, hash);

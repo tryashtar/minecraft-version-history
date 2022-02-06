@@ -4,7 +4,7 @@ public static class GitWrapper
 {
     public static IEnumerable<GitCommit> CommittedVersions(string repo, string git_install)
     {
-        string[] all = CommandRunner.RunCommand(repo, $"\"{git_install}\" log --all --pretty=\"%H___%s___%ad___%p\" --date=format:\"%Y/%m/%d\"", output: true).Output.Split('\n');
+        string[] all = StringUtils.SplitLines(CommandRunner.RunCommand(repo, $"\"{git_install}\" log --all --pretty=\"%H___%s___%ad___%p\" --date=format:\"%Y/%m/%d\"").Output).ToArray();
         foreach (var item in all)
         {
             if (String.IsNullOrEmpty(item))
