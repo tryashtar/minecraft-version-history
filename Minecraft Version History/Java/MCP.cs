@@ -9,6 +9,7 @@ public class MCP
     public string Version => $"{MajorVersion}.{MinorVersion}{ExtraVersion}";
     public readonly string ClientVersion;
     public readonly string ServerVersion;
+    private readonly List<Mapping> LocalMappings;
     private static readonly Regex MCPVersionRegex = new(@"mcp(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex RevengVersionRegex = new(@"revengpack(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex ClientVersionRegex = new(@"ClientVersion = (?<ver>.*)");
@@ -18,6 +19,7 @@ public class MCP
     public MCP(string path, Dictionary<string, string> version_fallback)
     {
         ZipPath = path;
+        using ZipArchive zip = ZipFile.OpenRead(path);
         var v = MCPVersionRegex.Match(Path.GetFileNameWithoutExtension(path));
         if (!v.Success)
             v = RevengVersionRegex.Match(Path.GetFileNameWithoutExtension(path));
@@ -31,7 +33,6 @@ public class MCP
         }
         if (ClientVersion == null)
         {
-            using ZipArchive zip = ZipFile.OpenRead(path);
             var vcfg = zip.GetEntry("conf/version.cfg");
             if (vcfg != null)
             {
@@ -75,33 +76,56 @@ public class MCP
         }
         if (ClientVersion == null)
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
+        LocalMappings = LoadLocalMappings(zip);
     }
 
-    private record Mapping(string Type, string OldName, string NewName);
+    private record Mapping(string Type, string OldName, string NewName, string Side);
 
-    private void CreateMappings(string path, ZipArchive zip, string side)
+    private List<Mapping> LoadLocalMappings(ZipArchive zip)
     {
-        bool filter(Dictionary<string, string> x) => x["side"] == side && x["package"] != "";
-        var classes = ParseCSV(zip.GetEntry("conf/classes.csv")).Where(filter);
-        var methods = ParseCSV(zip.GetEntry("conf/methods.csv")).Where(filter);
-        var fields = ParseCSV(zip.GetEntry("conf/fields.csv")).Where(filter);
-        var mappings = new List<Mapping>();
-        foreach (var c in classes)
+        var list = new List<Mapping>();
+
+        var combined_srg = zip.GetEntry("conf/joined.srg");
+        if (combined_srg != null)
         {
-            mappings.Add(new Mapping("CL", c["notch"], $"{c["package"]}/{c["name"]}"));
+            list.AddRange(ParseSRG(combined_srg, "0"));
+            list.AddRange(ParseSRG(combined_srg, "1"));
+            return list;
         }
-        foreach (var c in fields)
-        {
-            mappings.Add(new Mapping("FD", $"{c["classnotch"]}/{c["notch"]}", $"{c["package"]}/{c["classname"]}/{c["searge"]}"));
-        }
-        foreach (var c in methods)
-        {
-            mappings.Add(new Mapping("MD", $"{c["classnotch"]}/{c["notch"]} {c["notchsig"]}", $"{c["package"]}/{c["classname"]}/{c["searge"]} {c["sig"]}"));
-        }
-        WriteMappings(path, mappings, side);
+
+        var client_srg = zip.GetEntry("conf/client.srg");
+        if (client_srg != null)
+            list.AddRange(ParseSRG(client_srg, "0"));
+        var server_srg = zip.GetEntry("conf/server.srg");
+        if (server_srg != null)
+            list.AddRange(ParseSRG(server_srg, "1"));
+        if (client_srg != null || server_srg != null)
+            return list;
+
+        var client_rgs = zip.GetEntry("conf/minecraft.rgs") ?? zip.GetEntry(@"conf\minecraft.rgs");
+        if (client_rgs != null)
+            list.AddRange(ParseRGS(client_rgs, "0"));
+        var server_rgs = zip.GetEntry("conf/minecraft_server.rgs") ?? zip.GetEntry(@"conf\minecraft_server.rgs");
+        if (server_rgs != null)
+            list.AddRange(ParseRGS(server_rgs, "1"));
+        if (client_rgs != null || server_rgs != null)
+            return list;
+
+        list.AddRange(ParseCSVs(zip));
+        return list;
     }
 
-    private void WriteMappings(string path, IEnumerable<Mapping> mappings, string side)
+    public void CreateClientMappings(string path)
+    {
+        WriteSRG(path, "0");
+    }
+
+    public void CreateServerMappings(string path)
+    {
+        WriteSRG(path, "1");
+    }
+
+    private void WriteSRG(string path, string side)
     {
         using var writer = new StreamWriter(path);
         writer.WriteLine("PK: . net/minecraft/src");
@@ -118,16 +142,34 @@ public class MCP
         {
             writer.WriteLine("PK: net/minecraft/server net/minecraft/server");
         }
-        foreach (var m in mappings)
+        foreach (var m in LocalMappings.Where(x => x.Side == side))
         {
             writer.WriteLine($"{m.Type}: {m.OldName} {m.NewName}");
         }
     }
 
-    private void RewriteRGS(string path, ZipArchiveEntry rgs, string side)
+    private IEnumerable<Mapping> ParseSRG(ZipArchiveEntry srg, string side)
+    {
+        using var reader = new StreamReader(srg.Open());
+        while (!reader.EndOfStream)
+        {
+            var line = reader.ReadLine();
+            if (String.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
+                continue;
+            var entries = line.Split(' ');
+            var type = entries[0][..^1];
+            if (entries.Length == 3 || entries.Length == 4)
+                yield return new Mapping(type, entries[1], entries[2], side);
+            else if (entries.Length == 5 || entries.Length == 6)
+                yield return new Mapping(type, $"{entries[1]} {entries[2]}", $"{entries[3]} {entries[4]}", side);
+            else
+                throw new InvalidOperationException($"Can't parse SRG line {line}");
+        }
+    }
+
+    private IEnumerable<Mapping> ParseRGS(ZipArchiveEntry rgs, string side)
     {
         using var reader = new StreamReader(rgs.Open());
-        var mappings = new List<Mapping>();
         var class_dict = new Dictionary<string, string>();
         var field_set = new HashSet<string>();
         var method_set = new HashSet<string>();
@@ -142,7 +184,7 @@ public class MCP
             if (type == ".class_map" && !name.Contains('/') && !class_dict.ContainsKey(name))
             {
                 class_dict[name] = entries[2];
-                mappings.Add(new Mapping("CL", name, entries[2]));
+                yield return new Mapping("CL", name, entries[2], side);
             }
             else if (type == ".field_map" || type == ".method_map")
             {
@@ -151,7 +193,7 @@ public class MCP
                 if (type == ".field_map" && !field_set.Contains(name))
                 {
                     field_set.Add(name);
-                    mappings.Add(new Mapping("FD", name, $"{newpath}/{entries[2]}"));
+                    yield return new Mapping("FD", name, $"{newpath}/{entries[2]}", side);
                 }
                 else if (type == ".method_map" && !method_set.Contains(name))
                 {
@@ -161,56 +203,30 @@ public class MCP
                     {
                         newsig = newsig.Replace($"L{key};", $"L{value};");
                     }
-                    mappings.Add(new Mapping("MD", $"{name} {entries[2]}", $"{newpath}/{entries[3]} {newsig}"));
+                    yield return new Mapping("MD", $"{name} {entries[2]}", $"{newpath}/{entries[3]} {newsig}", side);
                 }
             }
         }
-        WriteMappings(path, mappings, side);
     }
 
-    public void CreateClientMappings(string path)
+    private IEnumerable<Mapping> ParseCSVs(ZipArchive zip)
     {
-        using ZipArchive zip = ZipFile.OpenRead(ZipPath);
-        var client =
-            zip.GetEntry("conf/client.srg") ??
-            zip.GetEntry("conf/joined.srg");
-        if (client != null)
-            client.ExtractToFile(path, true);
-        else
+        static bool filter(Dictionary<string, string> x) => x["package"] != "";
+        var classes = ParseCSV(zip.GetEntry("conf/classes.csv")).Where(filter);
+        var methods = ParseCSV(zip.GetEntry("conf/methods.csv")).Where(filter);
+        var fields = ParseCSV(zip.GetEntry("conf/fields.csv")).Where(filter);
+        foreach (var c in classes)
         {
-            var rgs = zip.GetEntry("conf/minecraft.rgs") ??
-                zip.GetEntry(@"conf\minecraft.rgs");
-            if (rgs != null)
-                RewriteRGS(path, rgs, "0");
-            else
-                CreateMappings(path, zip, "0");
+            yield return new Mapping("CL", c["notch"], $"{c["package"]}/{c["name"]}", c["side"]);
         }
-    }
-
-    public void CreateServerMappings(string path)
-    {
-        using ZipArchive zip = ZipFile.OpenRead(ZipPath);
-        var server =
-            zip.GetEntry("conf/server.srg") ??
-            zip.GetEntry("conf/joined.srg");
-        if (server != null)
-            server.ExtractToFile(path, true);
-        else
+        foreach (var c in fields)
         {
-            var rgs = zip.GetEntry("conf/minecraft_server.rgs") ??
-                zip.GetEntry(@"conf\minecraft_server.rgs") ??
-                zip.GetEntry("conf/minecraft.rgs") ??
-                zip.GetEntry(@"conf\minecraft.rgs");
-            if (rgs != null)
-                RewriteRGS(path, rgs, "1");
-            else
-                CreateMappings(path, zip, "1");
+            yield return new Mapping("FD", $"{c["classnotch"]}/{c["notch"]}", $"{c["package"]}/{c["classname"]}/{c["searge"]}", c["side"]);
         }
-    }
-
-    private string ParseQuotedString(string quoted)
-    {
-        return quoted.Replace("\"", "");
+        foreach (var c in methods)
+        {
+            yield return new Mapping("MD", $"{c["classnotch"]}/{c["notch"]} {c["notchsig"]}", $"{c["package"]}/{c["classname"]}/{c["searge"]} {c["sig"]}", c["side"]);
+        }
     }
 
     private List<Dictionary<string, string>> ParseCSV(ZipArchiveEntry entry)
@@ -239,6 +255,11 @@ public class MCP
             }
         }
         return result;
+    }
+
+    private string ParseQuotedString(string quoted)
+    {
+        return quoted.Replace("\"", "");
     }
 }
 
