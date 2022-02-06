@@ -28,8 +28,6 @@ public static class Program
 #endif
 
             var java = new JavaUpdater(config);
-            TestMCP(java);
-            Console.ReadLine();
             java.Perform();
 
             var bedrock = new BedrockUpdater(config);
@@ -47,37 +45,5 @@ public static class Program
                 goto start;
             }
 #endif
-    }
-
-    private static void TestMCP(JavaUpdater up)
-    {
-        foreach (var node in up.Graph.Flatten())
-        {
-            var version = (JavaVersion)node.Version;
-            var mcp = up.Config.Java.GetBestMCP(version);
-            if (mcp != null)
-            {
-                Console.WriteLine($"Testing {version.Name} with MCP {mcp.Version}");
-                bool success = true;
-                try
-                {
-                    mcp.CreateClientMappings("test.txt");
-                    up.Config.Java.RemapJar(version.Client.JarPath, "test.txt", "test.jar");
-                }
-                catch (Exception ex)
-                {
-                    success = false;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"\tFAILED! {ex}");
-                    Console.ResetColor();
-                }
-                if (success)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"\tPassed!");
-                    Console.ResetColor();
-                }
-            }
-        }
     }
 }

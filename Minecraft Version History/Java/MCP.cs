@@ -77,19 +77,96 @@ public class MCP
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
     }
 
+    private void CreateMappings(string path, ZipArchive zip, string side)
+    {
+        using var writer = new StreamWriter(path);
+        writer.WriteLine("PK: . net/minecraft/src");
+        writer.WriteLine("PK: net net");
+        writer.WriteLine("PK: net/minecraft net/minecraft");
+        if (side == "0")
+        {
+            writer.WriteLine("PK: net/minecraft/client net/minecraft/client");
+            writer.WriteLine("PK: net/minecraft/client/main net/minecraft/client/main");
+            writer.WriteLine("PK: net/minecraft/realms net/minecraft/realms");
+            writer.WriteLine("PK: net/minecraft/isom net/minecraft/isom");
+        }
+        else if (side == "1")
+        {
+            writer.WriteLine("PK: net/minecraft/server net/minecraft/server");
+        }
+        var classes = ParseCSV(zip.GetEntry("conf/classes.csv"));
+        var methods = ParseCSV(zip.GetEntry("conf/methods.csv"));
+        var fields = ParseCSV(zip.GetEntry("conf/fields.csv"));
+        foreach (var c in classes.Where(x => x["side"] == side))
+        {
+            writer.WriteLine($"CL: {c["notch"]} {c["package"]}/{c["name"]}");
+        }
+        foreach (var c in fields.Where(x => x["side"] == side))
+        {
+            writer.WriteLine($"FD: {c["classnotch"]}/{c["notch"]} {c["package"]}/{c["classname"]}/{c["searge"]}");
+        }
+        foreach (var c in methods.Where(x => x["side"] == side))
+        {
+            writer.WriteLine($"MD: {c["classnotch"]}/{c["notch"]} {c["notchsig"]} {c["package"]}/{c["classname"]}/{c["searge"]} {c["sig"]}");
+        }
+    }
+
     public void CreateClientMappings(string path)
     {
         using ZipArchive zip = ZipFile.OpenRead(ZipPath);
-        var client = zip.GetEntry("conf/client.srg");
+        var client =
+            zip.GetEntry("conf/client.srg") ??
+            zip.GetEntry("conf/minecraft.rgs") ??
+            zip.GetEntry(@"conf\minecraft.rgs") ??
+            zip.GetEntry("conf/joined.srg");
         if (client != null)
             client.ExtractToFile(path, true);
         else
-            throw new Exception();
+            CreateMappings(path, zip, "0");
     }
 
     public void CreateServerMappings(string path)
     {
+        using ZipArchive zip = ZipFile.OpenRead(ZipPath);
+        var server =
+            zip.GetEntry("conf/server.srg") ??
+            zip.GetEntry("conf/minecraft_server.rgs") ??
+            zip.GetEntry(@"conf\minecraft_server.rgs") ??
+            zip.GetEntry("conf/joined.srg") ??
+            zip.GetEntry("conf/minecraft.rgs") ??
+            zip.GetEntry(@"conf\minecraft.rgs");
+        if (server != null)
+            server.ExtractToFile(path, true);
+        else
+            CreateMappings(path, zip, "1");
+    }
 
+    private List<Dictionary<string, string>> ParseCSV(ZipArchiveEntry entry)
+    {
+        using var reader = new StreamReader(entry.Open());
+        var result = new List<Dictionary<string, string>>();
+        bool first = true;
+        string[] keys = null;
+        while (!reader.EndOfStream)
+        {
+            var line = reader.ReadLine();
+            var items = line.Split(',');
+            if (first)
+            {
+                first = false;
+                keys = items;
+            }
+            else
+            {
+                var dict = new Dictionary<string, string>();
+                for (int i = 0; i < items.Length; i++)
+                {
+                    dict[keys[i]] = items[i];
+                }
+                result.Add(dict);
+            }
+        }
+        return result;
     }
 }
 

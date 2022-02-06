@@ -42,7 +42,7 @@ public class ProcessWrapper
             if (Output != null)
                 Output.WriteLine(e.Data);
         };
-        process.OutputDataReceived += (sender, e) =>
+        process.ErrorDataReceived += (sender, e) =>
         {
             error.AppendLine(e.Data);
             if (Error != null)

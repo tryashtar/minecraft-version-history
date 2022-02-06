@@ -276,7 +276,7 @@ public class JavaVersion : Version
         Profiler.Stop();
     }
 
-    private void DownloadServerJar(JavaConfig config)
+    public void DownloadServerJar(JavaConfig config)
     {
         if (ServerJarURL is null)
             return;
