@@ -2,16 +2,21 @@
 
 public static class CommandRunner
 {
-    public static ProcessResult RunCommand(string directory, string input)
+    public static ProcessResult RunCommand(string directory, string input, TextWriter output, TextWriter error)
     {
 #if DEBUG
         Console.ForegroundColor = ConsoleColor.Magenta;
         Console.WriteLine($"Running this command: {input}");
 #endif
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        var result = new ProcessWrapper(directory, "cmd.exe", $"/S /C \"{input}\"").Result;
+        var result = new ProcessWrapper(directory, "cmd.exe", $"/S /C \"{input}\"", output, error).Result;
         Console.ResetColor();
         return result;
+    }
+
+    public static ProcessResult RunCommand(string directory, string input)
+    {
+        return RunCommand(directory, input, Console.Out, Console.Out);
     }
 
     public static ProcessResult RunJavaCommand(string cd, IEnumerable<string> java, string input)

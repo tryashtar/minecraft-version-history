@@ -113,11 +113,15 @@ public class JavaVersion : Version
             var mcp = config.GetBestMCP(this);
             if (mcp == null)
                 return null;
+            Profiler.Start("Using MCP mappings");
             if (side.Name == "server")
                 mcp.CreateServerMappings(mappings_path);
             else if (side.Name == "client")
                 mcp.CreateClientMappings(mappings_path);
             else
+                mcp = null;
+            Profiler.Stop();
+            if (mcp == null)
                 return null;
         }
         string mapped_jar_path = Path.Combine(folder, $"mapped_{side.Name}.jar");
@@ -133,7 +137,7 @@ public class JavaVersion : Version
             var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                 $"--outputdir \"{folder}\" {config.CfrArgs}");
             if (result.ExitCode != 0)
-                throw new ApplicationException("Failed to decompile");
+                throw new ApplicationException($"Failed to decompile: {result.Error}");
             string summary_file = Path.Combine(folder, "summary.txt");
             if (File.Exists(summary_file))
             {
@@ -146,8 +150,10 @@ public class JavaVersion : Version
         {
             string output_dir = Path.Combine(folder, "decompiled");
             Directory.CreateDirectory(output_dir);
-            CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
-                $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\""); ;
+            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
+                 $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\""); ;
+            if (result.ExitCode != 0)
+                throw new ApplicationException($"Failed to decompile: {result.Error}");
             using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
             {
                 foreach (var entry in zip.Entries)

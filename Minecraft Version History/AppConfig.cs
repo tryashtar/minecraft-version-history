@@ -9,8 +9,8 @@ public class AppConfig
     public AppConfig(string folder, YamlMappingNode yaml)
     {
         GitInstallationPath = Util.FilePath(folder, yaml["git install"]);
-        GitIgnoreContents = (string)yaml["gitignore"];
-        Java = new JavaConfig(folder, yaml["java"] as YamlMappingNode);
-        Bedrock = new BedrockConfig(folder, yaml["bedrock"] as YamlMappingNode);
+        GitIgnoreContents = yaml.Go("gitignore").String();
+        Java = new JavaConfig(folder, this, yaml["java"] as YamlMappingNode);
+        Bedrock = new BedrockConfig(folder, this, yaml["bedrock"] as YamlMappingNode);
     }
 }

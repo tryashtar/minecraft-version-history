@@ -1,7 +1,5 @@
 # you can just use 'git' if it's in your PATH
 git install: C:\Program Files\Git\cmd\git.exe
-# contents of .gitignore file when repo is created
-gitignore: ""
 
 java:
   repo: D:\Minecraft\Java Storage\History

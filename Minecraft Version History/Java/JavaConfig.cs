@@ -17,7 +17,7 @@ public class JavaConfig : VersionConfig
     private readonly Dictionary<string, IJsonSorter> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
-    public JavaConfig(string folder, YamlMappingNode yaml) : base(folder, yaml)
+    public JavaConfig(string folder, AppConfig parent, YamlMappingNode yaml) : base(folder, parent, yaml)
     {
         JavaInstallationPaths = yaml.Go("java install").ToList(x => Util.FilePath(folder, x));
         FernflowerPath = Util.FilePath(folder, yaml["fernflower jar"]);

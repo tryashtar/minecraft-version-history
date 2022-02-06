@@ -28,7 +28,7 @@ public abstract class Updater
     private VersionGraph CreateGraph()
     {
         var versions = FindVersions().Distinct(new DuplicateRemover()).ToList();
-        var git_versions = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath).Select(x => new GitVersion(x));
+        var git_versions = VersionConfig.GitRepo.CommittedVersions().Select(x => new GitVersion(x));
         versions.AddRange(git_versions.Where(x => !versions.Any(y => x.Name == y.Name)));
         return new VersionGraph(VersionConfig.VersionFacts, versions);
     }
@@ -47,15 +47,13 @@ public abstract class Updater
     }
 
     protected abstract VersionConfig VersionConfig { get; }
-    protected string OutputRepo => VersionConfig.OutputRepo;
-
     private void LoadCommits()
     {
         var versions = Graph.Flatten();
         CommitToVersion = new Dictionary<string, VersionNode>();
         VersionToCommit = new Dictionary<VersionNode, string>();
         Profiler.Start("Loading commits");
-        var commits = GitWrapper.CommittedVersions(OutputRepo, Config.GitInstallationPath);
+        var commits = VersionConfig.GitRepo.CommittedVersions();
         foreach (var entry in commits)
         {
             var version = versions.FirstOrDefault(x => x.Version.Name == entry.Message);
@@ -90,19 +88,15 @@ public abstract class Updater
     }
 
     private string GetBranchName(VersionNode version) => version.ReleaseName.Replace(' ', '-');
-
-    private string GIT => $"\"{Config.GitInstallationPath}\"";
-
     private void InitialCommit(VersionNode version)
     {
         Profiler.Start("Initializing repo");
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} init");
-        File.WriteAllText(Path.Combine(OutputRepo, ".gitignore"), Config.GitIgnoreContents);
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} add -A");
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} commit -m \"Initial commit\"");
+        VersionConfig.GitRepo.Init();
+        if (Config.GitIgnoreContents != null)
+            File.WriteAllText(Path.Combine(VersionConfig.GitRepo.Folder, ".gitignore"), Config.GitIgnoreContents);
+        VersionConfig.GitRepo.Commit("Initial commit");
         // create branch
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{GetBranchName(version)}\"");
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{GetBranchName(version)}\"");
+        VersionConfig.GitRepo.CheckoutBranch(GetBranchName(version));
         Profiler.Stop();
         DoCommit(version);
     }
@@ -113,27 +107,26 @@ public abstract class Updater
         string hash = VersionToCommit[version.Parent];
         // create branch
         var branchname = GetBranchName(version);
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{branchname}\" {hash}");
+        VersionConfig.GitRepo.MakeBranch(branchname, hash);
         // if this commit is the most recent for this branch, we can just commit right on top without insertion logic
-        string tophash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse \"{branchname}\"").Output;
-        tophash = tophash.Substring(0, 40);
+        string tophash = VersionConfig.GitRepo.BranchHash(branchname);
         if (hash == tophash)
         {
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{branchname}\"");
+            VersionConfig.GitRepo.Checkout(branchname);
             DoCommit(version);
         }
         else
         {
             Console.WriteLine($"Needs to insert into history for this one");
             // make a branch that starts there and prepare to commit to it
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout -b temp {hash}");
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} branch \"{branchname}\"");
+            VersionConfig.GitRepo.CheckoutBranch("temp", hash);
+            VersionConfig.GitRepo.MakeBranch(branchname);
             DoCommit(version);
             // insert
             Profiler.Start($"Rebasing");
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} rebase temp \"{branchname}\" -X theirs");
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} checkout \"{branchname}\"");
-            CommandRunner.RunCommand(OutputRepo, $"{GIT} branch -d temp");
+            VersionConfig.GitRepo.Rebase("temp", branchname);
+            VersionConfig.GitRepo.Checkout(branchname);
+            VersionConfig.GitRepo.DeleteBranch("temp");
             Profiler.Stop();
             // need to rescan since commit hashes change after a rebase
             LoadCommits();
@@ -154,17 +147,15 @@ public abstract class Updater
         { TranslateNbtFiles(workspace); });
         Profiler.Run($"Merging", () =>
         {
-            MergeWithWorkspace(OutputRepo, workspace);
+            MergeWithWorkspace(VersionConfig.GitRepo.Folder, workspace);
             Directory.Delete(workspace, true);
-            Util.RemoveEmptyFolders(OutputRepo);
-            File.WriteAllText(Path.Combine(OutputRepo, "version.txt"), version.Version.Name);
+            Util.RemoveEmptyFolders(VersionConfig.GitRepo.Folder);
+            File.WriteAllText(Path.Combine(VersionConfig.GitRepo.Folder, "version.txt"), version.Version.Name);
         });
         // commit
         Profiler.Start($"Running git commit");
-        CommandRunner.RunCommand(OutputRepo, $"{GIT} add -A");
-        CommandRunner.RunCommand(OutputRepo, $"set GIT_COMMITTER_DATE={version.Version.ReleaseTime} & {GIT} commit --date=\"{version.Version.ReleaseTime}\" -m \"{version.Version.Name}\"");
-        string hash = CommandRunner.RunCommand(OutputRepo, $"{GIT} rev-parse HEAD").Output;
-        hash = hash.Substring(0, 40);
+        VersionConfig.GitRepo.Commit(version.Version.Name, version.Version.ReleaseTime);
+        string hash = VersionConfig.GitRepo.BranchHash("HEAD");
         CommitToVersion.Add(hash, version);
         VersionToCommit.Add(version, hash);
         Profiler.Stop(); // git commit
