@@ -12,7 +12,7 @@ public class JavaVersionDownloader
     {
         Profiler.Start("Checking for new versions");
         var versions = JObject.Parse(Util.DownloadString(LAUNCHER_MANIFEST))["versions"];
-        var commits = GitWrapper.CommittedVersions(config.Java.OutputRepo, config.GitInstallationPath).ToList();
+        var commits = config.Java.GitRepo.CommittedVersions().ToList();
         foreach (var version in versions)
         {
             var name = (string)version["id"];

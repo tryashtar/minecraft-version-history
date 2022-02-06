@@ -2,44 +2,37 @@
 
 public static class CommandRunner
 {
-    public static CommandResult RunCommand(string cd, string input, bool output = false, bool suppress_errors = false)
+    public static ProcessResult RunCommand(string directory, string input, TextWriter output, TextWriter error)
     {
 #if DEBUG
         Console.ForegroundColor = ConsoleColor.Magenta;
         Console.WriteLine($"Running this command: {input}");
 #endif
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        var cmd = new Process();
-        cmd.StartInfo.FileName = "cmd.exe";
-        cmd.StartInfo.WorkingDirectory = cd;
-        cmd.StartInfo.Arguments = $"/S /C \"{input}\"";
-        cmd.StartInfo.CreateNoWindow = false;
-        cmd.StartInfo.UseShellExecute = false;
-        cmd.StartInfo.RedirectStandardError = suppress_errors;
-        cmd.StartInfo.RedirectStandardOutput = output;
-        cmd.Start();
-        string result = null;
-        if (output)
-            result = cmd.StandardOutput.ReadToEnd();
-        cmd.WaitForExit();
+        var result = new ProcessWrapper(directory, "cmd.exe", $"/S /C \"{input}\"", output, error).Result;
         Console.ResetColor();
-        return new CommandResult { ExitCode = cmd.ExitCode, Output = result };
+        return result;
     }
 
-    public static CommandResult RunJavaCommand(string cd, IEnumerable<string> java, string input, bool output = false, bool suppress_errors = false)
+    public static ProcessResult RunCommand(string directory, string input)
     {
-        return RunJavaCommands(cd, java.Select(x => (x, input)), output, suppress_errors);
+        return RunCommand(directory, input, Console.Out, Console.Out);
     }
 
-    public static CommandResult RunJavaCombos(string cd, IEnumerable<string> java, IEnumerable<string> inputs, bool output = false, bool suppress_errors = false)
+    public static ProcessResult RunJavaCommand(string cd, IEnumerable<string> java, string input)
+    {
+        return RunJavaCommands(cd, java.Select(x => (x, input)));
+    }
+
+    public static ProcessResult RunJavaCombos(string cd, IEnumerable<string> java, IEnumerable<string> inputs)
     {
         var combinations = from x in java from y in inputs select (x, y);
-        return RunJavaCommands(cd, combinations, output, suppress_errors);
+        return RunJavaCommands(cd, combinations);
     }
 
-    public static CommandResult RunJavaCommands(string cd, IEnumerable<(string java, string input)> commands, bool output = false, bool suppress_errors = false)
+    public static ProcessResult RunJavaCommands(string cd, IEnumerable<(string java, string input)> commands)
     {
-        CommandResult result = default;
+        ProcessResult result = default;
 #if DEBUG
         int i = 0;
 #endif
@@ -52,16 +45,10 @@ public static class CommandRunner
             Console.WriteLine($"Install: {java}");
             Console.WriteLine($"Input: {input}");
 #endif
-            result = RunCommand(cd, $"\"{java}\" {input}", output, suppress_errors);
+            result = RunCommand(cd, $"\"{java}\" {input}");
             if (result.ExitCode == 0)
                 return result;
         }
         return result;
-    }
-
-    public struct CommandResult
-    {
-        public string Output;
-        public int ExitCode;
     }
 }
