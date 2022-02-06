@@ -25,5 +25,13 @@
   <ItemGroup>
     <ProjectReference Include="..\Minecraft Version History\Minecraft Version History.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="all_effects.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="shipwreck_supply.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

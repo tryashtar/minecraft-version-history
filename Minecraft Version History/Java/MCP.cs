@@ -94,18 +94,19 @@ public class MCP
         {
             writer.WriteLine("PK: net/minecraft/server net/minecraft/server");
         }
-        var classes = ParseCSV(zip.GetEntry("conf/classes.csv"));
-        var methods = ParseCSV(zip.GetEntry("conf/methods.csv"));
-        var fields = ParseCSV(zip.GetEntry("conf/fields.csv"));
-        foreach (var c in classes.Where(x => x["side"] == side))
+        bool filter(Dictionary<string, string> x) => x["side"] == side && x["package"] != "";
+        var classes = ParseCSV(zip.GetEntry("conf/classes.csv")).Where(filter);
+        var methods = ParseCSV(zip.GetEntry("conf/methods.csv")).Where(filter);
+        var fields = ParseCSV(zip.GetEntry("conf/fields.csv")).Where(filter);
+        foreach (var c in classes)
         {
             writer.WriteLine($"CL: {c["notch"]} {c["package"]}/{c["name"]}");
         }
-        foreach (var c in fields.Where(x => x["side"] == side))
+        foreach (var c in fields)
         {
             writer.WriteLine($"FD: {c["classnotch"]}/{c["notch"]} {c["package"]}/{c["classname"]}/{c["searge"]}");
         }
-        foreach (var c in methods.Where(x => x["side"] == side))
+        foreach (var c in methods)
         {
             writer.WriteLine($"MD: {c["classnotch"]}/{c["notch"]} {c["notchsig"]} {c["package"]}/{c["classname"]}/{c["searge"]} {c["sig"]}");
         }
@@ -141,8 +142,17 @@ public class MCP
             CreateMappings(path, zip, "1");
     }
 
+    private string ParseQuotedString(string quoted)
+    {
+        return quoted.Replace("\"", "");
+    }
+
     private List<Dictionary<string, string>> ParseCSV(ZipArchiveEntry entry)
     {
+        using (var a = new StreamReader(entry.Open()))
+        {
+            File.WriteAllText(entry.Name.Replace("/", ""), a.ReadToEnd());
+        }
         using var reader = new StreamReader(entry.Open());
         var result = new List<Dictionary<string, string>>();
         bool first = true;
@@ -150,7 +160,7 @@ public class MCP
         while (!reader.EndOfStream)
         {
             var line = reader.ReadLine();
-            var items = line.Split(',');
+            var items = line.Split(',').Select(ParseQuotedString).ToArray();
             if (first)
             {
                 first = false;

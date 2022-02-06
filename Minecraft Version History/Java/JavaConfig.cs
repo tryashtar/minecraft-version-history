@@ -69,7 +69,7 @@ public class JavaConfig : VersionConfig
             $"--in-jar \"{in_path}\" --out-jar \"{out_path}\" --srg-in \"{mappings_path}\" --kill-lvt");
         Profiler.Stop();
         if (result.ExitCode != 0)
-            throw new ArgumentException($"SpecialSource failed with exit code {result.ExitCode}: {result.Error}");
+            throw new InvalidOperationException($"SpecialSource failed with exit code {result.ExitCode}: {result.Error}");
     }
 
     public MCP GetBestMCP(JavaVersion version)
