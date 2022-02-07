@@ -13,7 +13,7 @@ public class JavaConfig : VersionConfig
     public readonly string FernflowerArgs;
     public readonly DateTime DataGenerators;
     public readonly DecompilerType? Decompiler;
-    private readonly List<MCP> MCPs;
+    private readonly Lazy<List<MCP>> MCPs;
     private readonly Dictionary<string, IJsonSorter> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
@@ -28,9 +28,9 @@ public class JavaConfig : VersionConfig
         var mcp_map = yaml.Go("mcp versions").ToDictionary() ?? new();
         var mcp_folder = Util.FilePath(folder, yaml["mcp folder"], nullable: true);
         if (mcp_folder == null)
-            MCPs = new();
+            MCPs = new(() => new());
         else
-            MCPs = Directory.GetFiles(mcp_folder).Select(x => new MCP(x, mcp_map)).ToList();
+            MCPs = new(() => Directory.GetFiles(mcp_folder).Select(x => new MCP(x, mcp_map)).ToList());
         Decompiler = ParseDecompiler((string)yaml["decompiler"]);
         DecompilerArgs = (string)yaml["decompiler args"];
         CfrArgs = (string)yaml["cfr args"];
@@ -74,7 +74,7 @@ public class JavaConfig : VersionConfig
 
     public MCP GetBestMCP(JavaVersion version)
     {
-        var candidates = MCPs.Where(x => x.ClientVersion == version.Name);
+        var candidates = MCPs.Value.Where(x => x.ClientVersion == version.Name);
         return candidates.OrderBy(x => x, MCP.Sorter).LastOrDefault();
     }
 

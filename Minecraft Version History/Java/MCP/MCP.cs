@@ -124,16 +124,19 @@ public class MCP
     private void WriteSRG(string path, TargetedMappings mappings)
     {
         using var writer = new StreamWriter(path);
+        // export as TSRG format, which resembles proguard more than SRG
+        // each class lists its properties in turn instead of duplicating the class name for each
+        // also we don't need the deobfuscated method signature
         foreach (var c in mappings.Classes.Values)
         {
-            writer.WriteLine($"CL: {c.OldName} {c.NewName}");
+            writer.WriteLine($"{c.OldName} {c.NewName}");
             foreach (var f in c.Fields)
             {
-                writer.WriteLine($"FD: {f.Key} {f.Value}");
+                writer.WriteLine($"\t{f.Key} {f.Value}");
             }
             foreach (var m in c.Methods.Values)
             {
-                writer.WriteLine($"MD: {m.OldName} {m.NewName}");
+                writer.WriteLine($"\t{m.OldName} {m.Signature} {m.NewName}");
             }
         }
     }
@@ -210,7 +213,9 @@ public class MCP
                 // 3.0 - 5.6 style
                 foreach (var item in classes.Skip(1))
                 {
-                    LocalMappings.Get(item[4]).AddClass(item[1], item[3] + "/" + item[0]);
+                    // skip lines with no destination package (a few random ones that clearly aren't classes)
+                    if (item[3] != "")
+                        AddToSide(item[4], LocalMappings, x => x.AddClass(item[1], item[3] + "/" + item[0]));
                 }
             }
         }
@@ -223,7 +228,7 @@ public class MCP
                 // 6.0+ style
                 foreach (var item in methods.Skip(1))
                 {
-                    GlobalMappings.Get(item[2]).AddMethod(item[0], item[1]);
+                    AddToSide(item[2], GlobalMappings, x => x.AddMethod(item[0], item[1]));
                 }
             }
             else if (methods[0].Length == 9)
@@ -231,14 +236,15 @@ public class MCP
                 // 3.0 - 5.6 style
                 foreach (var item in methods.Skip(1))
                 {
-                    GlobalMappings.Get(item[8]).AddMethod(item[0], item[1]);
-                    LocalMappings.Get(item[8]).AddMethod(item[7] + "/" + item[6] + "/" + item[2], item[0], item[4]);
+                    AddToSide(item[8], GlobalMappings, x => x.AddMethod(item[0], item[1]));
+                    AddToSide(item[8], LocalMappings, x => x.AddMethod(item[7] + "/" + item[6] + "/" + item[2], item[0], item[4]));
                 }
             }
             else
             {
                 // 2.0 - 2.12 style
-                foreach (var item in methods.Skip(4))
+                // has some weird entries at the end we need to skip
+                foreach (var item in methods.Skip(4).Where(x => x.Length >= 5))
                 {
                     if (item[1] != "*" && item[1] != "")
                         GlobalMappings.Client.AddMethod(item[1], item[4]);
@@ -256,7 +262,7 @@ public class MCP
                 // 6.0+ style
                 foreach (var item in fields.Skip(1))
                 {
-                    GlobalMappings.Get(item[2]).AddField(item[0], item[1]);
+                    AddToSide(item[2], GlobalMappings, x => x.AddField(item[0], item[1]));
                 }
             }
             else if (fields[0].Length == 9)
@@ -264,8 +270,8 @@ public class MCP
                 // 3.0 - 5.6 style
                 foreach (var item in fields.Skip(1))
                 {
-                    GlobalMappings.Get(item[8]).AddField(item[0], item[1]);
-                    LocalMappings.Get(item[8]).AddField(item[7] + "/" + item[6] + "/" + item[2], item[0]);
+                    AddToSide(item[8], GlobalMappings, x => x.AddField(item[0], item[1]));
+                    AddToSide(item[8], LocalMappings, x => x.AddField(item[7] + "/" + item[6] + "/" + item[2], item[0]));
                 }
             }
             else
@@ -292,6 +298,14 @@ public class MCP
         {
             yield return parser.ReadFields();
         }
+    }
+
+    private void AddToSide<T>(string side, SidedMappings<T> mappings, Action<T> action) where T : new()
+    {
+        if (side == "0" || side == "2")
+            action(mappings.Client);
+        if (side == "1" || side == "2")
+            action(mappings.Server);
     }
 }
 
