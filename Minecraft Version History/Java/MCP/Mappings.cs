@@ -15,11 +15,13 @@ public class UntargetedMappings
     {
         if (from != to)
         {
+#if DEBUG
             if (Methods.TryGetValue(from, out var existing))
             {
                 if (to != existing)
                     Console.WriteLine($"Replacing {from} from {existing} to {to}");
             }
+#endif
             Methods[from] = to;
         }
     }
@@ -28,11 +30,13 @@ public class UntargetedMappings
     {
         if (from != to)
         {
+#if DEBUG
             if (Methods.TryGetValue(from, out var existing))
             {
                 if (to != existing)
                     Console.WriteLine($"Replacing {from} from {existing} to {to}");
             }
+#endif
             Fields[from] = to;
         }
     }
@@ -46,8 +50,10 @@ public class TargetedMappings
     {
         if (Classes.TryGetValue(from, out var existing))
         {
+#if DEBUG
             if (to != existing.NewName)
-                Console.WriteLine($"Ignoring change of {from} from {existing.NewName} to {to}?");
+                Console.WriteLine($"Ignoring change of {from} from {existing.NewName} to {to}");
+#endif
         }
         else
             Classes.Add(from, new MappedClass(from, to));
@@ -86,15 +92,19 @@ public class TargetedMappings
             foreach (var f in c.Fields)
             {
                 var value = untargeted.Fields.GetValueOrDefault(f.Value, f.Value);
+#if DEBUG
                 if (value != f.Value)
                     Console.WriteLine($"Remapped {f.Value} to {value}");
+#endif
                 result.AddField(c.OldName + "/" + f.Key, value);
             }
             foreach (var m in c.Methods.Values)
             {
                 var value = untargeted.Methods.GetValueOrDefault(m.NewName, m.NewName);
+#if DEBUG
                 if (value != m.NewName)
                     Console.WriteLine($"Remapped {m.NewName} to {value}");
+#endif
                 result.AddMethod(c.OldName + "/" + m.OldName, value, m.Signature);
             }
         }
@@ -119,21 +129,25 @@ public record MappedClass(string OldName, string NewName)
 
     public void AddMethod(string from, string to, string signature)
     {
+#if DEBUG
         if (Methods.TryGetValue((from, signature), out var existing))
         {
             if (to != existing.NewName)
-                Console.WriteLine($"Changing {from} from {existing} to {to}");
+                Console.WriteLine($"Changing {from} from {existing.NewName} to {to}");
         }
+#endif
         Methods[(from, signature)] = new MappedMethod(from, to, signature);
     }
 
     public void AddField(string from, string to)
     {
+#if DEBUG
         if (Fields.TryGetValue(from, out var existing))
         {
             if (to != existing)
                 Console.WriteLine($"Changing {from} from {existing} to {to}");
         }
+#endif
         Fields[from] = to;
     }
 }
