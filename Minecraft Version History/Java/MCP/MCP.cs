@@ -1,4 +1,4 @@
-﻿using Microsoft.VisualBasic.FileIO;
+using Microsoft.VisualBasic.FileIO;
 
 namespace MinecraftVersionHistory;
 
@@ -41,7 +41,7 @@ public class MCP
             if (vcfg != null)
             {
                 using var reader = new StreamReader(vcfg.Open());
-                while (!reader.EndOfStream)
+                while (!reader.EndOfStream && ClientVersion == null)
                 {
                     var line = reader.ReadLine();
                     var m1 = ClientVersionRegex.Match(line);
@@ -51,6 +51,8 @@ public class MCP
                     if (m2.Success)
                         ClientVersion = m2.Groups["ver"].Value;
                 }
+                if (ClientVersion != null)
+                    ClientVersion = ClientVersion.Replace("pre", "-pre");
             }
             if (ClientVersion == null)
             {
@@ -129,7 +131,7 @@ public class MCP
         // also we don't need the deobfuscated method signature
         foreach (var c in mappings.Classes.Values)
         {
-            writer.WriteLine($"{c.OldName} {c.NewName}");
+            writer.WriteLine($"{TargetedMappings.Split(c.OldName).name} {c.NewName}");
             foreach (var f in c.Fields)
             {
                 writer.WriteLine($"\t{f.Key} {f.Value}");
@@ -174,6 +176,9 @@ public class MCP
             var entries = line.Split(' ');
             var type = entries[0];
             var name = entries[1];
+            // fix for a couple random non-obfuscated classes getting renamed for no reason
+            if (name.StartsWith("com/jcraft") || name.StartsWith("paulscode"))
+                continue;
             if (type == ".class_map")
                 mappings.AddClass(name, entries[2]);
             else if (type == ".field_map")
@@ -215,7 +220,7 @@ public class MCP
                 {
                     // skip lines with no destination package (a few random ones that clearly aren't classes)
                     if (item[3] != "")
-                        AddToSide(item[4], LocalMappings, x => x.AddClass(item[1], item[3] + "/" + item[0]));
+                        AddToSide(item[4], LocalMappings, x => x.AddClass(item[3] + "/" + item[1], item[3] + "/" + item[0]));
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿namespace MinecraftVersionHistory;
+namespace MinecraftVersionHistory;
 
 public class SidedMappings<T> where T : new()
 {
@@ -101,7 +101,7 @@ public class TargetedMappings
         return result;
     }
 
-    private (string classpath, string name) Split(string path)
+    public static (string classpath, string name) Split(string path)
     {
         int sep = path.LastIndexOf('/');
         if (sep == -1)
