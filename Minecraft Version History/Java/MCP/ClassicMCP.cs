@@ -11,7 +11,6 @@ public class ClassicMCP : MCP
     public string Version => $"{MajorVersion}.{MinorVersion}{ExtraVersion}";
     public readonly string ClientVersion;
     public readonly string ServerVersion;
-    private readonly SidedMappings<TargetedMappings> LocalMappings = new();
     private static readonly Regex MCPVersionRegex = new(@"mcp(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex RevengVersionRegex = new(@"revengpack(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex ClientVersionRegex = new(@"ClientVersion = (?<ver>.*)");
@@ -80,7 +79,6 @@ public class ClassicMCP : MCP
         if (ClientVersion == null)
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
         Console.WriteLine($"Loaded classic MCP {Version} for MC {ClientVersion}");
-        LoadMappings(zip);
     }
 
     public override bool AcceptsVersion(JavaVersion version)
@@ -90,28 +88,30 @@ public class ClassicMCP : MCP
 
     private record Mapping(string Type, string OldName, string NewName, string Side);
 
-    private void LoadMappings(ZipArchive zip)
+    protected override SidedMappings LoadMappings()
     {
+        using var zip = ZipFile.OpenRead(ZipPath);
+        var mappings = new SidedMappings();
         var combined_srg = zip.GetEntry("conf/joined.srg");
         if (combined_srg != null)
         {
-            ParseSRG(combined_srg, LocalMappings.Client);
-            ParseSRG(combined_srg, LocalMappings.Server);
+            ParseSRG(combined_srg, mappings.Client);
+            ParseSRG(combined_srg, mappings.Server);
         }
 
         var client_srg = zip.GetEntry("conf/client.srg");
         if (client_srg != null)
-            ParseSRG(client_srg, LocalMappings.Client);
+            ParseSRG(client_srg, mappings.Client);
         var server_srg = zip.GetEntry("conf/server.srg");
         if (server_srg != null)
-            ParseSRG(server_srg, LocalMappings.Server);
+            ParseSRG(server_srg, mappings.Server);
 
         var client_rgs = zip.GetEntry("conf/minecraft.rgs") ?? zip.GetEntry(@"conf\minecraft.rgs");
         if (client_rgs != null)
-            ParseRGS(client_rgs, LocalMappings.Client);
+            ParseRGS(client_rgs, mappings.Client);
         var server_rgs = zip.GetEntry("conf/minecraft_server.rgs") ?? zip.GetEntry(@"conf\minecraft_server.rgs");
         if (server_rgs != null)
-            ParseRGS(server_rgs, LocalMappings.Server);
+            ParseRGS(server_rgs, mappings.Server);
 
         StreamReader read(string path)
         {
@@ -120,25 +120,15 @@ public class ClassicMCP : MCP
                 return null;
             return new(entry.Open());
         }
-        ParseCSVs(LocalMappings,
-            newids: read("conf/newids.csv"),
+        ParseCSVs(mappings,
             classes: read("conf/classes.csv"),
             methods: read("conf/methods.csv"),
             fields: read("conf/fields.csv")
         );
+        return mappings;
     }
 
-    public override void CreateClientMappings(string path)
-    {
-        WriteSRG(path, LocalMappings.Client.Remap(GlobalMappings.Client).Remap(NewIDs.Client).Remap(GlobalMappings.Client));
-    }
-
-    public override void CreateServerMappings(string path)
-    {
-        WriteSRG(path, LocalMappings.Server.Remap(GlobalMappings.Server).Remap(NewIDs.Server).Remap(GlobalMappings.Server));
-    }
-
-    private void ParseSRG(ZipArchiveEntry srg, TargetedMappings mappings)
+    private void ParseSRG(ZipArchiveEntry srg, Mappings mappings)
     {
         using var reader = new StreamReader(srg.Open());
         while (!reader.EndOfStream)
@@ -157,7 +147,7 @@ public class ClassicMCP : MCP
         }
     }
 
-    private void ParseRGS(ZipArchiveEntry rgs, TargetedMappings mappings)
+    private void ParseRGS(ZipArchiveEntry rgs, Mappings mappings)
     {
         using var reader = new StreamReader(rgs.Open());
         var class_dict = new Dictionary<string, string>();

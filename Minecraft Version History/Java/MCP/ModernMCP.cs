@@ -21,13 +21,14 @@ public class ModernMCP : MCP
         {
             string category = Path.GetFileName(Path.GetDirectoryName(folder));
             string name = Path.GetFileName(folder);
-            if (File.Exists(Path.Combine(folder, $"{category}-{name}.zip")))
+            var zip = Path.Combine(folder, $"{category}-{name}.zip");
+            if (File.Exists(zip))
             {
                 string series_name = name[(name.IndexOf('-') + 1)..];
                 if (versions.TryGetValue(series_name, out var items))
                 {
                     var first = items.First();
-                    yield return new ModernMCP(first.Key, first.Value, folder);
+                    yield return new ModernMCP(first.Key, first.Value, zip);
                     if (items.Count > 1)
                         items.Remove(first.Key);
                 }
@@ -35,31 +36,40 @@ public class ModernMCP : MCP
         }
     }
 
+    public readonly string TSRGFile;
+    public readonly string CSVZip;
     public readonly string ClientVersion;
-    public readonly SidedMappings<TargetedMappings> Mappings = new();
 
-    public ModernMCP(string mc_version, string tsrg_file, string csv_folder)
+    public ModernMCP(string mc_version, string tsrg_file, string csv_zip)
     {
-        Console.WriteLine($"Loaded modern MCP for MC {mc_version}");
         ClientVersion = mc_version;
-        ParseTSRG(tsrg_file, Mappings.Client);
-        ParseTSRG(tsrg_file, Mappings.Server);
+        TSRGFile = tsrg_file;
+        CSVZip = csv_zip;
+        Console.WriteLine($"Loaded modern MCP for MC {mc_version}");
+    }
+
+    protected override SidedMappings LoadMappings()
+    {
+        var mappings = new SidedMappings();
+        ParseTSRG(TSRGFile, mappings.Client);
+        ParseTSRG(TSRGFile, mappings.Server);
+        using var zip = ZipFile.OpenRead(CSVZip);
         StreamReader read(string path)
         {
-            var file = Path.Combine(csv_folder, path);
-            if (!File.Exists(file))
+            var entry = zip.GetEntry(path);
+            if (entry == null)
                 return null;
-            return File.OpenText(file);
+            return new(entry.Open());
         }
-        ParseCSVs(Mappings,
-            newids: read("newids.csv"),
+        ParseCSVs(mappings,
             classes: read("classes.csv"),
             methods: read("methods.csv"),
             fields: read("fields.csv")
         );
+        return mappings;
     }
 
-    private void ParseTSRG(string tsrg_file, TargetedMappings mappings)
+    private void ParseTSRG(string tsrg_file, Mappings mappings)
     {
         using var reader = File.OpenText(tsrg_file);
         string current_class = null;
@@ -88,15 +98,5 @@ public class ModernMCP : MCP
     public override bool AcceptsVersion(JavaVersion version)
     {
         return ClientVersion == version.Name;
-    }
-
-    public override void CreateClientMappings(string path)
-    {
-        WriteSRG(path, Mappings.Client.Remap(GlobalMappings.Client).Remap(NewIDs.Client).Remap(GlobalMappings.Client));
-    }
-
-    public override void CreateServerMappings(string path)
-    {
-        WriteSRG(path, Mappings.Client.Remap(GlobalMappings.Client).Remap(NewIDs.Client).Remap(GlobalMappings.Client));
     }
 }

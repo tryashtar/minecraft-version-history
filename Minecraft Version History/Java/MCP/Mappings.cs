@@ -1,50 +1,17 @@
 namespace MinecraftVersionHistory;
 
-public class SidedMappings<T> where T : new()
+public class SidedMappings
 {
-    public readonly T Client = new();
-    public readonly T Server = new();
+    public readonly Mappings Client = new();
+    public readonly Mappings Server = new();
 }
 
-public class UntargetedMappings
+public class Mappings
 {
-    public readonly Dictionary<string, string> Methods = new();
-    public readonly Dictionary<string, string> Fields = new();
-
-    public void AddMethod(string from, string to)
-    {
-        if (from != to)
-        {
-#if DEBUG
-            if (Methods.TryGetValue(from, out var existing))
-            {
-                if (to != existing)
-                    Console.WriteLine($"Replacing {from} from {existing} to {to}");
-            }
-#endif
-            Methods[from] = to;
-        }
-    }
-
-    public void AddField(string from, string to)
-    {
-        if (from != to)
-        {
-#if DEBUG
-            if (Methods.TryGetValue(from, out var existing))
-            {
-                if (to != existing)
-                    Console.WriteLine($"Replacing {from} from {existing} to {to}");
-            }
-#endif
-            Fields[from] = to;
-        }
-    }
-}
-
-public class TargetedMappings
-{
-    public readonly Dictionary<string, MappedClass> Classes = new();
+    private readonly Dictionary<string, MappedClass> Classes = new();
+    private readonly Dictionary<string, MappedClass> MethodMap = new();
+    private readonly Dictionary<string, MappedClass> FieldMap = new();
+    public IEnumerable<MappedClass> ClassList => Classes.Values;
 
     public void AddClass(string from, string to)
     {
@@ -68,6 +35,7 @@ public class TargetedMappings
             if (path != null && !Classes.ContainsKey(path))
                 Classes.Add(path, new MappedClass(path, path));
             Classes[path].AddMethod(name, to, signature);
+            MethodMap[to] = Classes[path];
         }
     }
 
@@ -80,35 +48,31 @@ public class TargetedMappings
             if (path != null && !Classes.ContainsKey(path))
                 Classes.Add(path, new MappedClass(path, path));
             Classes[path].AddField(name, to);
+            FieldMap[to] = Classes[path];
         }
     }
 
-    public TargetedMappings Remap(UntargetedMappings untargeted)
+    public void RemapField(string from, string to)
     {
-        var result = new TargetedMappings();
-        foreach (var c in Classes.Values)
+        if (from != to)
         {
-            result.AddClass(c.OldName, c.NewName);
-            foreach (var f in c.Fields)
+            var owner = FieldMap[from];
+            var old_field = owner.GetField(from);
+            owner.AddField(old_field.OldName, to);
+        }
+    }
+
+    public void RemapMethod(string from, string to)
+    {
+        if (from != to)
+        {
+            var owner = MethodMap[from];
+            var overloads = owner.GetOverloads(from).ToList();
+            foreach (var o in overloads)
             {
-                var value = untargeted.Fields.GetValueOrDefault(f.Value, f.Value);
-#if DEBUG
-                if (value != f.Value)
-                    Console.WriteLine($"Remapped {f.Value} to {value}");
-#endif
-                result.AddField(c.OldName + "/" + f.Key, value);
-            }
-            foreach (var m in c.Methods.Values)
-            {
-                var value = untargeted.Methods.GetValueOrDefault(m.NewName, m.NewName);
-#if DEBUG
-                if (value != m.NewName)
-                    Console.WriteLine($"Remapped {m.NewName} to {value}");
-#endif
-                result.AddMethod(c.OldName + "/" + m.OldName, value, m.Signature);
+                owner.AddMethod(o.OldName, to, o.Signature);
             }
         }
-        return result;
     }
 
     public static (string classpath, string name) Split(string path)
@@ -120,12 +84,20 @@ public class TargetedMappings
     }
 }
 
+public record MappedField(string OldName, string NewName);
 public record MappedMethod(string OldName, string NewName, string Signature);
 
 public record MappedClass(string OldName, string NewName)
 {
-    public readonly Dictionary<(string name, string signature), MappedMethod> Methods = new();
-    public readonly Dictionary<string, string> Fields = new();
+    private readonly Dictionary<(string name, string signature), MappedMethod> Methods = new();
+    private readonly Dictionary<string, List<MappedMethod>> NewOverloads = new();
+    private readonly Dictionary<string, MappedField> Fields = new();
+    private readonly Dictionary<string, MappedField> NewFields = new();
+    public IEnumerable<MappedMethod> MethodList => Methods.Values;
+    public IEnumerable<MappedField> FieldList => Fields.Values;
+
+    public IEnumerable<MappedMethod> GetOverloads(string name) => NewOverloads[name];
+    public MappedField GetField(string name) => NewFields[name];
 
     public void AddMethod(string from, string to, string signature)
     {
@@ -136,7 +108,11 @@ public record MappedClass(string OldName, string NewName)
                 Console.WriteLine($"Changing {from} from {existing.NewName} to {to}");
         }
 #endif
-        Methods[(from, signature)] = new MappedMethod(from, to, signature);
+        var method = new MappedMethod(from, to, signature);
+        Methods[(from, signature)] = method;
+        if (!NewOverloads.ContainsKey(to))
+            NewOverloads[to] = new();
+        NewOverloads[to].Add(method);
     }
 
     public void AddField(string from, string to)
@@ -144,10 +120,12 @@ public record MappedClass(string OldName, string NewName)
 #if DEBUG
         if (Fields.TryGetValue(from, out var existing))
         {
-            if (to != existing)
-                Console.WriteLine($"Changing {from} from {existing} to {to}");
+            if (to != existing.NewName)
+                Console.WriteLine($"Changing {from} from {existing.NewName} to {to}");
         }
 #endif
-        Fields[from] = to;
+        var field = new MappedField(from, to);
+        Fields[from] = field;
+        NewFields[to] = field;
     }
 }
