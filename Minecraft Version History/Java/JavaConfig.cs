@@ -52,6 +52,10 @@ public class JavaConfig : VersionConfig
             list.AddRange(Directory.GetFiles(item).Select(x => new ClassicMCP(x, MCPVersions)));
         }
         list.AddRange(ModernMCP.LoadFrom(MCPSRG, MCPCSV));
+        foreach (var item in list)
+        {
+            item.EnsureLoaded(); // load global mappings
+        }
         return list;
     }
 

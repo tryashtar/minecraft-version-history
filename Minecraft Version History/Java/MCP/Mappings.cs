@@ -1,9 +1,63 @@
 namespace MinecraftVersionHistory;
 
-public class SidedMappings
+public class Sided<T> where T : new()
 {
-    public readonly Mappings Client = new();
-    public readonly Mappings Server = new();
+    public readonly T Client = new();
+    public readonly T Server = new();
+}
+
+public class FriendlyNames
+{
+    private readonly Dictionary<string, string> Fields = new();
+    private readonly Dictionary<string, string> Methods = new();
+    private readonly Dictionary<string, string> Renames = new();
+    private readonly Dictionary<string, string> ReverseRenames = new();
+    public void AddField(string from, string to)
+    {
+        if (from != to)
+        {
+#if DEBUG
+            if (Fields.TryGetValue(to, out string existing))
+                Console.WriteLine($"Replacing friendly name for {from} from {existing} to {to}");
+#endif
+            Fields[from] = to;
+        }
+    }
+    public void AddMethod(string from, string to)
+    {
+        if (from != to)
+        {
+#if DEBUG
+            if (Methods.TryGetValue(to, out string existing))
+                Console.WriteLine($"Replacing friendly name for {from} from {existing} to {to}");
+#endif
+            Methods[from] = to;
+        }
+    }
+    public void AddRename(string from, string to)
+    {
+        Renames[from] = to;
+        ReverseRenames[to] = from;
+    }
+    public void ApplyTo(Mappings mappings)
+    {
+        foreach (var field in Fields)
+        {
+            mappings.RemapField(field.Key, field.Value);
+            if (Renames.TryGetValue(field.Key, out string rename))
+                mappings.RemapField(rename, field.Value);
+            if (ReverseRenames.TryGetValue(field.Key, out string rename2))
+                mappings.RemapField(rename2, field.Value);
+        }
+        foreach (var method in Methods)
+        {
+            mappings.RemapMethod(method.Key, method.Value);
+            if (Renames.TryGetValue(method.Key, out string rename))
+                mappings.RemapMethod(rename, method.Value);
+            if (ReverseRenames.TryGetValue(method.Key, out string rename2))
+                mappings.RemapMethod(rename2, method.Value);
+        }
+    }
 }
 
 public class Mappings
@@ -54,9 +108,8 @@ public class Mappings
 
     public void RemapField(string from, string to)
     {
-        if (from != to)
+        if (from != to && FieldMap.TryGetValue(from, out var owner))
         {
-            var owner = FieldMap[from];
             var old_field = owner.GetField(from);
             owner.AddField(old_field.OldName, to);
         }
@@ -64,9 +117,8 @@ public class Mappings
 
     public void RemapMethod(string from, string to)
     {
-        if (from != to)
+        if (from != to && MethodMap.TryGetValue(from, out var owner))
         {
-            var owner = MethodMap[from];
             var overloads = owner.GetOverloads(from).ToList();
             foreach (var o in overloads)
             {
@@ -87,8 +139,15 @@ public class Mappings
 public record MappedField(string OldName, string NewName);
 public record MappedMethod(string OldName, string NewName, string Signature);
 
-public record MappedClass(string OldName, string NewName)
+public class MappedClass
 {
+    public readonly string OldName;
+    public readonly string NewName;
+    public MappedClass(string oldname, string newname)
+    {
+        OldName = oldname;
+        NewName = newname;
+    }
     private readonly Dictionary<(string name, string signature), MappedMethod> Methods = new();
     private readonly Dictionary<string, List<MappedMethod>> NewOverloads = new();
     private readonly Dictionary<string, MappedField> Fields = new();

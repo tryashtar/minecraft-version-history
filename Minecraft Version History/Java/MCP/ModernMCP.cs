@@ -48,9 +48,9 @@ public class ModernMCP : MCP
         Console.WriteLine($"Loaded modern MCP for MC {mc_version}");
     }
 
-    protected override SidedMappings LoadMappings()
+    protected override Sided<Mappings> LoadMappings()
     {
-        var mappings = new SidedMappings();
+        var mappings = new Sided<Mappings>();
         ParseTSRG(TSRGFile, mappings.Client);
         ParseTSRG(TSRGFile, mappings.Server);
         using var zip = ZipFile.OpenRead(CSVZip);
@@ -62,6 +62,7 @@ public class ModernMCP : MCP
             return new(entry.Open());
         }
         ParseCSVs(mappings,
+            newids: read("newids.csv"),
             classes: read("classes.csv"),
             methods: read("methods.csv"),
             fields: read("fields.csv")

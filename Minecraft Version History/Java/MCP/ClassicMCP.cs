@@ -88,10 +88,10 @@ public class ClassicMCP : MCP
 
     private record Mapping(string Type, string OldName, string NewName, string Side);
 
-    protected override SidedMappings LoadMappings()
+    protected override Sided<Mappings> LoadMappings()
     {
         using var zip = ZipFile.OpenRead(ZipPath);
-        var mappings = new SidedMappings();
+        var mappings = new Sided<Mappings>();
         var combined_srg = zip.GetEntry("conf/joined.srg");
         if (combined_srg != null)
         {
@@ -121,6 +121,7 @@ public class ClassicMCP : MCP
             return new(entry.Open());
         }
         ParseCSVs(mappings,
+            newids: read("conf/newids.csv"),
             classes: read("conf/classes.csv"),
             methods: read("conf/methods.csv"),
             fields: read("conf/fields.csv")

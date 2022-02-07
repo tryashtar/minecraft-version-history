@@ -3,8 +3,13 @@ namespace MinecraftVersionHistory;
 public abstract class MCP
 {
     public static readonly MCPSorter Sorter = new();
-    public readonly Lazy<SidedMappings> LocalMappings;
-    protected abstract SidedMappings LoadMappings();
+    public static readonly Sided<FriendlyNames> GlobalFriendlies = new();
+    public readonly Lazy<Sided<Mappings>> LocalMappings;
+    protected abstract Sided<Mappings> LoadMappings();
+    public void EnsureLoaded()
+    {
+        LocalMappings.Value.ToString();
+    }
 
     public MCP()
     {
@@ -14,10 +19,12 @@ public abstract class MCP
     public abstract bool AcceptsVersion(JavaVersion version);
     public void CreateClientMappings(string path)
     {
+        GlobalFriendlies.Client.ApplyTo(LocalMappings.Value.Client);
         WriteSRG(path, LocalMappings.Value.Client);
     }
     public void CreateServerMappings(string path)
     {
+        GlobalFriendlies.Server.ApplyTo(LocalMappings.Value.Server);
         WriteSRG(path, LocalMappings.Value.Server);
     }
 
@@ -41,8 +48,19 @@ public abstract class MCP
         }
     }
 
-    protected void ParseCSVs(SidedMappings mappings, StreamReader classes, StreamReader methods, StreamReader fields)
+    protected void ParseCSVs(Sided<Mappings> mappings, StreamReader newids, StreamReader classes, StreamReader methods, StreamReader fields)
     {
+        if (newids != null)
+        {
+            var ids = ParseCSV(newids).ToList();
+            foreach (var item in ids.Skip(1))
+            {
+                if (item[0] != "*")
+                    GlobalFriendlies.Client.AddRename(item[0], item[2]);
+                if (item[1] != "*")
+                    GlobalFriendlies.Server.AddRename(item[1], item[2]);
+            }
+        }
         if (classes != null)
         {
             var class_list = ParseCSV(classes).ToList();
@@ -65,7 +83,7 @@ public abstract class MCP
                 // 6.0+ style
                 foreach (var item in method_list.Skip(1))
                 {
-                    AddToSide(item[2], mappings, x => x.RemapMethod(item[0], item[1]));
+                    AddToSide(item[2], GlobalFriendlies, x => x.AddMethod(item[0], item[1]));
                 }
             }
             else if (method_list[0].Length == 9)
@@ -74,7 +92,7 @@ public abstract class MCP
                 foreach (var item in method_list.Skip(1))
                 {
                     AddToSide(item[8], mappings, x => x.AddMethod(item[7] + "/" + item[6] + "/" + item[2], item[0], item[4]));
-                    AddToSide(item[8], mappings, x => x.RemapMethod(item[0], item[1]));
+                    AddToSide(item[8], GlobalFriendlies, x => x.AddMethod(item[0], item[1]));
                 }
             }
             else
@@ -84,9 +102,9 @@ public abstract class MCP
                 foreach (var item in method_list.Skip(4).Where(x => x.Length >= 5))
                 {
                     if (item[1] != "*" && item[1] != "")
-                        mappings.Client.RemapMethod(item[1], item[4]);
+                        GlobalFriendlies.Client.AddMethod(item[1], item[4]);
                     if (item[3] != "*" && item[3] != "")
-                        mappings.Server.RemapMethod(item[3], item[4]);
+                        GlobalFriendlies.Server.AddMethod(item[3], item[4]);
                 }
             }
         }
@@ -98,7 +116,12 @@ public abstract class MCP
                 // 6.0+ style
                 foreach (var item in field_list.Skip(1))
                 {
-                    AddToSide(item[2], mappings, x => x.RemapField(item[0], item[1]));
+                    // fix some modern ones prefixing fields
+                    var name = item[0];
+                    int dot = name.IndexOf('.');
+                    if (dot != -1)
+                        name = name[(dot + 1)..];
+                    AddToSide(item[2], GlobalFriendlies, x => x.AddField(name, item[1]));
                 }
             }
             else if (field_list[0].Length == 9)
@@ -107,7 +130,7 @@ public abstract class MCP
                 foreach (var item in field_list.Skip(1))
                 {
                     AddToSide(item[8], mappings, x => x.AddField(item[7] + "/" + item[6] + "/" + item[2], item[0]));
-                    AddToSide(item[8], mappings, x => x.RemapField(item[0], item[1]));
+                    AddToSide(item[8], GlobalFriendlies, x => x.AddField(item[0], item[1]));
                 }
             }
             else
@@ -116,20 +139,20 @@ public abstract class MCP
                 foreach (var item in field_list.Skip(3))
                 {
                     if (item[2] != "*" && item[2] != "")
-                        mappings.Client.RemapField(item[2], item[6]);
+                        GlobalFriendlies.Client.AddField(item[2], item[6]);
                     if (item[5] != "*" && item[5] != "")
-                        mappings.Server.RemapField(item[5], item[6]);
+                        GlobalFriendlies.Server.AddField(item[5], item[6]);
                 }
             }
         }
     }
 
-    private void AddToSide(string side, SidedMappings mappings, Action<Mappings> action)
+    private void AddToSide<T>(string side, Sided<T> sided, Action<T> action) where T : new()
     {
         if (side == "0" || side == "2")
-            action(mappings.Client);
+            action(sided.Client);
         if (side == "1" || side == "2")
-            action(mappings.Server);
+            action(sided.Server);
     }
 
     private IEnumerable<string[]> ParseCSV(StreamReader reader)
