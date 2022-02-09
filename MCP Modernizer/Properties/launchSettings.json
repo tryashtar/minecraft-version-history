@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MCP Modernizer": {
+      "commandName": "Project",
+      "commandLineArgs": "--classic \"D:\\Minecraft\\Java Storage\\MCP\\Classic\" --modern-srg \"D:\\Minecraft\\Java Storage\\MCP\\Modern\\MCPConfig\\versions\" --modern-csv \"D:\\Minecraft\\Java Storage\\MCP\\Modern\\MCPMappingsArchive\" --output \"D:\\Minecraft\\Java Storage\\MCP\\Merged\""
+    }
+  }
+}

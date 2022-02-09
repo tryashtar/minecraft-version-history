@@ -1,6 +1,8 @@
 using Microsoft.VisualBasic.FileIO;
+using System.IO.Compression;
+using System.Text.RegularExpressions;
 
-namespace MinecraftVersionHistory;
+namespace MCPModernizer;
 
 public class ClassicMCP : MCP
 {
@@ -9,8 +11,6 @@ public class ClassicMCP : MCP
     public readonly int MinorVersion;
     public readonly string ExtraVersion;
     public string Version => $"{MajorVersion}.{MinorVersion}{ExtraVersion}";
-    public readonly string ClientVersion;
-    public readonly string ServerVersion;
     private static readonly Regex MCPVersionRegex = new(@"mcp(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex RevengVersionRegex = new(@"revengpack(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex ClientVersionRegex = new(@"ClientVersion = (?<ver>.*)");
@@ -27,10 +27,7 @@ public class ClassicMCP : MCP
         MinorVersion = int.Parse(v.Groups["digits"].Value);
         ExtraVersion = v.Groups["extra"].Value;
         if (version_fallback.TryGetValue(Version, out var cv))
-        {
             ClientVersion = cv;
-            ServerVersion = cv;
-        }
         if (ClientVersion == null)
         {
             var vcfg = zip.GetEntry("conf/version.cfg");
@@ -71,62 +68,47 @@ public class ClassicMCP : MCP
                         if (!ver.StartsWith(series))
                             ver = series + ver;
                         ClientVersion = ver;
-                        ServerVersion = ver;
                     }
                 }
             }
         }
         if (ClientVersion == null)
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
-        Console.WriteLine($"Loaded classic MCP {Version} for MC {ClientVersion}");
-    }
 
-    public override bool AcceptsVersion(JavaVersion version)
-    {
-        return ClientVersion == version.Name;
-    }
-
-    private record Mapping(string Type, string OldName, string NewName, string Side);
-
-    protected override Sided<Mappings> LoadMappings()
-    {
-        using var zip = ZipFile.OpenRead(ZipPath);
-        var mappings = new Sided<Mappings>();
         var combined_srg = zip.GetEntry("conf/joined.srg");
         if (combined_srg != null)
         {
-            ParseSRG(combined_srg, mappings.Client);
-            ParseSRG(combined_srg, mappings.Server);
+            ParseSRG(combined_srg, LocalMappings.Client);
+            ParseSRG(combined_srg, LocalMappings.Server);
         }
 
         var client_srg = zip.GetEntry("conf/client.srg");
         if (client_srg != null)
-            ParseSRG(client_srg, mappings.Client);
+            ParseSRG(client_srg, LocalMappings.Client);
         var server_srg = zip.GetEntry("conf/server.srg");
         if (server_srg != null)
-            ParseSRG(server_srg, mappings.Server);
+            ParseSRG(server_srg, LocalMappings.Server);
 
         var client_rgs = zip.GetEntry("conf/minecraft.rgs") ?? zip.GetEntry(@"conf\minecraft.rgs");
         if (client_rgs != null)
-            ParseRGS(client_rgs, mappings.Client);
+            ParseRGS(client_rgs, LocalMappings.Client);
         var server_rgs = zip.GetEntry("conf/minecraft_server.rgs") ?? zip.GetEntry(@"conf\minecraft_server.rgs");
         if (server_rgs != null)
-            ParseRGS(server_rgs, mappings.Server);
+            ParseRGS(server_rgs, LocalMappings.Server);
 
-        StreamReader read(string path)
+        StreamReader? read(string path)
         {
             var entry = zip.GetEntry(path);
             if (entry == null)
                 return null;
             return new(entry.Open());
         }
-        ParseCSVs(mappings,
+        ParseCSVs(
             newids: read("conf/newids.csv"),
             classes: read("conf/classes.csv"),
             methods: read("conf/methods.csv"),
             fields: read("conf/fields.csv")
         );
-        return mappings;
     }
 
     private void ParseSRG(ZipArchiveEntry srg, Mappings mappings)

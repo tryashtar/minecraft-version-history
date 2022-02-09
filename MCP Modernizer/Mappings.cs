@@ -1,4 +1,4 @@
-namespace MinecraftVersionHistory;
+namespace MCPModernizer;
 
 public class Sided<T> where T : new()
 {
@@ -8,6 +8,8 @@ public class Sided<T> where T : new()
 
 public class FriendlyNames
 {
+    public IEnumerable<KeyValuePair<string, string>> FieldList => Fields;
+    public IEnumerable<KeyValuePair<string, string>> MethodList => Methods;
     private readonly Dictionary<string, string> Fields = new();
     private readonly Dictionary<string, string> Methods = new();
     private readonly Dictionary<string, string> Renames = new();
@@ -44,17 +46,17 @@ public class FriendlyNames
         foreach (var field in Fields)
         {
             mappings.RemapField(field.Key, field.Value);
-            if (Renames.TryGetValue(field.Key, out string rename))
+            if (Renames.TryGetValue(field.Key, out string? rename))
                 mappings.RemapField(rename, field.Value);
-            if (ReverseRenames.TryGetValue(field.Key, out string rename2))
+            if (ReverseRenames.TryGetValue(field.Key, out string? rename2))
                 mappings.RemapField(rename2, field.Value);
         }
         foreach (var method in Methods)
         {
             mappings.RemapMethod(method.Key, method.Value);
-            if (Renames.TryGetValue(method.Key, out string rename))
+            if (Renames.TryGetValue(method.Key, out string? rename))
                 mappings.RemapMethod(rename, method.Value);
-            if (ReverseRenames.TryGetValue(method.Key, out string rename2))
+            if (ReverseRenames.TryGetValue(method.Key, out string? rename2))
                 mappings.RemapMethod(rename2, method.Value);
         }
     }
@@ -83,10 +85,12 @@ public class Mappings
     public void AddMethod(string from, string to, string signature)
     {
         var (path, name) = Split(from);
+        if (path == null)
+            throw new ArgumentException($"No path to method {from}", nameof(from));
         (_, to) = Split(to);
         if (name != to)
         {
-            if (path != null && !Classes.ContainsKey(path))
+            if (!Classes.ContainsKey(path))
                 Classes.Add(path, new MappedClass(path, path));
             Classes[path].AddMethod(name, to, signature);
             MethodMap[to] = Classes[path];
@@ -97,9 +101,11 @@ public class Mappings
     {
         var (path, name) = Split(from);
         (_, to) = Split(to);
+        if (path == null)
+            throw new ArgumentException($"No path to field {from}", nameof(from));
         if (name != to)
         {
-            if (path != null && !Classes.ContainsKey(path))
+            if (!Classes.ContainsKey(path))
                 Classes.Add(path, new MappedClass(path, path));
             Classes[path].AddField(name, to);
             FieldMap[to] = Classes[path];
@@ -127,7 +133,7 @@ public class Mappings
         }
     }
 
-    public static (string classpath, string name) Split(string path)
+    public static (string? classpath, string name) Split(string path)
     {
         int sep = path.LastIndexOf('/');
         if (sep == -1)
