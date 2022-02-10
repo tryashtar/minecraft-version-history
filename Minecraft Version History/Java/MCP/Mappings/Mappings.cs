@@ -21,6 +21,8 @@ public class Mappings
 
     public MappedClass AddClass(string from, string to)
     {
+        if (from == null || to == null)
+            throw new NullReferenceException();
         if (Classes.TryGetValue(from, out var existing))
         {
 #if DEBUG

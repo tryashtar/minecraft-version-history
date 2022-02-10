@@ -19,6 +19,8 @@ public class MappedClass
 
     public MappedMethod AddMethod(string from, string to, string signature)
     {
+        if (from == null || to == null)
+            throw new NullReferenceException();
 #if DEBUG
         if (Methods.TryGetValue((from, signature), out var existing))
         {
@@ -33,6 +35,8 @@ public class MappedClass
 
     public MappedField AddField(string from, string to)
     {
+        if (from == null || to == null)
+            throw new NullReferenceException();
 #if DEBUG
         if (Fields.TryGetValue(from, out var existing))
         {

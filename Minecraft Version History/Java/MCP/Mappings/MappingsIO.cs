@@ -77,6 +77,8 @@ public static class MappingsIO
 
     public static void ParseProguard(Mappings mappings, StreamReader reader)
     {
+        var methods = new List<(MappedClass add_to, string from, string to, string ret, string[] args)>();
+        var backwards_classes = new Dictionary<string, string>();
         MappedClass current_class = null;
         while (!reader.EndOfStream)
         {
@@ -89,10 +91,11 @@ public static class MappingsIO
                 if (entries[0].Contains('('))
                 {
                     var split = entries[0].Split(' ');
-                    int paren = split[1].IndexOf('(');
-                    string name = split[1][..paren];
-                    string sig = split[0] + split[1][paren..];
-                    current_class.AddMethod(entries[1], name, sig);
+                    int open = split[1].IndexOf('(');
+                    int close = split[1].IndexOf(')');
+                    string name = split[1][..open];
+                    int colon = split[0].LastIndexOf(':') + 1;
+                    methods.Add((current_class, entries[1], name, split[0][colon..], split[1][(open + 1)..close].Split(',', StringSplitOptions.RemoveEmptyEntries)));
                 }
                 else
                     current_class.AddField(entries[1], entries[0].Split(' ')[1]);
@@ -100,9 +103,50 @@ public static class MappingsIO
             else
             {
                 var entries = line.Split(" -> ");
-                current_class = mappings.AddClass(entries[1].TrimEnd(':'), entries[0]);
+                string from = entries[1].TrimEnd(':');
+                current_class = mappings.AddClass(from, entries[0]);
+                backwards_classes[entries[0]] = from;
             }
         }
+        string shorten(string identifier)
+        {
+            (int count, string rest) = TrimArrays(identifier);
+            return Shorthand(backwards_classes.GetValueOrDefault(rest, rest), count);
+        }
+        foreach (var (add_to, from, to, ret, args) in methods)
+        {
+            string signature = $"({String.Join("", args.Select(shorten))}){shorten(ret)}";
+            add_to.AddMethod(from, to, signature);
+        }
+    }
+
+    private static (int count, string rest) TrimArrays(string identifier)
+    {
+        int arrays = 0;
+        while (identifier.EndsWith("[]"))
+        {
+            arrays++;
+            identifier = identifier[0..^2];
+        }
+        return (arrays, identifier);
+    }
+
+    private static string Shorthand(string identifier, int arrays)
+    {
+        identifier = identifier switch
+        {
+            "int" => "I",
+            "double" => "D",
+            "boolean" => "Z",
+            "float" => "F",
+            "long" => "J",
+            "byte" => "B",
+            "short" => "S",
+            "char" => "C",
+            "void" => "V",
+            _ => $"L{identifier.Replace('.', '/')};"
+        };
+        return new String('[', arrays) + identifier;
     }
 
     public static void WriteCSVs(FlatMap names, StreamWriter fields, StreamWriter methods)

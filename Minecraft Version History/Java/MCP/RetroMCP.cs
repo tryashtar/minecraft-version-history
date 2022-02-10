@@ -82,45 +82,38 @@ public class RetroMCP
         var final = new Sided<Mappings>();
         var local = ParseTsrgs(version);
         var friendlies = ParseCSVs(version);
-        void find_matches<T, U>(
-            T input,
-            Func<Mappings, U> prepare_mcp,
-            Func<Mappings, U> prepare_moj,
-            Func<U, string, T> get,
-            Action<U, string, string> add,
-            Func<FlatMap, string, string> get_flat,
-            // when your code is so convoluted it requires rank 2 polymorphism
-            Func<Sided<Mappings>, Mappings> map_side,
-            Func<Sided<FlatMap>, FlatMap> flat_side,
-            Func<T, string> old_name,
-            Func<T, string> new_name) where T : class
+        var renames = CustomRenames.Where(x => x.applies(version)).Select(x => x.renames).ToList();
+        foreach (var c in local.Client.ClassList)
         {
-            var matched_local = get(prepare_mcp(map_side(MatchedMCP)), new_name(input));
-            if (matched_local != null)
+            MappedClass final_class = null;
+            MappedClass matched_mojang = null;
+            MappedClass matched_mcp = null;
+            matched_mcp = MatchedMCP.Client.GetClass(c.NewName);
+            if (matched_mcp != null)
             {
-                var matched_mojang = get(prepare_moj(map_side(MatchedMojang)), new_name(matched_local));
-                add(prepare(map_side(final)), old_name(input), new_name(matched_mojang));
+                matched_mojang = MatchedMojang.Client.GetClass(matched_mcp.NewName);
 #if DEBUG
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"Mojang match! {new_name(input)} -> {new_name(matched_mojang)}");
+                Console.WriteLine($"Mojang match! {c.NewName} -> {matched_mojang.NewName}");
                 Console.ResetColor();
 #endif
+                final_class = final.Client.AddClass(c.OldName, matched_mojang.NewName);
             }
             else
             {
-                // couldn't find a match in 1.14, try custom overrides
+                // couldn't find a match, try custom overrides
                 bool found = false;
-                foreach (var subs in CustomRenames.Where(x => x.applies(version)).Select(x => x.renames))
+                foreach (var subs in renames)
                 {
-                    var rename = get_flat(flat_side(subs), new_name(input));
+                    var rename = subs.Client.GetClass(c.NewName);
                     if (rename != null)
                     {
 #if DEBUG
                         Console.ForegroundColor = ConsoleColor.Cyan;
-                        Console.WriteLine($"Custom match! {new_name(input)} -> {rename}");
+                        Console.WriteLine($"Custom match! {c.NewName} -> {rename}");
                         Console.ResetColor();
 #endif
-                        add(prepare(map_side(final)), old_name(input), rename);
+                        final_class = final.Client.AddClass(c.OldName, rename);
                         found = true;
                         break;
                     }
@@ -128,74 +121,144 @@ public class RetroMCP
                 if (!found)
                 {
                     // try local friendlies
-                    var friendly = get_flat(flat_side(friendlies), new_name(input));
+                    var friendly = friendlies.Client.GetClass(c.NewName);
                     if (friendly != null)
                     {
 #if DEBUG
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"Local match! {new_name(input)} -> {friendly}");
+                        Console.WriteLine($"Local match! {c.NewName} -> {friendly}");
                         Console.ResetColor();
 #endif
-                        add(prepare(map_side(final)), old_name(input), friendly);
+                        final_class = final.Client.AddClass(c.OldName, friendly);
                     }
                     else
                     {
                         // nothing
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"Unable to find a friendly name for {new_name(input)}");
+                        Console.WriteLine($"Unable to find a friendly name for {c.NewName}");
                         Console.ResetColor();
-                        add(prepare(map_side(final)), old_name(input), new_name(input));
+                        final_class = final.Client.AddClass(c.OldName, c.NewName);
                     }
                 }
             }
-        }
-        var sides = new (Func<Sided<Mappings>, Mappings> map, Func<Sided<FlatMap>, FlatMap> flat)[]
-        {
-            (x => x.Client, x => x.Client),
-            (x => x.Server, x => x.Server)
-        };
-        foreach (var (map, flat) in sides)
-        {
-            foreach (var c in map(local).ClassList)
+            foreach (var f in c.FieldList)
             {
-                find_matches(
-                    input: c,
-                    prepare: x => x,
-                    get: (x, y) => x.GetClass(y),
-                    add: (x, y, z) => x.AddClass(y, z),
-                    get_flat: (x, y) => x.GetClass(y),
-                    map_side: map,
-                    flat_side: flat,
-                    old_name: x => x.OldName,
-                    new_name: x => x.NewName
-                );
-                foreach (var f in c.FieldList)
+                bool found_field = false;
+                if (matched_mcp != null)
                 {
-                    find_matches(
-                        input: f,
-                        prepare: x => x.GetClass(c.NewName),
-                        get: (x, y) => x.GetField(y),
-                        add: (x, y, z) => x.AddField(y, z),
-                        get_flat: (x, y) => x.GetField(y),
-                        map_side: map,
-                        flat_side: flat,
-                        old_name: x => x.OldName,
-                        new_name: x => x.NewName
-                    );
+                    var local_field = matched_mcp.GetField(f.NewName);
+                    if (local_field != null)
+                    {
+                        var mojang_field = matched_mojang.GetField(local_field.NewName);
+#if DEBUG
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\tMojang match! {f.NewName} -> {mojang_field.NewName}");
+                        Console.ResetColor();
+#endif
+                        found_field = true;
+                        final_class.AddField(f.OldName, mojang_field.NewName);
+                    }
                 }
-                foreach (var m in c.MethodList)
+                if (!found_field)
                 {
-                    find_matches(
-                        input: m,
-                        prepare: x => x.GetClass(c.NewName),
-                        get: (x, y) => x.GetMethod(y, m.Signature),
-                        add: (x, y, z) => x.AddMethod(y, z, m.Signature),
-                        get_flat: (x, y) => x.GetMethod(y),
-                        map_side: map,
-                        flat_side: flat,
-                        old_name: x => x.OldName,
-                        new_name: x => x.NewName
-                    );
+                    // couldn't find a match, try custom overrides
+                    foreach (var subs in renames)
+                    {
+                        var rename = subs.Client.GetField(f.NewName);
+                        if (rename != null)
+                        {
+#if DEBUG
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine($"\tCustom match! {f.NewName} -> {rename}");
+                            Console.ResetColor();
+#endif
+                            final_class.AddField(f.OldName, rename);
+                            found_field = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found_field)
+                {
+                    // try local friendlies
+                    var friendly = friendlies.Client.GetField(f.NewName);
+                    if (friendly != null)
+                    {
+#if DEBUG
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"\tLocal match! {f.NewName} -> {friendly}");
+                        Console.ResetColor();
+#endif
+                        final_class.AddField(f.OldName, friendly);
+                    }
+                    else
+                    {
+                        // nothing
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"\tUnable to find a friendly name for {f.NewName}");
+                        Console.ResetColor();
+                        final_class.AddField(f.OldName, f.NewName);
+                    }
+                }
+            }
+            foreach (var m in c.MethodList)
+            {
+                bool found_method = false;
+                if (matched_mcp != null)
+                {
+                    var local_method = matched_mcp.GetMethod(m.NewName, m.Signature);
+                    if (local_method != null)
+                    {
+                        var mojang_method = matched_mojang.GetMethod(local_method.NewName, m.Signature);
+#if DEBUG
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\tMojang match! {m.NewName} -> {mojang_method.NewName}");
+                        Console.ResetColor();
+#endif
+                        found_method = true;
+                        final_class.AddMethod(m.OldName, mojang_method.NewName, m.Signature);
+                    }
+                }
+                if (!found_method)
+                {
+                    // couldn't find a match, try custom overrides
+                    foreach (var subs in renames)
+                    {
+                        var rename = subs.Client.GetMethod(m.NewName);
+                        if (rename != null)
+                        {
+#if DEBUG
+                            Console.ForegroundColor = ConsoleColor.Cyan;
+                            Console.WriteLine($"\tCustom match! {m.NewName} -> {rename}");
+                            Console.ResetColor();
+#endif
+                            final_class.AddMethod(m.OldName, rename, m.Signature);
+                            found_method = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found_method)
+                {
+                    // try local friendlies
+                    var friendly = friendlies.Client.GetMethod(m.NewName);
+                    if (friendly != null)
+                    {
+#if DEBUG
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"\tLocal match! {m.NewName} -> {friendly}");
+                        Console.ResetColor();
+#endif
+                        final_class.AddMethod(m.OldName, friendly, m.Signature);
+                    }
+                    else
+                    {
+                        // nothing
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"\tUnable to find a friendly name for {m.NewName}");
+                        Console.ResetColor();
+                        final_class.AddMethod(m.OldName, m.NewName, m.Signature);
+                    }
                 }
             }
         }
