@@ -5,7 +5,7 @@ public class RetroMCP
     public readonly string Folder;
     private readonly Sided<Mappings> MatchedMCP;
     private readonly Sided<Mappings> MatchedMojang;
-    private readonly List<(Predicate<string> applies, Sided<FlatMap> renames)> CustomRenames = new();
+    private readonly List<CustomRename> CustomRenames = new();
     public RetroMCP(string folder, string matched_version)
     {
         Folder = folder;
@@ -19,39 +19,7 @@ public class RetroMCP
         var list = (YamlSequenceNode)YamlHelper.ParseFile(Path.Combine(folder, "mappings.yaml"));
         foreach (var item in list)
         {
-            Predicate<string> pred = null;
-            var affects = item.Go("affects");
-            if (affects is YamlScalarNode n && n.Value == "*")
-                pred = x => true;
-            else if (affects is YamlSequenceNode s)
-                pred = x => s.ToStringList().Contains(x);
-            var map = new Sided<FlatMap>();
-            void add(string side, Action<FlatMap> adder)
-            {
-                if (side == "client" || side == "joined")
-                    adder(map.Client);
-                if (side == "server" || side == "joined")
-                    adder(map.Server);
-            }
-            foreach (var side in new[] { "client", "server", "joined" })
-            {
-                var classes = item.Go("mappings", side, "classes").ToDictionary() ?? new();
-                var fields = item.Go("mappings", side, "fields").ToDictionary() ?? new();
-                var methods = item.Go("mappings", side, "methods").ToDictionary() ?? new();
-                foreach (var c in classes)
-                {
-                    add(side, x => x.AddClass(c.Key, c.Value));
-                }
-                foreach (var f in fields)
-                {
-                    add(side, x => x.AddField(f.Key, f.Value));
-                }
-                foreach (var m in methods)
-                {
-                    add(side, x => x.AddMethod(m.Key, m.Value));
-                }
-            }
-            CustomRenames.Add((pred, map));
+            CustomRenames.Add(new CustomRename((YamlMappingNode)item));
         }
     }
 
@@ -84,7 +52,26 @@ public class RetroMCP
         var final = new Sided<Mappings>();
         var local = ParseTsrgs(version);
         var friendlies = ParseCSVs(version);
-        var renames = CustomRenames.Where(x => x.applies(version)).Select(x => x.renames).ToList();
+        var renames = CustomRenames.Where(x => x.AppliesTo(version)).ToList();
+        T get_with_equivalencies<T>(string name, Func<CustomRename, HashSet<string>> equiv_getter, Func<string, T> getter)
+        {
+            var result = getter(name);
+            foreach (var rename in renames)
+            {
+                var equiv = equiv_getter(rename);
+                if (equiv.Contains(name))
+                {
+                    foreach (var same in equiv)
+                    {
+                        var new_result = getter(same);
+                        if (result != null && new_result != null)
+                            throw new InvalidOperationException($"How are {result} and {new_result} equivalent?");
+                        result = new_result;
+                    }
+                }
+            }
+            return result;
+        }
         var sides = new (Func<Sided<Mappings>, Mappings> map, Func<Sided<FlatMap>, FlatMap> flat)[]
         {
              (x => x.Client, x => x.Client),
@@ -287,5 +274,84 @@ public class RetroMCP
             }
         }
         return final;
+    }
+}
+
+public class CustomRename
+{
+    private readonly Predicate<string> VersionPredicate;
+    public readonly Sided<List<HashSet<string>>> EquivalentClasses = new();
+    public readonly Sided<List<HashSet<string>>> EquivalentFields = new();
+    public readonly Sided<List<HashSet<string>>> EquivalentMethods = new();
+    public readonly Sided<FlatMap> Renames = new();
+    public CustomRename(YamlMappingNode node)
+    {
+        var affects = node.Go("affects");
+        if (affects is YamlScalarNode n && n.Value == "*")
+            VersionPredicate = x => true;
+        else if (affects is YamlSequenceNode s)
+            VersionPredicate = x => s.ToStringList().Contains(x);
+        void add_flat(string side, Action<FlatMap> adder)
+        {
+            if (side == "client" || side == "joined")
+                adder(Renames.Client);
+            if (side == "server" || side == "joined")
+                adder(Renames.Server);
+        }
+        void add_set(string side, Sided<List<HashSet<string>>> set, Action<List<HashSet<string>>> adder)
+        {
+            if (side == "client" || side == "joined")
+                adder(set.Client);
+            if (side == "server" || side == "joined")
+                adder(set.Server);
+        }
+        foreach (var side in new[] { "client", "server", "joined" })
+        {
+            var class_renames = node.Go("mappings", side, "classes", "renames").ToDictionary() ?? new();
+            var field_renames = node.Go("mappings", side, "fields", "renames").ToDictionary() ?? new();
+            var method_renames = node.Go("mappings", side, "methods", "renames").ToDictionary() ?? new();
+            foreach (var c in class_renames)
+            {
+                add_flat(side, x => x.AddClass(c.Key, c.Value));
+            }
+            foreach (var f in field_renames)
+            {
+                add_flat(side, x => x.AddField(f.Key, f.Value));
+            }
+            foreach (var m in method_renames)
+            {
+                add_flat(side, x => x.AddMethod(m.Key, m.Value));
+            }
+            var class_eq = node.Go("mappings", side, "classes", "equivalencies").ToList(x => x.ToStringList());
+            var field_eq = node.Go("mappings", side, "fields", "equivalencies").ToList(x => x.ToStringList());
+            var method_eq = node.Go("mappings", side, "methods", "equivalencies").ToList(x => x.ToStringList());
+            foreach (var c in class_eq)
+            {
+                add_set(side, EquivalentClasses, x => x.Add(c.ToHashSet()));
+            }
+            foreach (var f in field_eq)
+            {
+                add_set(side, EquivalentFields, x => x.Add(f.ToHashSet()));
+            }
+            foreach (var m in method_eq)
+            {
+                add_set(side, EquivalentMethods, x => x.Add(m.ToHashSet()));
+            }
+        }
+    }
+
+    public HashSet<string> GetEquivalencies(string name)
+    {
+        foreach (var set in EquivalentClasses.Server)
+        {
+            if (set.Contains(name))
+                return set;
+        }
+        return new HashSet<string> { name };
+    }
+
+    public bool AppliesTo(string version)
+    {
+        return VersionPredicate(version);
     }
 }
