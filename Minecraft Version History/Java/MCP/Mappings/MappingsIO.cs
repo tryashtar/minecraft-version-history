@@ -86,22 +86,48 @@ public static class MappingsIO
             if (line.StartsWith("    "))
             {
                 var entries = line.TrimStart(' ').Split(" -> ");
-                if (entries[0].Contains(':'))
+                if (entries[0].Contains('('))
                 {
                     var split = entries[0].Split(' ');
                     int paren = split[1].IndexOf('(');
                     string name = split[1][..paren];
                     string sig = split[0] + split[1][paren..];
-                    current_class.AddMethod(name, entries[1], sig);
+                    current_class.AddMethod(entries[1], name, sig);
                 }
                 else
-                    current_class.AddField(entries[0].Split(' ')[1], entries[1]);
+                    current_class.AddField(entries[1], entries[0].Split(' ')[1]);
             }
             else
             {
                 var entries = line.Split(" -> ");
-                current_class = mappings.AddClass(entries[0], entries[1].TrimEnd(':'));
+                current_class = mappings.AddClass(entries[1].TrimEnd(':'), entries[0]);
             }
+        }
+    }
+
+    public static void WriteCSVs(FlatMap names, StreamWriter fields, StreamWriter methods)
+    {
+        foreach (var item in names.FieldList)
+        {
+            fields.WriteLine(item.OldName + "," + item.NewName);
+        }
+        foreach (var item in names.MethodList)
+        {
+            methods.WriteLine(item.OldName + "," + item.NewName);
+        }
+    }
+
+    public static void ParseCSVs(FlatMap names, StreamReader fields, StreamReader methods)
+    {
+        while (!fields.EndOfStream)
+        {
+            var items = fields.ReadLine().Split(',');
+            names.AddField(items[0], items[1]);
+        }
+        while (!methods.EndOfStream)
+        {
+            var items = methods.ReadLine().Split(',');
+            names.AddMethod(items[0], items[1]);
         }
     }
 }

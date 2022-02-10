@@ -26,7 +26,7 @@ public class JavaConfig : VersionConfig
         ServerJarFolder = Util.FilePath(folder, yaml["server jars"]);
         AssetsFolder = Util.FilePath(folder, yaml["assets folder"]);
         string mcp = Util.FilePath(folder, yaml.Go("mcp", "merged"));
-        string ver = Util.FilePath(folder, yaml.Go("mcp", "matched"));
+        string ver = yaml.Go("mcp", "matched").String();
         if (mcp != null && ver != null)
             MCP = new RetroMCP(mcp, ver);
         Decompiler = ParseDecompiler((string)yaml["decompiler"]);

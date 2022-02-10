@@ -44,4 +44,18 @@ public class MappedClass
         Fields[from] = field;
         return field;
     }
+
+    public MappedMethod GetMethod(string from, string signature)
+    {
+        if (Methods.TryGetValue((from, signature), out var existing))
+            return existing;
+        return null;
+    }
+
+    public MappedField GetField(string from)
+    {
+        if (Fields.TryGetValue(from, out var existing))
+            return existing;
+        return null;
+    }
 }

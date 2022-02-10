@@ -14,9 +14,10 @@ public class ModernMCP : MCP
         TsrgFile = tsrg_file;
         CsvZip = csv_zip;
 
-        using var reader = File.OpenText(TsrgFile);
-        MappingsIO.ParseTsrg(LocalMappings.Client, reader);
-        MappingsIO.ParseTsrg(LocalMappings.Server, reader);
+        using (var reader = File.OpenText(TsrgFile))
+            MappingsIO.ParseTsrg(LocalMappings.Client, reader);
+        using (var reader = File.OpenText(TsrgFile))
+            MappingsIO.ParseTsrg(LocalMappings.Server, reader);
         using var zip = ZipFile.OpenRead(CsvZip);
         StreamReader? read(string path)
         {

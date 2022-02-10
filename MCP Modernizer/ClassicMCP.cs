@@ -83,25 +83,28 @@ public class ClassicMCP : MCP
                 return null;
             return new(entry.Open());
         }
-        var combined_srg = read("conf/joined.srg");
-        if (combined_srg != null)
+        using (var joined_srg = read("conf/joined.srg"))
         {
-            MappingsIO.ParseSrg(LocalMappings.Client, combined_srg);
-            combined_srg = read("conf/joined.srg");
-            MappingsIO.ParseSrg(LocalMappings.Server, combined_srg);
+            if (joined_srg != null)
+                MappingsIO.ParseSrg(LocalMappings.Client, joined_srg);
+        }
+        using (var joined_srg = read("conf/joined.srg"))
+        {
+            if (joined_srg != null)
+                MappingsIO.ParseSrg(LocalMappings.Client, joined_srg);
         }
 
-        var client_srg = read("conf/client.srg");
+        using var client_srg = read("conf/client.srg");
         if (client_srg != null)
             MappingsIO.ParseSrg(LocalMappings.Client, client_srg);
-        var server_srg = read("conf/server.srg");
+        using var server_srg = read("conf/server.srg");
         if (server_srg != null)
             MappingsIO.ParseSrg(LocalMappings.Server, server_srg);
 
-        var client_rgs = read("conf/minecraft.rgs") ?? read(@"conf\minecraft.rgs");
+        using var client_rgs = read("conf/minecraft.rgs") ?? read(@"conf\minecraft.rgs");
         if (client_rgs != null)
             ParseRGS(LocalMappings.Client, client_rgs);
-        var server_rgs = read("conf/minecraft_server.rgs") ?? read(@"conf\minecraft_server.rgs");
+        using var server_rgs = read("conf/minecraft_server.rgs") ?? read(@"conf\minecraft_server.rgs");
         if (server_rgs != null)
             ParseRGS(LocalMappings.Server, server_rgs);
 

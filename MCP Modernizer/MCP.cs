@@ -6,7 +6,7 @@ namespace MCPModernizer;
 public abstract class MCP
 {
     public static readonly MCPSorter Sorter = new();
-    public readonly Sided<FriendlyNames> FriendlyNames = new();
+    public readonly Sided<FlatMap> FriendlyNames = new();
     public readonly Sided<Mappings> LocalMappings = new();
     public string ClientVersion { get; protected set; }
 
@@ -22,25 +22,15 @@ public abstract class MCP
     }
     public void WriteClientFriendlies(string fields, string methods)
     {
-        WriteCSVs(fields, methods, FriendlyNames.Client);
+        using var fwriter = new StreamWriter(fields);
+        using var mwriter = new StreamWriter(methods);
+        MappingsIO.WriteCSVs(FriendlyNames.Client, fwriter, mwriter);
     }
     public void WriteServerFriendlies(string fields, string methods)
     {
-        WriteCSVs(fields, methods, FriendlyNames.Server);
-    }
-
-    private void WriteCSVs(string fields, string methods, FriendlyNames names)
-    {
-        using var field_writer = new StreamWriter(fields);
-        foreach (var item in names.FieldList)
-        {
-            field_writer.WriteLine(item.Key + "," + item.Value);
-        }
-        using var method_writer = new StreamWriter(methods);
-        foreach (var item in names.MethodList)
-        {
-            method_writer.WriteLine(item.Key + "," + item.Value);
-        }
+        using var fwriter = new StreamWriter(fields);
+        using var mwriter = new StreamWriter(methods);
+        MappingsIO.WriteCSVs(FriendlyNames.Server, fwriter, mwriter);
     }
 
     protected void ParseCSVs(StreamReader? classes, StreamReader? methods, StreamReader? fields)
