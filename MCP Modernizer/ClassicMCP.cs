@@ -1,4 +1,5 @@
 using Microsoft.VisualBasic.FileIO;
+using MinecraftVersionHistory;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 
@@ -75,27 +76,6 @@ public class ClassicMCP : MCP
         if (ClientVersion == null)
             throw new ArgumentException($"Can't figure out what MC version MCP {Version} is for");
 
-        var combined_srg = zip.GetEntry("conf/joined.srg");
-        if (combined_srg != null)
-        {
-            ParseSRG(combined_srg, LocalMappings.Client);
-            ParseSRG(combined_srg, LocalMappings.Server);
-        }
-
-        var client_srg = zip.GetEntry("conf/client.srg");
-        if (client_srg != null)
-            ParseSRG(client_srg, LocalMappings.Client);
-        var server_srg = zip.GetEntry("conf/server.srg");
-        if (server_srg != null)
-            ParseSRG(server_srg, LocalMappings.Server);
-
-        var client_rgs = zip.GetEntry("conf/minecraft.rgs") ?? zip.GetEntry(@"conf\minecraft.rgs");
-        if (client_rgs != null)
-            ParseRGS(client_rgs, LocalMappings.Client);
-        var server_rgs = zip.GetEntry("conf/minecraft_server.rgs") ?? zip.GetEntry(@"conf\minecraft_server.rgs");
-        if (server_rgs != null)
-            ParseRGS(server_rgs, LocalMappings.Server);
-
         StreamReader? read(string path)
         {
             var entry = zip.GetEntry(path);
@@ -103,39 +83,37 @@ public class ClassicMCP : MCP
                 return null;
             return new(entry.Open());
         }
+        var combined_srg = read("conf/joined.srg");
+        if (combined_srg != null)
+        {
+            MappingsIO.ParseSrg(LocalMappings.Client, combined_srg);
+            combined_srg = read("conf/joined.srg");
+            MappingsIO.ParseSrg(LocalMappings.Server, combined_srg);
+        }
+
+        var client_srg = read("conf/client.srg");
+        if (client_srg != null)
+            MappingsIO.ParseSrg(LocalMappings.Client, client_srg);
+        var server_srg = read("conf/server.srg");
+        if (server_srg != null)
+            MappingsIO.ParseSrg(LocalMappings.Server, server_srg);
+
+        var client_rgs = read("conf/minecraft.rgs") ?? read(@"conf\minecraft.rgs");
+        if (client_rgs != null)
+            ParseRGS(LocalMappings.Client, client_rgs);
+        var server_rgs = read("conf/minecraft_server.rgs") ?? read(@"conf\minecraft_server.rgs");
+        if (server_rgs != null)
+            ParseRGS(LocalMappings.Server, server_rgs);
+
         ParseCSVs(
-            newids: read("conf/newids.csv"),
             classes: read("conf/classes.csv"),
             methods: read("conf/methods.csv"),
             fields: read("conf/fields.csv")
         );
     }
 
-    private void ParseSRG(ZipArchiveEntry srg, Mappings mappings)
+    private void ParseRGS(Mappings mappings, StreamReader reader)
     {
-        using var reader = new StreamReader(srg.Open());
-        while (!reader.EndOfStream)
-        {
-            var line = reader.ReadLine();
-            if (String.IsNullOrWhiteSpace(line) || line.StartsWith("#"))
-                continue;
-            var entries = line.Split(' ');
-            var type = entries[0];
-            if (type == "CL:")
-                mappings.AddClass(entries[1], entries[2]);
-            else if (type == "FD:")
-                mappings.AddField(entries[1], entries[2]);
-            else if (type == "MD:")
-                mappings.AddMethod(entries[1], entries[3], entries[2]);
-        }
-    }
-
-    private void ParseRGS(ZipArchiveEntry rgs, Mappings mappings)
-    {
-        using var reader = new StreamReader(rgs.Open());
-        var class_dict = new Dictionary<string, string>();
-        var field_set = new HashSet<string>();
-        var method_set = new HashSet<string>();
         while (!reader.EndOfStream)
         {
             var line = reader.ReadLine();
@@ -148,11 +126,19 @@ public class ClassicMCP : MCP
             if (name.StartsWith("com/jcraft") || name.StartsWith("paulscode"))
                 continue;
             if (type == ".class_map")
-                mappings.AddClass(name, entries[2]);
+                mappings.AddClass(name.Replace('/', '.'), entries[2].Replace('/', '.'));
+            if (type == ".class")
+                mappings.AddClass(name.Replace('/', '.'), name.Replace('/', '.'));
             else if (type == ".field_map")
-                mappings.AddField(name, entries[2]);
+            {
+                var (path, namepart) = MappingsIO.Split(name);
+                mappings.GetOrAddClass(path).AddField(namepart, entries[2]);
+            }
             else if (type == ".method_map")
-                mappings.AddMethod(name, entries[3], entries[2]);
+            {
+                var (path, namepart) = MappingsIO.Split(name);
+                mappings.GetOrAddClass(path).AddMethod(namepart, entries[3], entries[2]);
+            }
         }
     }
 }

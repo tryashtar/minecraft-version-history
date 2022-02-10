@@ -1,4 +1,5 @@
 using Microsoft.VisualBasic.FileIO;
+using MinecraftVersionHistory;
 
 namespace MCPModernizer;
 
@@ -11,11 +12,13 @@ public abstract class MCP
 
     public void WriteClientMappings(string path)
     {
-        WriteSRG(path, LocalMappings.Client);
+        using var writer = new StreamWriter(path);
+        MappingsIO.WriteTsrg(LocalMappings.Client, writer);
     }
     public void WriteServerMappings(string path)
     {
-        WriteSRG(path, LocalMappings.Server);
+        using var writer = new StreamWriter(path);
+        MappingsIO.WriteTsrg(LocalMappings.Server, writer);
     }
     public void WriteClientFriendlies(string fields, string methods)
     {
@@ -40,39 +43,8 @@ public abstract class MCP
         }
     }
 
-    private void WriteSRG(string path, Mappings mappings)
+    protected void ParseCSVs(StreamReader? classes, StreamReader? methods, StreamReader? fields)
     {
-        using var writer = new StreamWriter(path);
-        // export as TSRG format, which resembles proguard more than SRG
-        // each class lists its properties in turn instead of duplicating the class name for each
-        // also we don't need the deobfuscated method signature
-        foreach (var c in mappings.ClassList)
-        {
-            writer.WriteLine($"{Mappings.Split(c.OldName).name} {c.NewName}");
-            foreach (var f in c.FieldList)
-            {
-                writer.WriteLine($"\t{f.OldName} {f.NewName}");
-            }
-            foreach (var m in c.MethodList)
-            {
-                writer.WriteLine($"\t{m.OldName} {m.Signature} {m.NewName}");
-            }
-        }
-    }
-
-    protected void ParseCSVs(StreamReader? newids, StreamReader? classes, StreamReader? methods, StreamReader? fields)
-    {
-        if (newids != null)
-        {
-            var ids = ParseCSV(newids).ToList();
-            foreach (var item in ids.Skip(1))
-            {
-                if (item[0] != "*")
-                    FriendlyNames.Client.AddRename(item[0], item[2]);
-                if (item[1] != "*")
-                    FriendlyNames.Server.AddRename(item[1], item[2]);
-            }
-        }
         if (classes != null)
         {
             var class_list = ParseCSV(classes).ToList();
@@ -83,7 +55,7 @@ public abstract class MCP
                 {
                     // skip lines with no destination package (a few random ones that clearly aren't classes)
                     if (item[3] != "")
-                        AddToSide(item[4], LocalMappings, x => x.AddClass(item[3] + "/" + item[1], item[3] + "/" + item[0]));
+                        AddToSide(item[4], LocalMappings, x => x.AddClass(item[1], item[3].Replace('/', '.') + '.' + item[0]));
                 }
             }
         }
@@ -103,7 +75,7 @@ public abstract class MCP
                 // 3.0 - 5.6 style
                 foreach (var item in method_list.Skip(1))
                 {
-                    AddToSide(item[8], LocalMappings, x => x.AddMethod(item[7] + "/" + item[6] + "/" + item[2], item[0], item[4]));
+                    AddToSide(item[8], LocalMappings, x => x.GetOrAddClass(item[6].Replace('/', '.')).AddMethod(item[2], item[0], item[4]));
                     AddToSide(item[8], FriendlyNames, x => x.AddMethod(item[0], item[1]));
                 }
             }
@@ -111,7 +83,7 @@ public abstract class MCP
             {
                 // 2.0 - 2.12 style
                 // has some weird entries at the end we need to skip
-                foreach (var item in method_list.Skip(4).Where(x => x.Length >= 5))
+                foreach (var item in method_list.Skip(4).TakeWhile(x => x.Length >= 5))
                 {
                     if (item[1] != "*" && item[1] != "")
                         FriendlyNames.Client.AddMethod(item[1], item[4]);
@@ -141,7 +113,7 @@ public abstract class MCP
                 // 3.0 - 5.6 style
                 foreach (var item in field_list.Skip(1))
                 {
-                    AddToSide(item[8], LocalMappings, x => x.AddField(item[7] + "/" + item[6] + "/" + item[2], item[0]));
+                    AddToSide(item[8], LocalMappings, x => x.GetOrAddClass(item[6].Replace('/', '.')).AddField(item[2], item[0]));
                     AddToSide(item[8], FriendlyNames, x => x.AddField(item[0], item[1]));
                 }
             }

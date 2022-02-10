@@ -146,8 +146,8 @@ public static class Program
             {
                 string dir = Path.Combine(output, mcp.ClientVersion);
                 Directory.CreateDirectory(dir);
-                mcp.WriteServerMappings(Path.Combine(dir, "server.tsrg"));
                 mcp.WriteClientMappings(Path.Combine(dir, "client.tsrg"));
+                mcp.WriteServerMappings(Path.Combine(dir, "server.tsrg"));
                 mcp.WriteClientFriendlies(
                     Path.Combine(dir, "client_fields.csv"),
                     Path.Combine(dir, "client_methods.csv")

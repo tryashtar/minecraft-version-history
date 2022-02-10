@@ -9,15 +9,11 @@ public class JavaConfig : VersionConfig
     public readonly string ServerJarFolder;
     public readonly string AssetsFolder;
     public readonly string DecompilerArgs;
+    public readonly RetroMCP MCP;
     public readonly string CfrArgs;
     public readonly string FernflowerArgs;
     public readonly DateTime DataGenerators;
     public readonly DecompilerType? Decompiler;
-    private readonly Lazy<List<MCP>> MCPs;
-    private readonly Dictionary<string, string> MCPVersions;
-    private readonly List<string> MCPFolders;
-    private readonly List<string> MCPSRG;
-    private readonly List<string> MCPCSV;
     private readonly Dictionary<string, IJsonSorter> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
@@ -29,11 +25,10 @@ public class JavaConfig : VersionConfig
         SpecialSourcePath = Util.FilePath(folder, yaml["special source jar"]);
         ServerJarFolder = Util.FilePath(folder, yaml["server jars"]);
         AssetsFolder = Util.FilePath(folder, yaml["assets folder"]);
-        MCPVersions = yaml.Go("mcp", "classic", "versions").ToDictionary() ?? new();
-        MCPFolders = yaml.Go("mcp", "classic", "folders").ToList(x => Util.FilePath(folder, x)) ?? new();
-        MCPSRG = yaml.Go("mcp", "modern", "srg").ToList(x => Util.FilePath(folder, x)) ?? new();
-        MCPCSV = yaml.Go("mcp", "modern", "csv").ToList(x => Util.FilePath(folder, x)) ?? new();
-        MCPs = new(CreateMCPs);
+        string mcp = Util.FilePath(folder, yaml.Go("mcp", "merged"));
+        string ver = Util.FilePath(folder, yaml.Go("mcp", "matched"));
+        if (mcp != null && ver != null)
+            MCP = new RetroMCP(mcp, ver);
         Decompiler = ParseDecompiler((string)yaml["decompiler"]);
         DecompilerArgs = (string)yaml["decompiler args"];
         CfrArgs = (string)yaml["cfr args"];
@@ -44,19 +39,11 @@ public class JavaConfig : VersionConfig
         ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new();
     }
 
-    private List<MCP> CreateMCPs()
+    public Sided<Mappings> GetMCPMappings(JavaVersion version)
     {
-        var list = new List<MCP>();
-        foreach (var item in MCPFolders)
-        {
-            list.AddRange(Directory.GetFiles(item).Select(x => new ClassicMCP(x, MCPVersions)));
-        }
-        list.AddRange(ModernMCP.LoadFrom(MCPSRG, MCPCSV));
-        foreach (var item in list)
-        {
-            item.EnsureLoaded(); // load global mappings
-        }
-        return list;
+        if (MCP == null)
+            return null;
+        return MCP.CreateMappings(version.Name);
     }
 
     protected override VersionFacts CreateVersionFacts(YamlMappingNode yaml)
@@ -88,12 +75,6 @@ public class JavaConfig : VersionConfig
         Profiler.Stop();
         if (result.ExitCode != 0)
             throw new InvalidOperationException($"SpecialSource failed with exit code {result.ExitCode}: {result.Error}");
-    }
-
-    public MCP GetBestMCP(JavaVersion version)
-    {
-        var candidates = MCPs.Value.Where(x => x.AcceptsVersion(version));
-        return candidates.OrderBy(x => x, MCP.Sorter).LastOrDefault();
     }
 
     public void JsonSort(string folder, Version version)
