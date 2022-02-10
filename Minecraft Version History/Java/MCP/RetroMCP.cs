@@ -79,6 +79,8 @@ public class RetroMCP
 
     public Sided<Mappings> CreateMappings(string version)
     {
+        if (!Directory.Exists(Path.Combine(Folder, version)))
+            return null;
         var final = new Sided<Mappings>();
         var local = ParseTsrgs(version);
         var friendlies = ParseCSVs(version);
@@ -99,12 +101,18 @@ public class RetroMCP
                 if (matched_mcp != null)
                 {
                     matched_mojang = map(MatchedMojang).GetClass(matched_mcp.NewName);
+                    // should only be null if this is one-sided
+                    if (matched_mojang != null)
+                    {
 #if DEBUG
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"Mojang match! {c.NewName} -> {matched_mojang.NewName}");
-                    Console.ResetColor();
+                        //Console.ForegroundColor = ConsoleColor.Green;
+                        //Console.WriteLine($"Mojang match! {c.NewName} -> {matched_mojang.NewName}");
+                        //Console.ResetColor();
 #endif
-                    final_class = map(final).AddClass(c.OldName, matched_mojang.NewName);
+                        final_class = map(final).AddClass(c.OldName, matched_mojang.NewName);
+                    }
+                    else
+                        continue;
                 }
                 else
                 {
@@ -156,14 +164,18 @@ public class RetroMCP
                         var local_field = matched_mcp.GetField(f.NewName);
                         if (local_field != null)
                         {
-                            var mojang_field = matched_mojang.GetField(local_field.NewName);
-#if DEBUG
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"\tMojang match! {f.NewName} -> {mojang_field.NewName}");
-                            Console.ResetColor();
-#endif
                             found_field = true;
-                            final_class.AddField(f.OldName, mojang_field.NewName);
+                            var mojang_field = matched_mojang.GetField(local_field.NewName);
+                            // should only be null if this is one-sided
+                            if (mojang_field != null)
+                            {
+#if DEBUG
+                                ///Console.ForegroundColor = ConsoleColor.Green;
+                                ///Console.WriteLine($"\tMojang match! {f.NewName} -> {mojang_field.NewName}");
+                                ///Console.ResetColor();
+#endif
+                                final_class.AddField(f.OldName, mojang_field.NewName);
+                            }
                         }
                     }
                     if (!found_field)
@@ -202,7 +214,7 @@ public class RetroMCP
                         {
                             // nothing
                             Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"\tUnable to find a friendly name for {f.NewName}");
+                            Console.WriteLine($"\tUnable to find a friendly name for {c.NewName}.{f.NewName}");
                             Console.ResetColor();
                             final_class.AddField(f.OldName, f.NewName);
                         }
@@ -216,14 +228,18 @@ public class RetroMCP
                         var local_method = matched_mcp.GetMethod(m.NewName, m.Signature);
                         if (local_method != null)
                         {
-                            var mojang_method = matched_mojang.GetMethod(local_method.NewName, m.Signature);
-#if DEBUG
-                            Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine($"\tMojang match! {m.NewName} -> {mojang_method.NewName}");
-                            Console.ResetColor();
-#endif
                             found_method = true;
-                            final_class.AddMethod(m.OldName, mojang_method.NewName, m.Signature);
+                            var mojang_method = matched_mojang.GetMethod(local_method.NewName, m.Signature);
+                            // should only be null if this is one-sided
+                            if (mojang_method != null)
+                            {
+#if DEBUG
+                                //Console.ForegroundColor = ConsoleColor.Green;
+                                //Console.WriteLine($"\tMojang match! {m.NewName} -> {mojang_method.NewName}");
+                                //Console.ResetColor();
+#endif
+                                final_class.AddMethod(m.OldName, mojang_method.NewName, m.Signature);
+                            }
                         }
                     }
                     if (!found_method)
@@ -262,7 +278,7 @@ public class RetroMCP
                         {
                             // nothing
                             Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"\tUnable to find a friendly name for {m.NewName}");
+                            Console.WriteLine($"\tUnable to find a friendly name for {c.NewName}.{m.NewName}");
                             Console.ResetColor();
                             final_class.AddMethod(m.OldName, m.NewName, m.Signature);
                         }
