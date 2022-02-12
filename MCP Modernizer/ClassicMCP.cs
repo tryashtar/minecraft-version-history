@@ -108,11 +108,34 @@ public class ClassicMCP : MCP
         if (server_rgs != null)
             ParseRGS(LocalMappings.Server, server_rgs);
 
+        var newids = read("conf/newids.csv");
+        if (newids != null)
+            ParseNewIDs(newids);
+
         ParseCSVs(
             classes: read("conf/classes.csv"),
             methods: read("conf/methods.csv"),
             fields: read("conf/fields.csv")
         );
+    }
+
+    private void ParseNewIDs(StreamReader reader)
+    {
+        var ids = ParseCSV(reader).ToList();
+        static void add(FlatMap map, string from, string to)
+        {
+            if (from.StartsWith("field_"))
+                map.AddEquivalentFields(new[] { from, to });
+            else if (from.StartsWith("func_"))
+                map.AddEquivalentMethods(new[] { from, to });
+        }
+        foreach (var item in ids.Skip(1))
+        {
+            if (item[0] != "*")
+                add(FriendlyNames.Client, item[0], item[2]);
+            if (item[1] != "*")
+                add(FriendlyNames.Server, item[1], item[2]);
+        }
     }
 
     private void ParseRGS(Mappings mappings, StreamReader reader)

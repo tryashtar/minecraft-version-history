@@ -148,30 +148,4 @@ public static class MappingsIO
         };
         return new String('[', arrays) + identifier;
     }
-
-    public static void WriteCSVs(FlatMap names, StreamWriter fields, StreamWriter methods)
-    {
-        foreach (var item in names.FieldList)
-        {
-            fields.WriteLine(item.OldName + "," + item.NewName);
-        }
-        foreach (var item in names.MethodList)
-        {
-            methods.WriteLine(item.OldName + "," + item.NewName);
-        }
-    }
-
-    public static void ParseCSVs(FlatMap names, StreamReader fields, StreamReader methods)
-    {
-        while (!fields.EndOfStream)
-        {
-            var items = fields.ReadLine().Split(',');
-            names.AddField(items[0], items[1]);
-        }
-        while (!methods.EndOfStream)
-        {
-            var items = methods.ReadLine().Split(',');
-            names.AddMethod(items[0], items[1]);
-        }
-    }
 }

@@ -5,31 +5,29 @@ namespace MCPModernizer;
 
 public class ModernMCP : MCP
 {
-    public readonly string TsrgFile;
-    public readonly string CsvZip;
-
-    public ModernMCP(string mc_version, string tsrg_file, string csv_zip)
+    public ModernMCP(string mc_version, string tsrg_file, string[] csv_zips)
     {
         ClientVersion = mc_version;
-        TsrgFile = tsrg_file;
-        CsvZip = csv_zip;
 
-        using (var reader = File.OpenText(TsrgFile))
+        using (var reader = File.OpenText(tsrg_file))
             MappingsIO.ParseTsrg(LocalMappings.Client, reader);
-        using (var reader = File.OpenText(TsrgFile))
+        using (var reader = File.OpenText(tsrg_file))
             MappingsIO.ParseTsrg(LocalMappings.Server, reader);
-        using var zip = ZipFile.OpenRead(CsvZip);
-        StreamReader? read(string path)
+        foreach (var csv in csv_zips)
         {
-            var entry = zip.GetEntry(path);
-            if (entry == null)
-                return null;
-            return new(entry.Open());
+            using var zip = ZipFile.OpenRead(csv);
+            StreamReader? read(string path)
+            {
+                var entry = zip.GetEntry(path);
+                if (entry == null)
+                    return null;
+                return new(entry.Open());
+            }
+            ParseCSVs(
+                classes: read("classes.csv"),
+                methods: read("methods.csv"),
+                fields: read("fields.csv")
+            );
         }
-        ParseCSVs(
-            classes: read("classes.csv"),
-            methods: read("methods.csv"),
-            fields: read("fields.csv")
-        );
     }
 }

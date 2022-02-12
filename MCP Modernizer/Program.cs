@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using MinecraftVersionHistory;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using TryashtarUtils.Utility;
 
@@ -39,6 +40,8 @@ public static class Program
             else if (parsing != null)
                 sorted[parsing.Value].Add(arg);
         }
+        var versioned_map = new VersionedRenames();
+        var global_map = new Sided<FlatMap>();
         var mcps = new Dictionary<string, MCP>();
         void add_mcp(MCP mcp)
         {
@@ -87,24 +90,31 @@ public static class Program
             {
                 foreach (var (json, folder) in jsons)
                 {
-                    (string type, string number)? choose(string? prefer, string? secondary)
+                    IEnumerable<(string type, string number)> choose()
                     {
-                        if (prefer == null)
-                            return null;
                         if (!(json.TryGetValue(series, out var r) && r is JObject results))
-                            return null;
-                        if (!(results.TryGetValue(prefer, out var l) && l is JArray list))
-                            return null;
-                        if (list.Count == 0)
-                            return choose(secondary, null);
-                        return (prefer, list[0].ToString());
+                            yield break;
+                        if (results.TryGetValue("snapshot", out var n) && n is JArray snapshot)
+                        {
+                            foreach (var item in snapshot.Select(x => ("snapshot", x.ToString())).Reverse())
+                            {
+                                yield return item;
+                            }
+                        }
+                        if (results.TryGetValue("stable", out var t) && t is JArray stable)
+                        {
+                            foreach (var item in stable.Select(x => ("stable", x.ToString())).Reverse())
+                            {
+                                yield return item;
+                            }
+                        }
                     }
 
-                    var choice = choose(type, type == "stable" ? "snapshot" : "stable");
-                    if (choice != null)
+                    var choices = choose();
+                    if (choices.Any())
                     {
-                        var csvs = Path.Combine(folder, $"mcp_{choice.Value.type}", $"{choice.Value.number}-{series}", $"mcp_{choice.Value.type}-{choice.Value.number}-{series}.zip");
-                        var mcp = new ModernMCP(version, tsrg, csvs);
+                        var csvs = choices.Select(x => Path.Combine(folder, $"mcp_{x.type}", $"{x.number}-{series}", $"mcp_{x.type}-{x.number}-{series}.zip"));
+                        var mcp = new ModernMCP(version, tsrg, csvs.ToArray());
                         Console.WriteLine($"Modern MCP for {mcp.ClientVersion}");
                         add_mcp(mcp);
                     }
@@ -148,15 +158,9 @@ public static class Program
                 Directory.CreateDirectory(dir);
                 mcp.WriteClientMappings(Path.Combine(dir, "client.tsrg"));
                 mcp.WriteServerMappings(Path.Combine(dir, "server.tsrg"));
-                mcp.WriteClientFriendlies(
-                    Path.Combine(dir, "client_fields.csv"),
-                    Path.Combine(dir, "client_methods.csv")
-                );
-                mcp.WriteServerFriendlies(
-                    Path.Combine(dir, "server_fields.csv"),
-                    Path.Combine(dir, "server_methods.csv")
-                );
+                versioned_map.Add(new VersionSpec(mcp.ClientVersion), mcp.FriendlyNames);
             }
+            versioned_map.WriteTo(Path.Combine(output, "mappings.yaml"));
         }
     }
 }

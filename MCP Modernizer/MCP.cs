@@ -20,18 +20,6 @@ public abstract class MCP
         using var writer = new StreamWriter(path);
         MappingsIO.WriteTsrg(LocalMappings.Server, writer);
     }
-    public void WriteClientFriendlies(string fields, string methods)
-    {
-        using var fwriter = new StreamWriter(fields);
-        using var mwriter = new StreamWriter(methods);
-        MappingsIO.WriteCSVs(FriendlyNames.Client, fwriter, mwriter);
-    }
-    public void WriteServerFriendlies(string fields, string methods)
-    {
-        using var fwriter = new StreamWriter(fields);
-        using var mwriter = new StreamWriter(methods);
-        MappingsIO.WriteCSVs(FriendlyNames.Server, fwriter, mwriter);
-    }
 
     protected void ParseCSVs(StreamReader? classes, StreamReader? methods, StreamReader? fields)
     {
@@ -129,7 +117,7 @@ public abstract class MCP
             action(sided.Server);
     }
 
-    private IEnumerable<string[]> ParseCSV(StreamReader reader)
+    protected IEnumerable<string[]> ParseCSV(StreamReader reader)
     {
         var parser = new TextFieldParser(reader);
         parser.HasFieldsEnclosedInQuotes = true;
