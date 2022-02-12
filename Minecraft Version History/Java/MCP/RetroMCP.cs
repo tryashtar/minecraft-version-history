@@ -56,12 +56,12 @@ public class RetroMCP
         {
             foreach (var c in map(local).ClassList)
             {
-                var matched_mcp = map(MatchedMCP).GetClass(c.NewName);
+                var matched_mcp = map(MatchedMCP).GetClass(c.NewName, eq);
                 MappedClass matched_mojang()
                 {
                     if (matched_mcp == null)
                         return null;
-                    return map(MatchedMojang).GetClass(matched_mcp.NewName);
+                    return map(MatchedMojang).GetClass(matched_mcp.NewName, eq);
                 }
                 MappedClass mojang = matched_mojang();
                 static void WriteText(string text, ConsoleColor color)
@@ -95,10 +95,10 @@ public class RetroMCP
                 {
                     if (mojang == null)
                         return null;
-                    var mcp_field = matched_mcp.GetField(field.NewName);
+                    var mcp_field = matched_mcp.GetField(field.NewName, eq);
                     if (mcp_field == null)
                         return null;
-                    var matched_field = mojang.GetField(mcp_field.NewName);
+                    var matched_field = mojang.GetField(mcp_field.NewName, eq);
                     if (matched_field == null)
                         return null;
                     WriteText($"\tField {field.OldName}: Mojang Match -> {matched_field.NewName}", ConsoleColor.Green);
@@ -121,10 +121,10 @@ public class RetroMCP
                 {
                     if (mojang == null)
                         return null;
-                    var mcp_method = matched_mcp.GetMethod(method.NewName, method.Signature);
+                    var mcp_method = matched_mcp.GetMethod(method.NewName, method.Signature, eq);
                     if (mcp_method == null)
                         return null;
-                    var matched_method = mojang.GetMethod(mcp_method.NewName, method.Signature);
+                    var matched_method = mojang.GetMethod(mcp_method.NewName, method.Signature, eq);
                     if (matched_method == null)
                         return null;
                     WriteText($"\tMethod {method.OldName}: Mojang Match -> {matched_method.NewName}", ConsoleColor.Green);

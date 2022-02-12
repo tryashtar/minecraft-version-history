@@ -5,10 +5,13 @@ public class Mappings
     private readonly Dictionary<string, MappedClass> Classes = new();
     public IEnumerable<MappedClass> ClassList => Classes.Values;
 
-    public MappedClass GetClass(string from)
+    public MappedClass GetClass(string from, Equivalencies eq)
     {
-        if (Classes.TryGetValue(from, out var existing))
-            return existing;
+        foreach (var item in eq.GetEquivalentClasses(from))
+        {
+            if (Classes.TryGetValue(item, out var existing))
+                return existing;
+        }
         return null;
     }
 

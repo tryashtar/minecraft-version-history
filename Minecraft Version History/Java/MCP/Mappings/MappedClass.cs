@@ -49,17 +49,23 @@ public class MappedClass
         return field;
     }
 
-    public MappedMethod GetMethod(string from, string signature)
+    public MappedMethod GetMethod(string from, string signature, Equivalencies eq)
     {
-        if (Methods.TryGetValue((from, signature), out var existing))
-            return existing;
+        foreach (var item in eq.GetEquivalentMethods(from))
+        {
+            if (Methods.TryGetValue((item, signature), out var existing))
+                return existing;
+        }
         return null;
     }
 
-    public MappedField GetField(string from)
+    public MappedField GetField(string from, Equivalencies eq)
     {
-        if (Fields.TryGetValue(from, out var existing))
-            return existing;
+        foreach (var item in eq.GetEquivalentFields(from))
+        {
+            if (Fields.TryGetValue(item, out var existing))
+                return existing;
+        }
         return null;
     }
 }
