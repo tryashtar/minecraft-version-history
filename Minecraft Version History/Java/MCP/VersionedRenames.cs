@@ -3,53 +3,14 @@
 public class VersionedRenames
 {
     private readonly List<(VersionSpec spec, Sided<FlatMap> renames)> Renames;
-    public readonly Sided<Equivalencies> Equivalencies;
     public VersionedRenames(YamlMappingNode node)
     {
         Renames = ((YamlSequenceNode)node.Go("mappings")).OfType<YamlMappingNode>().Select(ParseNode).ToList();
-        Equivalencies = new();
-        foreach (var side in new[] { "client", "server", "joined" })
-        {
-            var classes = node.Go("equivalencies", side, "classes").NullableParse(x => ParseEquivalencies((YamlSequenceNode)x)) ?? new();
-            var fields = node.Go("equivalencies", side, "fields").NullableParse(x => ParseEquivalencies((YamlSequenceNode)x)) ?? new();
-            var methods = node.Go("equivalencies", side, "methods").NullableParse(x => ParseEquivalencies((YamlSequenceNode)x)) ?? new();
-            if (side == "client" || side == "joined")
-            {
-                foreach (var item in classes)
-                {
-                    Equivalencies.Client.AddClasses(item);
-                }
-                foreach (var item in fields)
-                {
-                    Equivalencies.Client.AddFields(item);
-                }
-                foreach (var item in methods)
-                {
-                    Equivalencies.Client.AddMethods(item);
-                }
-            }
-            if (side == "server" || side == "joined")
-            {
-                foreach (var item in classes)
-                {
-                    Equivalencies.Server.AddClasses(item);
-                }
-                foreach (var item in fields)
-                {
-                    Equivalencies.Server.AddFields(item);
-                }
-                foreach (var item in methods)
-                {
-                    Equivalencies.Server.AddMethods(item);
-                }
-            }
-        }
     }
 
     public VersionedRenames()
     {
         Renames = new();
-        Equivalencies = new();
     }
 
     private string GetSidedItem(string version, IEnumerable<string> equiv, Func<Sided<FlatMap>, string, string> getter)
@@ -66,45 +27,19 @@ public class VersionedRenames
         return null;
     }
 
-    public string GetClientClass(string version, string name)
+    public string GetClass(string version, string name, Equivalencies eq)
     {
-        return GetSidedItem(version, Equivalencies.Client.GetEquivalentClasses(name), (x, y) => x.Client.GetClass(y));
+        return GetSidedItem(version, eq.GetEquivalentClasses(name), (x, y) => x.Client.GetClass(y));
     }
 
-    public string GetServerClass(string version, string name)
+    public string GetMethod(string version, string name, Equivalencies eq)
     {
-        return GetSidedItem(version, Equivalencies.Server.GetEquivalentClasses(name), (x, y) => x.Server.GetClass(y));
+        return GetSidedItem(version, eq.GetEquivalentMethods(name), (x, y) => x.Client.GetMethod(y));
     }
 
-    public string GetClientMethod(string version, string name)
+    public string GetField(string version, string name, Equivalencies eq)
     {
-        return GetSidedItem(version, Equivalencies.Client.GetEquivalentMethods(name), (x, y) => x.Client.GetMethod(y));
-    }
-
-    public string GetServerMethod(string version, string name)
-    {
-        return GetSidedItem(version, Equivalencies.Server.GetEquivalentMethods(name), (x, y) => x.Server.GetMethod(y));
-    }
-
-    public string GetClientField(string version, string name)
-    {
-        return GetSidedItem(version, Equivalencies.Client.GetEquivalentFields(name), (x, y) => x.Client.GetField(y));
-    }
-
-    public string GetServerField(string version, string name)
-    {
-        return GetSidedItem(version, Equivalencies.Server.GetEquivalentFields(name), (x, y) => x.Server.GetField(y));
-    }
-
-    private List<HashSet<string>> ParseEquivalencies(YamlSequenceNode node)
-    {
-        var list = new List<HashSet<string>>();
-        foreach (YamlSequenceNode item in node)
-        {
-            var set = new HashSet<string>(item.Children.Select(x => x.String()));
-            list.Add(set);
-        }
-        return list;
+        return GetSidedItem(version, eq.GetEquivalentFields(name), (x, y) => x.Client.GetField(y));
     }
 
     public void Add(VersionSpec spec, Sided<FlatMap> renames)
@@ -144,36 +79,7 @@ public class VersionedRenames
         return (spec, renames);
     }
 
-    private (Equivalencies client, Equivalencies server, Equivalencies joined) Split(Sided<Equivalencies> sided)
-    {
-        var client = new Equivalencies();
-        var server = new Equivalencies();
-        var joined = new Equivalencies();
-        void send(Func<Equivalencies, IEnumerable<IEnumerable<string>>> getter, Action<Equivalencies, IEnumerable<string>> adder)
-        {
-            var client_items = getter(sided.Client).Select(x => x.ToHashSet()).ToList();
-            var server_items = getter(sided.Server).Select(x => x.ToHashSet()).ToList();
-            var comparer = HashSet<string>.CreateSetComparer();
-            foreach (var item in client_items.Intersect(server_items, comparer))
-            {
-                adder(joined, item);
-            }
-            foreach (var item in client_items.Except(server_items, comparer))
-            {
-                adder(server, item);
-            }
-            foreach (var item in server_items.Except(client_items, comparer))
-            {
-                adder(client, item);
-            }
-        }
-        send(x => x.Classes, (x, y) => x.AddClasses(y));
-        send(x => x.Methods, (x, y) => x.AddMethods(y));
-        send(x => x.Fields, (x, y) => x.AddFields(y));
-        return (client, server, joined);
-    }
-
-    private (FlatMap client, FlatMap server, FlatMap joined) Split(Sided<FlatMap> map)
+    private static (FlatMap client, FlatMap server, FlatMap joined) Split(Sided<FlatMap> map)
     {
         var client = new FlatMap();
         var server = new FlatMap();
@@ -201,7 +107,7 @@ public class VersionedRenames
         return (client, server, joined);
     }
 
-    private void AddIfPresent(YamlMappingNode node, string key, YamlNode value)
+    private static void AddIfPresent(YamlMappingNode node, string key, YamlNode value)
     {
         if (value is YamlScalarNode || (value is YamlSequenceNode seq && seq.Children.Count > 0) || (value is YamlMappingNode map && map.Children.Count > 0))
             node.Add(key, value);
@@ -230,14 +136,6 @@ public class VersionedRenames
             AddIfPresent(node, "mappings", mappings);
         }
         AddIfPresent(root, "mappings", list);
-        var equivs = new YamlMappingNode();
-        var (eclient, eserver, ejoined) = Split(Equivalencies);
-        var esides = new[] { ("client", eclient), ("server", eserver), ("joined", ejoined) };
-        foreach (var (name, eq) in esides)
-        {
-            AddIfPresent(equivs, name, SerializeEquivalencies(eq));
-        }
-        AddIfPresent(root, "equivalencies", equivs);
         YamlHelper.SaveToFile(root, file);
     }
 
@@ -270,45 +168,6 @@ public class VersionedRenames
         {
             node.Add(item.OldName, item.NewName);
         }
-        return node;
-    }
-
-    private YamlMappingNode SerializeEquivalencies(Equivalencies eq)
-    {
-        var node = new YamlMappingNode();
-        var classes = new YamlSequenceNode();
-        var methods = new YamlSequenceNode();
-        var fields = new YamlSequenceNode();
-        foreach (var item in eq.Classes)
-        {
-            var sub = new YamlSequenceNode();
-            foreach (var i in item)
-            {
-                sub.Add(i);
-            }
-            classes.Add(sub);
-        }
-        foreach (var item in eq.Methods)
-        {
-            var sub = new YamlSequenceNode();
-            foreach (var i in item)
-            {
-                sub.Add(i);
-            }
-            methods.Add(sub);
-        }
-        foreach (var item in eq.Fields)
-        {
-            var sub = new YamlSequenceNode();
-            foreach (var i in item)
-            {
-                sub.Add(i);
-            }
-            fields.Add(sub);
-        }
-        AddIfPresent(node, "classes", classes);
-        AddIfPresent(node, "methods", methods);
-        AddIfPresent(node, "fields", fields);
         return node;
     }
 }

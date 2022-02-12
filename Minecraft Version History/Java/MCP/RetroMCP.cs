@@ -5,8 +5,9 @@ public class RetroMCP
     public readonly string Folder;
     private readonly Sided<Mappings> MatchedMCP;
     private readonly Sided<Mappings> MatchedMojang;
-    private readonly VersionedRenames NormalRenames;
+    private readonly VersionedRenames FoundRenames;
     private readonly VersionedRenames CustomRenames;
+    private readonly Sided<Equivalencies> MergedEquivalencies;
     public RetroMCP(string folder, string matched_version)
     {
         Folder = folder;
@@ -17,8 +18,13 @@ public class RetroMCP
         using var server_file = File.OpenText(Path.Combine(Folder, "matched_server.txt"));
         MappingsIO.ParseProguard(MatchedMojang.Client, client_file);
         MappingsIO.ParseProguard(MatchedMojang.Server, server_file);
-        NormalRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "mappings.yaml")));
-        CustomRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "custom.yaml")));
+        FoundRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "mappings_found.yaml")));
+        CustomRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "mappings_custom.yaml")));
+        var found_equivs = Equivalencies.Parse((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "equivalencies_custom.yaml")));
+        var custom_equivs = Equivalencies.Parse((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "equivalencies_custom.yaml")));
+        var client_equivs = new Equivalencies(found_equivs.Client, custom_equivs.Client);
+        var server_equivs = new Equivalencies(found_equivs.Server, custom_equivs.Server);
+        MergedEquivalencies = new(client_equivs, server_equivs);
     }
 
     private Sided<Mappings> ParseTsrgs(string version)
@@ -40,15 +46,13 @@ public class RetroMCP
         var sides = new (
             Func<Sided<Mappings>, Mappings> map,
             Func<Sided<FlatMap>, FlatMap> flat,
-            Func<VersionedRenames, Func<string, string, string>> class_getter,
-            Func<VersionedRenames, Func<string, string, string>> method_getter,
-            Func<VersionedRenames, Func<string, string, string>> field_getter
+            Equivalencies eq
             )[]
         {
-            (x => x.Client, x => x.Client, x => x.GetClientClass,  x => x.GetClientMethod, x => x.GetClientField),
-             (x => x.Server, x => x.Server, x => x.GetServerClass, x => x.GetServerMethod, x => x.GetServerField)
+            (x => x.Client, x => x.Client, MergedEquivalencies.Client),
+            (x => x.Server, x => x.Server, MergedEquivalencies.Server)
         };
-        foreach (var (map, flat, class_getter, method_getter, field_getter) in sides)
+        foreach (var (map, flat, eq) in sides)
         {
             foreach (var c in map(local).ClassList)
             {
@@ -75,7 +79,7 @@ public class RetroMCP
                 }
                 MappedClass find_custom(VersionedRenames rename)
                 {
-                    string new_name = class_getter(rename)(version, c.NewName);
+                    string new_name = rename.GetClass(version, c.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"Class {c.OldName}: Rename Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);
@@ -86,7 +90,7 @@ public class RetroMCP
                     WriteText($"Class {c.OldName}: No Match -> {c.NewName}", ConsoleColor.Red);
                     return map(final).AddClass(c.OldName, c.NewName);
                 }
-                MappedClass final_class = find_mojang() ?? find_custom(CustomRenames) ?? find_custom(NormalRenames) ?? give_up();
+                MappedClass final_class = find_mojang() ?? find_custom(CustomRenames) ?? find_custom(FoundRenames) ?? give_up();
                 MappedField find_mojang_field(MappedField field)
                 {
                     if (mojang == null)
@@ -102,7 +106,7 @@ public class RetroMCP
                 }
                 MappedField find_custom_field(MappedField field, VersionedRenames rename)
                 {
-                    string new_name = field_getter(rename)(version, field.NewName);
+                    string new_name = rename.GetField(version, field.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"\tField {field.OldName}: Custom Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);
@@ -128,7 +132,7 @@ public class RetroMCP
                 }
                 MappedMethod find_custom_method(MappedMethod method, VersionedRenames rename)
                 {
-                    string new_name = method_getter(rename)(version, method.NewName);
+                    string new_name = rename.GetMethod(version, method.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"\tMethod {method.OldName}: Custom Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);
@@ -141,11 +145,11 @@ public class RetroMCP
                 }
                 foreach (var item in c.FieldList)
                 {
-                    MappedField final_field = find_mojang_field(item) ?? find_custom_field(item, CustomRenames) ?? find_custom_field(item, NormalRenames) ?? give_up_field(item);
+                    MappedField final_field = find_mojang_field(item) ?? find_custom_field(item, CustomRenames) ?? find_custom_field(item, FoundRenames) ?? give_up_field(item);
                 }
                 foreach (var item in c.MethodList)
                 {
-                    MappedMethod final_method = find_mojang_method(item) ?? find_custom_method(item, CustomRenames) ?? find_custom_method(item, NormalRenames) ?? give_up_method(item);
+                    MappedMethod final_method = find_mojang_method(item) ?? find_custom_method(item, CustomRenames) ?? find_custom_method(item, FoundRenames) ?? give_up_method(item);
                 }
             }
         }

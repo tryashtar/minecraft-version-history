@@ -156,6 +156,7 @@ public static class Program
         var field_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var method_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var latest = new Sided<FlatMap>();
+        var equivs = new Sided<Equivalencies>();
         static void add_to(Dictionary<(Rename, string), HashSet<string>> dict, IEnumerable<Rename> stuff, string side, string version)
         {
             foreach (var item in stuff)
@@ -204,16 +205,16 @@ public static class Program
                 foreach (var (from, to) in classic.NewIDs.Client)
                 {
                     if (from.StartsWith("field_"))
-                        versioned_map.Equivalencies.Client.AddFields(new[] { from, to });
+                        equivs.Client.AddFields(new[] { from, to });
                     else if (from.StartsWith("func_"))
-                        versioned_map.Equivalencies.Client.AddMethods(new[] { from, to });
+                        equivs.Client.AddMethods(new[] { from, to });
                 }
                 foreach (var (from, to) in classic.NewIDs.Server)
                 {
                     if (from.StartsWith("field_"))
-                        versioned_map.Equivalencies.Server.AddFields(new[] { from, to });
+                        equivs.Server.AddFields(new[] { from, to });
                     else if (from.StartsWith("func_"))
-                        versioned_map.Equivalencies.Server.AddMethods(new[] { from, to });
+                        equivs.Server.AddMethods(new[] { from, to });
                 }
             }
             foreach (var output in sorted[ArgType.Output])
@@ -248,7 +249,8 @@ public static class Program
         versioned_map.Add(VersionSpec.All, latest);
         foreach (var output in sorted[ArgType.Output])
         {
-            versioned_map.WriteTo(Path.Combine(output, "mappings.yaml"));
+            versioned_map.WriteTo(Path.Combine(output, "mappings_found.yaml"));
+            Equivalencies.WriteTo(equivs, Path.Combine(output, "equivalencies_found.yaml"));
         }
     }
     class HistoryComparer : IComparer<MCP>
