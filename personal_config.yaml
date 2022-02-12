@@ -227,8 +227,10 @@ bedrock:
       - vanilla_1.17.40
       - vanilla_1.18.0
       - vanilla_1.18.10
+      - vanilla_1.18.20
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
+      - experimental_wild_update
     resource:
       layers:
       - vanilla_base
@@ -248,9 +250,12 @@ bedrock:
       - vanilla_1.17.40
       - vanilla_1.18.0
       - vanilla_1.18.10
+      - vanilla_1.18.20
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
+      - experimental_wild_update
       merging:
+      - path: materials/entity.material
       - path: biomes_client.json
       - path: contents.json
       - path: splashes.json
@@ -294,8 +299,13 @@ bedrock:
       - 1.17.2023.0
       - 1.17.3020.0
       - 1.17.3021.0
-    parents: {}
+    parents:
+      1.18.102.0: 1.18.2.0
+      1.18.100.0: 1.18.1021.0
+      1.18.1023.0: 1.18.1022.0
+      1.18.2021.0: 1.18.1028.0
     releases:
       regex:
         ^(\d+\.\d+)\.\d\d?\.0$: $1
+        ^(\d+\.\d+\.\d)\d\d\.0$: $1
         ^(\d+\.\d+\.\d\d)\d\d?\d?\.0$: $1

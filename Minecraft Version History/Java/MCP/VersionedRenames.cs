@@ -65,42 +65,119 @@ public class VersionedRenames
         return (spec, renames);
     }
 
+    private (FlatMap client, FlatMap server, FlatMap joined) Split(Sided<FlatMap> map)
+    {
+        var client = new FlatMap();
+        var server = new FlatMap();
+        var joined = new FlatMap();
+        void send(Func<FlatMap, IEnumerable<Rename>> getter, Action<FlatMap, string, string> adder)
+        {
+            var client_items = getter(map.Client).ToHashSet();
+            var server_items = getter(map.Server).ToHashSet();
+            foreach (var item in client_items.Intersect(server_items))
+            {
+                adder(joined, item.OldName, item.NewName);
+            }
+            foreach (var item in client_items.Except(server_items))
+            {
+                adder(server, item.OldName, item.NewName);
+            }
+            foreach (var item in server_items.Except(client_items))
+            {
+                adder(client, item.OldName, item.NewName);
+            }
+        }
+        void send2(Func<FlatMap, IEnumerable<IEnumerable<string>>> getter, Action<FlatMap, IEnumerable<string>> adder)
+        {
+            var client_items = getter(map.Client).Select(x => x.ToHashSet()).ToList();
+            var server_items = getter(map.Server).Select(x => x.ToHashSet()).ToList();
+            var comparer = HashSet<string>.CreateSetComparer();
+            foreach (var item in client_items.Intersect(server_items, comparer))
+            {
+                adder(joined, item);
+            }
+            foreach (var item in client_items.Except(server_items, comparer))
+            {
+                adder(server, item);
+            }
+            foreach (var item in server_items.Except(client_items, comparer))
+            {
+                adder(client, item);
+            }
+        }
+        send(x => x.ClassMap, (x, y, z) => x.AddClass(y, z));
+        send(x => x.MethodMap, (x, y, z) => x.AddMethod(y, z));
+        send(x => x.FieldMap, (x, y, z) => x.AddField(y, z));
+        send2(x => x.ClassEquivalencies, (x, y) => x.AddEquivalentClasses(y));
+        send2(x => x.MethodEquivalencies, (x, y) => x.AddEquivalentMethods(y));
+        send2(x => x.FieldEquivalencies, (x, y) => x.AddEquivalentFields(y));
+        return (client, server, joined);
+    }
+
     public void WriteTo(string file)
     {
+        static void add_node(YamlMappingNode node, string key, YamlNode value)
+        {
+            if (value is YamlScalarNode || (value is YamlSequenceNode seq && seq.Children.Count > 0) || (value is YamlMappingNode map && map.Children.Count > 0))
+                node.Add(key, value);
+        }
         var root = new YamlSequenceNode();
         foreach (var (spec, renames) in Renames)
         {
             var node = new YamlMappingNode();
             node.Add("affects", spec.Serialize());
-            var mappings = new YamlMappingNode();
-            node.Add("mappings", mappings);
             root.Add(node);
-            var sides = new[] { ("client", renames.Client), ("server", renames.Server) };
+            var mappings = new YamlMappingNode();
+            var (client, server, joined) = Split(renames);
+            var sides = new[] { ("client", client), ("server", server), ("joined", joined) };
             foreach (var (name, map) in sides)
             {
                 var side_node = new YamlMappingNode();
-                node.Add(name, side_node);
                 var classes = new YamlMappingNode();
                 var fields = new YamlMappingNode();
                 var methods = new YamlMappingNode();
-                side_node.Add("classes", classes);
-                side_node.Add("fields", fields);
-                side_node.Add("methods", methods);
-                classes.Add("equivalencies", SerializeEquivalencies(map.ClassEquivalencies));
-                fields.Add("equivalencies", SerializeEquivalencies(map.FieldEquivalencies));
-                methods.Add("equivalencies", SerializeEquivalencies(map.MethodEquivalencies));
-                classes.Add("mappings", SerializeMappings(map.ClassMap));
-                fields.Add("mappings", SerializeMappings(map.FieldMap));
-                methods.Add("mappings", SerializeMappings(map.MethodMap));
+                add_node(classes, "equivalencies", SerializeEquivalencies(map.ClassEquivalencies));
+                add_node(fields, "equivalencies", SerializeEquivalencies(map.FieldEquivalencies));
+                add_node(methods, "equivalencies", SerializeEquivalencies(map.MethodEquivalencies));
+                add_node(classes, "mappings", SerializeMappings(map.ClassMap));
+                add_node(fields, "mappings", SerializeMappings(map.FieldMap));
+                add_node(methods, "mappings", SerializeMappings(map.MethodMap));
+                add_node(side_node, "classes", classes);
+                add_node(side_node, "fields", fields);
+                add_node(side_node, "methods", methods);
+                add_node(mappings, name, side_node);
             }
+            add_node(node, "mappings", mappings);
         }
         YamlHelper.SaveToFile(root, file);
+    }
+
+    private class RenameSorter : IComparer<string>
+    {
+        public int Compare(string x, string y)
+        {
+            string[] x_scores = x.Split('_');
+            string[] y_scores = y.Split('_');
+            for (int i = 0; i < Math.Min(x_scores.Length, y_scores.Length); i++)
+            {
+                if (int.TryParse(x_scores[i], out int xi) && int.TryParse(y_scores[i], out int yi))
+                {
+                    int compare = xi.CompareTo(yi);
+                    if (compare != 0)
+                        return compare;
+                }
+                int compare_str = x_scores[i].CompareTo(y_scores[i]);
+                if (compare_str != 0)
+                    return compare_str;
+            }
+            return x_scores.Length.CompareTo(y_scores.Length);
+        }
     }
 
     private YamlMappingNode SerializeMappings(IEnumerable<Rename> renames)
     {
         var node = new YamlMappingNode();
-        foreach (var item in renames)
+        foreach (var item in renames.OrderBy(x => x.OldName, new RenameSorter()))
         {
             node.Add(item.OldName, item.NewName);
         }
@@ -132,6 +209,18 @@ public class VersionSpec
     {
         Accepted.Add(version);
     }
+
+    public VersionSpec(IEnumerable<string> versions)
+    {
+        Accepted.AddRange(versions);
+    }
+
+    private VersionSpec(bool all)
+    {
+        AllVersions = all;
+    }
+
+    public static VersionSpec All => new VersionSpec(true);
 
     public VersionSpec(YamlNode node)
     {
