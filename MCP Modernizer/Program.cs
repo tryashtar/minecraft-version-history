@@ -1,4 +1,4 @@
-﻿using MinecraftVersionHistory;
+using MinecraftVersionHistory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using TryashtarUtils.Utility;
@@ -165,27 +165,31 @@ public static class Program
                 dict[(item, side)].Add(version);
             }
         }
-        void add_equivs(IEnumerable<IEnumerable<string>> items, Action<Sided<FlatMap>, IEnumerable<string>> adder)
-        {
-            foreach (var e in items)
-            {
-                adder(equivs, e);
-            }
-        }
         foreach (var mcp in mcps.Values)
         {
-            add_to(class_renames, mcp.FriendlyNames.Client.GetAllClasses(), "client", mcp.ClientVersion);
-            add_to(class_renames, mcp.FriendlyNames.Server.GetAllClasses(), "server", mcp.ClientVersion);
-            add_to(field_renames, mcp.FriendlyNames.Client.GetAllFields(), "client", mcp.ClientVersion);
-            add_to(field_renames, mcp.FriendlyNames.Server.GetAllFields(), "server", mcp.ClientVersion);
-            add_to(method_renames, mcp.FriendlyNames.Client.GetAllMethods(), "client", mcp.ClientVersion);
-            add_to(method_renames, mcp.FriendlyNames.Server.GetAllMethods(), "server", mcp.ClientVersion);
-            add_equivs(mcp.FriendlyNames.Client.ClassEquivalencies, (x, y) => x.Client.AddEquivalentClasses(y));
-            add_equivs(mcp.FriendlyNames.Server.ClassEquivalencies, (x, y) => x.Server.AddEquivalentClasses(y));
-            add_equivs(mcp.FriendlyNames.Client.FieldEquivalencies, (x, y) => x.Client.AddEquivalentFields(y));
-            add_equivs(mcp.FriendlyNames.Server.FieldEquivalencies, (x, y) => x.Server.AddEquivalentFields(y));
-            add_equivs(mcp.FriendlyNames.Client.MethodEquivalencies, (x, y) => x.Client.AddEquivalentMethods(y));
-            add_equivs(mcp.FriendlyNames.Server.MethodEquivalencies, (x, y) => x.Server.AddEquivalentMethods(y));
+            add_to(class_renames, mcp.FriendlyNames.Client.ClassMap, "client", mcp.ClientVersion);
+            add_to(class_renames, mcp.FriendlyNames.Server.ClassMap, "server", mcp.ClientVersion);
+            add_to(field_renames, mcp.FriendlyNames.Client.FieldMap, "client", mcp.ClientVersion);
+            add_to(field_renames, mcp.FriendlyNames.Server.FieldMap, "server", mcp.ClientVersion);
+            add_to(method_renames, mcp.FriendlyNames.Client.MethodMap, "client", mcp.ClientVersion);
+            add_to(method_renames, mcp.FriendlyNames.Server.MethodMap, "server", mcp.ClientVersion);
+            if (mcp is ClassicMCP classic)
+            {
+                foreach (var (from, to) in classic.NewIDs.Client)
+                {
+                    if (from.StartsWith("field_"))
+                        versioned_map.Equivalencies.Client.AddFields(new[] { from, to });
+                    else if (from.StartsWith("func_"))
+                        versioned_map.Equivalencies.Client.AddMethods(new[] { from, to });
+                }
+                foreach (var (from, to) in classic.NewIDs.Server)
+                {
+                    if (from.StartsWith("field_"))
+                        versioned_map.Equivalencies.Server.AddFields(new[] { from, to });
+                    else if (from.StartsWith("func_"))
+                        versioned_map.Equivalencies.Server.AddMethods(new[] { from, to });
+                }
+            }
             foreach (var output in sorted[ArgType.Output])
             {
                 string dir = Path.Combine(output, mcp.ClientVersion);

@@ -11,6 +11,7 @@ public class ClassicMCP : MCP
     public readonly int MajorVersion;
     public readonly int MinorVersion;
     public readonly string ExtraVersion;
+    public readonly Sided<Dictionary<string, string>> NewIDs = new();
     public string Version => $"{MajorVersion}.{MinorVersion}{ExtraVersion}";
     private static readonly Regex MCPVersionRegex = new(@"mcp(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
     private static readonly Regex RevengVersionRegex = new(@"revengpack(?<lead>\d)(?<digits>\d+)(?<extra>.*)");
@@ -122,19 +123,12 @@ public class ClassicMCP : MCP
     private void ParseNewIDs(StreamReader reader)
     {
         var ids = ParseCSV(reader).ToList();
-        static void add(FlatMap map, string from, string to)
-        {
-            if (from.StartsWith("field_"))
-                map.AddEquivalentFields(new[] { from, to });
-            else if (from.StartsWith("func_"))
-                map.AddEquivalentMethods(new[] { from, to });
-        }
         foreach (var item in ids.Skip(1))
         {
             if (item[0] != "*")
-                add(FriendlyNames.Client, item[0], item[2]);
+                NewIDs.Client.Add(item[0], item[2]);
             if (item[1] != "*")
-                add(FriendlyNames.Server, item[1], item[2]);
+                NewIDs.Server.Add(item[1], item[2]);
         }
     }
 

@@ -16,7 +16,7 @@ public class RetroMCP
         using var server_file = File.OpenText(Path.Combine(Folder, "matched_server.txt"));
         MappingsIO.ParseProguard(MatchedMojang.Client, client_file);
         MappingsIO.ParseProguard(MatchedMojang.Server, server_file);
-        CustomRenames = new((YamlSequenceNode)YamlHelper.ParseFile(Path.Combine(folder, "custom.yaml")));
+        CustomRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "custom.yaml")));
     }
 
     private Sided<Mappings> ParseTsrgs(string version)
