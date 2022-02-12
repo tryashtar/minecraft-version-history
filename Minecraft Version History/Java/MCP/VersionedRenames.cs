@@ -52,6 +52,50 @@ public class VersionedRenames
         Equivalencies = new();
     }
 
+    private string GetSidedItem(string version, IEnumerable<string> equiv, Func<Sided<FlatMap>, string, string> getter)
+    {
+        foreach (var (spec, renames) in Renames.Where(x => x.spec.AppliesTo(version)))
+        {
+            foreach (var item in equiv)
+            {
+                var result = getter(renames, item);
+                if (result != null)
+                    return result;
+            }
+        }
+        return null;
+    }
+
+    public string GetClientClass(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Client.GetEquivalentClasses(name), (x, y) => x.Client.GetClass(y));
+    }
+
+    public string GetServerClass(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Server.GetEquivalentClasses(name), (x, y) => x.Server.GetClass(y));
+    }
+
+    public string GetClientMethod(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Client.GetEquivalentMethods(name), (x, y) => x.Client.GetMethod(y));
+    }
+
+    public string GetServerMethod(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Server.GetEquivalentMethods(name), (x, y) => x.Server.GetMethod(y));
+    }
+
+    public string GetClientField(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Client.GetEquivalentFields(name), (x, y) => x.Client.GetField(y));
+    }
+
+    public string GetServerField(string version, string name)
+    {
+        return GetSidedItem(version, Equivalencies.Server.GetEquivalentFields(name), (x, y) => x.Server.GetField(y));
+    }
+
     private List<HashSet<string>> ParseEquivalencies(YamlSequenceNode node)
     {
         var list = new List<HashSet<string>>();

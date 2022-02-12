@@ -23,6 +23,26 @@ public class Equivalencies
         EquivalentMethods = methods.Select(x => new HashSet<string>(x)).ToList();
     }
 
+    private IEnumerable<string> GetEquivalencies(List<HashSet<string>> list, string name)
+    {
+        return (IEnumerable<string>)FindSet(list, name) ?? new[] { name };
+    }
+
+    public IEnumerable<string> GetEquivalentClasses(string name)
+    {
+        return GetEquivalencies(EquivalentClasses, name);
+    }
+
+    public IEnumerable<string> GetEquivalentMethods(string name)
+    {
+        return GetEquivalencies(EquivalentMethods, name);
+    }
+
+    public IEnumerable<string> GetEquivalentFields(string name)
+    {
+        return GetEquivalencies(EquivalentFields, name);
+    }
+
     public void AddClasses(IEnumerable<string> classes)
     {
         AddEquivalencies(EquivalentClasses, classes);

@@ -267,6 +267,9 @@ public class JavaVersion : Version
 
     private void CopyEntry(ZipArchiveEntry entry, ZipArchive destination)
     {
+        var existing = destination.GetEntry(entry.FullName);
+        if (existing != null && existing.Length != entry.Length)
+            Console.WriteLine($"Possibly replacing jar data {entry.FullName}");
         var file = destination.CreateEntry(entry.FullName);
         using var source = entry.Open();
         using var dest = file.Open();
