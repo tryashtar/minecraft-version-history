@@ -5,6 +5,7 @@ public class RetroMCP
     public readonly string Folder;
     private readonly Sided<Mappings> MatchedMCP;
     private readonly Sided<Mappings> MatchedMojang;
+    private readonly VersionedRenames NormalRenames;
     private readonly VersionedRenames CustomRenames;
     public RetroMCP(string folder, string matched_version)
     {
@@ -16,6 +17,7 @@ public class RetroMCP
         using var server_file = File.OpenText(Path.Combine(Folder, "matched_server.txt"));
         MappingsIO.ParseProguard(MatchedMojang.Client, client_file);
         MappingsIO.ParseProguard(MatchedMojang.Server, server_file);
+        NormalRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "mappings.yaml")));
         CustomRenames = new((YamlMappingNode)YamlHelper.ParseFile(Path.Combine(folder, "custom.yaml")));
     }
 

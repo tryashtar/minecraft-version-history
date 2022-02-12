@@ -12,9 +12,9 @@ enum ArgType
     ModernCSV,
     Output
 }
+// the most schizophrenic code you've ever seen in your life
 public static class Program
 {
-    // the most schizophrenic code you've ever seen in your life
     public static void Main(string[] args)
     {
         ArgType? parsing = null;
@@ -115,7 +115,7 @@ public static class Program
                     if (choices.Any())
                     {
                         var csvs = choices.Select(x => Path.Combine(folder, $"mcp_{x.type}", $"{x.number}-{series}", $"mcp_{x.type}-{x.number}-{series}.zip"));
-                        var mcp = new ModernMCP(version, tsrg, csvs.ToArray());
+                        var mcp = new ModernMCP(version, series, tsrg, csvs.ToArray());
                         Console.WriteLine($"Modern MCP for {mcp.ClientVersion}");
                         add_mcp(mcp);
                     }
@@ -155,7 +155,7 @@ public static class Program
         var class_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var field_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var method_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
-        var equivs = new Sided<FlatMap>();
+        var latest = new Sided<FlatMap>();
         static void add_to(Dictionary<(Rename, string), HashSet<string>> dict, IEnumerable<Rename> stuff, string side, string version)
         {
             foreach (var item in stuff)
@@ -165,14 +165,40 @@ public static class Program
                 dict[(item, side)].Add(version);
             }
         }
-        foreach (var mcp in mcps.Values)
+
+        foreach (var mcp in mcps.Values.OrderBy(x => x, new HistoryComparer()))
         {
+            Console.WriteLine(mcp.ClientVersion);
             add_to(class_renames, mcp.FriendlyNames.Client.ClassMap, "client", mcp.ClientVersion);
             add_to(class_renames, mcp.FriendlyNames.Server.ClassMap, "server", mcp.ClientVersion);
             add_to(field_renames, mcp.FriendlyNames.Client.FieldMap, "client", mcp.ClientVersion);
             add_to(field_renames, mcp.FriendlyNames.Server.FieldMap, "server", mcp.ClientVersion);
             add_to(method_renames, mcp.FriendlyNames.Client.MethodMap, "client", mcp.ClientVersion);
             add_to(method_renames, mcp.FriendlyNames.Server.MethodMap, "server", mcp.ClientVersion);
+            foreach (var item in mcp.FriendlyNames.Client.ClassMap)
+            {
+                latest.Client.AddClass(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp.FriendlyNames.Client.FieldMap)
+            {
+                latest.Client.AddField(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp.FriendlyNames.Client.MethodMap)
+            {
+                latest.Client.AddMethod(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp.FriendlyNames.Server.ClassMap)
+            {
+                latest.Server.AddClass(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp.FriendlyNames.Server.FieldMap)
+            {
+                latest.Server.AddField(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp.FriendlyNames.Server.MethodMap)
+            {
+                latest.Server.AddMethod(item.OldName, item.NewName);
+            }
             if (mcp is ClassicMCP classic)
             {
                 foreach (var (from, to) in classic.NewIDs.Client)
@@ -219,10 +245,99 @@ public static class Program
             versioned_map.Add(new(versions), map);
         }
 
-        versioned_map.Add(VersionSpec.All, equivs);
+        versioned_map.Add(VersionSpec.All, latest);
         foreach (var output in sorted[ArgType.Output])
         {
             versioned_map.WriteTo(Path.Combine(output, "mappings.yaml"));
+        }
+    }
+    class HistoryComparer : IComparer<MCP>
+    {
+        public int Compare(MCP? x, MCP? y)
+        {
+            int c = CompareSeries(GetSeries(x), GetSeries(y));
+            if (c != 0)
+                return c;
+            return CompareVersions(x, y);
+        }
+
+        private int CompareVersions(MCP x, MCP y)
+        {
+            if (x.ClientVersion.Contains("w") && y.ClientVersion.Contains("w"))
+                return CompareSnapshots(x.ClientVersion, y.ClientVersion);
+            if (x.ClientVersion.Contains("w"))
+                return -1;
+            if (y.ClientVersion.Contains("w"))
+                return 1;
+            return CompareSeries(x.ClientVersion, y.ClientVersion);
+        }
+
+        private int CompareSnapshots(string x, string y)
+        {
+            return x.CompareTo(y);
+        }
+
+        private int CompareSeries(string x, string y)
+        {
+            string[] xs = x.Split('.');
+            string[] ys = y.Split('.');
+            if (x.StartsWith("a"))
+            {
+                if (y.StartsWith("b") || !y.StartsWith("a"))
+                    return -1;
+            }
+            if (y.StartsWith("a"))
+            {
+                if (x.StartsWith("b") || !x.StartsWith("a"))
+                    return 1;
+            }
+            if (x.StartsWith("b"))
+            {
+                if (y.StartsWith("a"))
+                    return 1;
+                if (!y.StartsWith("b"))
+                    return -1;
+            }
+            if (y.StartsWith("b"))
+            {
+                if (x.StartsWith("a"))
+                    return -1;
+                if (!x.StartsWith("b"))
+                    return 1;
+            }
+            for (int i = 0; i < Math.Min(xs.Length, ys.Length); i++)
+            {
+
+                if (xs[i].Contains("-pre") && ys[i].Contains("-pre"))
+                {
+                    xs[i] = xs[i].Replace("-pre", "");
+                    ys[i] = ys[i].Replace("-pre", "");
+                }
+                if (int.TryParse(xs[i], out int xsi) && int.TryParse(ys[i], out int ysi))
+                {
+                    int ic = xsi.CompareTo(ysi);
+                    if (ic != 0)
+                        return ic;
+                }
+                int c = xs[i].CompareTo(ys[i]);
+                if (c != 0)
+                    return c;
+            }
+            int c2 = xs.Length.CompareTo(ys.Length);
+            return c2;
+        }
+
+        private string GetSeries(MCP m)
+        {
+            if (m.ClientVersion.StartsWith("12w"))
+                return "1.3";
+            if (m.ClientVersion.StartsWith("13w"))
+                return "1.5";
+            if (m is ClassicMCP c)
+                return c.ClientVersion;
+            else if (m is ModernMCP a)
+                return a.Series;
+            else throw new Exception();
         }
     }
 }

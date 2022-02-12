@@ -5,9 +5,11 @@ namespace MCPModernizer;
 
 public class ModernMCP : MCP
 {
-    public ModernMCP(string mc_version, string tsrg_file, string[] csv_zips)
+    public readonly string Series;
+    public ModernMCP(string mc_version, string series, string tsrg_file, string[] csv_zips)
     {
         ClientVersion = mc_version;
+        Series = series;
 
         using (var reader = File.OpenText(tsrg_file))
             MappingsIO.ParseTsrg(LocalMappings.Client, reader);
