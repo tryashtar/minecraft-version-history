@@ -26,20 +26,19 @@ public class Mappings
     {
         if (from == null || to == null)
             throw new NullReferenceException();
+        MappedClass newclass;
         if (Classes.TryGetValue(from, out var existing))
         {
 #if DEBUG
             if (to != existing.NewName)
-                Console.WriteLine($"Ignoring change of {from} from {existing.NewName} to {to}");
+                Console.WriteLine($"Changing {from} from {existing.NewName} to {to}");
 #endif
-            return existing;
+            newclass = existing.CopyWith(from, to);
         }
         else
-        {
-            var newclass = new MappedClass(from, to);
-            Classes.Add(from, newclass);
-            return newclass;
-        }
+            newclass = new MappedClass(from, to);
+        Classes[from] = newclass;
+        return newclass;
     }
 
     public Mappings Reversed()
@@ -58,23 +57,5 @@ public class Mappings
             }
         }
         return mappings;
-    }
-
-    public FlatMap Flattened()
-    {
-        var map = new FlatMap();
-        foreach (var c in Classes.Values)
-        {
-            map.AddClass(c.OldName, c.NewName);
-            foreach (var f in c.FieldList)
-            {
-                map.AddField(f.OldName, f.NewName);
-            }
-            foreach (var m in c.MethodList)
-            {
-                map.AddMethod(m.OldName, m.NewName);
-            }
-        }
-        return map;
     }
 }

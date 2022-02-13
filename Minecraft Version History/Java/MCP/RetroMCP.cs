@@ -46,13 +46,16 @@ public class RetroMCP
         var sides = new (
             Func<Sided<Mappings>, Mappings> map,
             Func<Sided<FlatMap>, FlatMap> flat,
-            Equivalencies eq
+            Equivalencies eq,
+            Func<VersionedRenames, Func<string, string, Equivalencies, string>> class_getter,
+            Func<VersionedRenames, Func<string, string, Equivalencies, string>> method_getter,
+            Func<VersionedRenames, Func<string, string, Equivalencies, string>> field_getter
             )[]
         {
-            (x => x.Client, x => x.Client, MergedEquivalencies.Client),
-            (x => x.Server, x => x.Server, MergedEquivalencies.Server)
+            (x => x.Client, x => x.Client, MergedEquivalencies.Client, x=>(a,b,c)=>x.GetClientClass(a,b,c), x=>(a,b,c)=>x.GetClientMethod(a,b,c), x=>(a,b,c)=>x.GetClientField(a,b,c)),
+            (x => x.Server, x => x.Server, MergedEquivalencies.Server, x=>(a,b,c)=>x.GetServerClass(a,b,c), x=>(a,b,c)=>x.GetServerMethod(a,b,c), x=>(a,b,c)=>x.GetServerField(a,b,c))
         };
-        foreach (var (map, flat, eq) in sides)
+        foreach (var (map, flat, eq, class_getter, method_getter, field_getter) in sides)
         {
             foreach (var c in map(local).ClassList)
             {
@@ -79,7 +82,7 @@ public class RetroMCP
                 }
                 MappedClass find_custom(VersionedRenames rename)
                 {
-                    string new_name = rename.GetClass(version, c.NewName, eq);
+                    string new_name = class_getter(rename)(version, c.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"Class {c.OldName}: Rename Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);
@@ -106,7 +109,7 @@ public class RetroMCP
                 }
                 MappedField find_custom_field(MappedField field, VersionedRenames rename)
                 {
-                    string new_name = rename.GetField(version, field.NewName, eq);
+                    string new_name = field_getter(rename)(version, field.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"\tField {field.OldName}: Custom Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);
@@ -132,7 +135,7 @@ public class RetroMCP
                 }
                 MappedMethod find_custom_method(MappedMethod method, VersionedRenames rename)
                 {
-                    string new_name = rename.GetMethod(version, method.NewName, eq);
+                    string new_name = method_getter(rename)(version, method.NewName, eq);
                     if (new_name == null)
                         return null;
                     WriteText($"\tMethod {method.OldName}: Custom Match -> {new_name}", rename == CustomRenames ? ConsoleColor.Cyan : ConsoleColor.Yellow);

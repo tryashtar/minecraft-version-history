@@ -49,15 +49,70 @@ public static class Program
             if (mcps.TryGetValue(mcp.ClientVersion, out var existing))
             {
                 if (MCP.Sorter.Compare(mcp, existing) > 0)
-                {
-                    mcps[mcp.ClientVersion] = mcp;
-                    Console.WriteLine($"Replacing MCP {existing} with {mcp} for version {mcp.ClientVersion}");
-                }
+                    MergeMCPs(mcps[mcp.ClientVersion], mcps[mcp.ClientVersion], mcp);
                 else
-                    Console.WriteLine($"Not replacing MCP {existing} with {mcp} for version {mcp.ClientVersion}");
+                    MergeMCPs(mcps[mcp.ClientVersion], mcp, mcps[mcp.ClientVersion]);
             }
             else
                 mcps[mcp.ClientVersion] = mcp;
+        }
+        static void MergeMCPs(MCP destination, MCP mcp1, MCP mcp2)
+        {
+            Merge2MCPs(destination, mcp1);
+            Merge2MCPs(destination, mcp2);
+        }
+        static void Merge2MCPs(MCP destination, MCP mcp1)
+        {
+            Console.WriteLine($"Merging {destination.ClientVersion} and {mcp1.ClientVersion}");
+            foreach (var item in mcp1.LocalMappings.Client.ClassList)
+            {
+                var cl = destination.LocalMappings.Client.AddClass(item.OldName, item.NewName);
+                foreach (var i in item.FieldList)
+                {
+                    cl.AddField(i.OldName, i.NewName);
+                }
+                foreach (var i in item.MethodList)
+                {
+                    cl.AddMethod(i.OldName, i.NewName, i.Signature);
+                }
+            }
+            foreach (var item in mcp1.LocalMappings.Server.ClassList)
+            {
+                var cl = destination.LocalMappings.Server.AddClass(item.OldName, item.NewName);
+                foreach (var i in item.FieldList)
+                {
+                    cl.AddField(i.OldName, i.NewName);
+                }
+                foreach (var i in item.MethodList)
+                {
+                    cl.AddMethod(i.OldName, i.NewName, i.Signature);
+                }
+            }
+            foreach (var item in mcp1.FriendlyNames.Client.ClassMap)
+            {
+                destination.FriendlyNames.Client.AddClass(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp1.FriendlyNames.Client.MethodMap)
+            {
+                destination.FriendlyNames.Client.AddMethod(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp1.FriendlyNames.Client.FieldMap)
+            {
+                destination.FriendlyNames.Client.AddField(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp1.FriendlyNames.Server.ClassMap)
+            {
+                destination.FriendlyNames.Server.AddClass(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp1.FriendlyNames.Server.MethodMap)
+            {
+                destination.FriendlyNames.Server.AddMethod(item.OldName, item.NewName);
+            }
+            foreach (var item in mcp1.FriendlyNames.Server.FieldMap)
+            {
+                destination.FriendlyNames.Server.AddField(item.OldName, item.NewName);
+            }
+            Console.WriteLine("Merge done");
         }
         foreach (var folder in sorted[ArgType.Classic])
         {

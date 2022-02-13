@@ -17,6 +17,20 @@ public class MappedClass
     public IEnumerable<MappedMethod> MethodList => Methods.Values;
     public IEnumerable<MappedField> FieldList => Fields.Values;
 
+    public MappedClass CopyWith(string oldname, string newname)
+    {
+        var copy = new MappedClass(oldname, newname);
+        foreach (var item in MethodList)
+        {
+            copy.AddMethod(item.OldName, item.NewName, item.Signature);
+        }
+        foreach (var item in FieldList)
+        {
+            copy.AddField(item.OldName, item.NewName);
+        }
+        return copy;
+    }
+
     public MappedMethod AddMethod(string from, string to, string signature)
     {
         if (from == null || to == null)

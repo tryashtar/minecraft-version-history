@@ -27,19 +27,34 @@ public class VersionedRenames
         return null;
     }
 
-    public string GetClass(string version, string name, Equivalencies eq)
+    public string GetClientClass(string version, string name, Equivalencies eq)
     {
         return GetSidedItem(version, eq.GetEquivalentClasses(name), (x, y) => x.Client.GetClass(y));
     }
 
-    public string GetMethod(string version, string name, Equivalencies eq)
+    public string GetServerClass(string version, string name, Equivalencies eq)
+    {
+        return GetSidedItem(version, eq.GetEquivalentClasses(name), (x, y) => x.Server.GetClass(y));
+    }
+
+    public string GetClientMethod(string version, string name, Equivalencies eq)
     {
         return GetSidedItem(version, eq.GetEquivalentMethods(name), (x, y) => x.Client.GetMethod(y));
     }
 
-    public string GetField(string version, string name, Equivalencies eq)
+    public string GetServerMethod(string version, string name, Equivalencies eq)
+    {
+        return GetSidedItem(version, eq.GetEquivalentMethods(name), (x, y) => x.Server.GetMethod(y));
+    }
+
+    public string GetClientField(string version, string name, Equivalencies eq)
     {
         return GetSidedItem(version, eq.GetEquivalentFields(name), (x, y) => x.Client.GetField(y));
+    }
+
+    public string GetServerField(string version, string name, Equivalencies eq)
+    {
+        return GetSidedItem(version, eq.GetEquivalentFields(name), (x, y) => x.Server.GetField(y));
     }
 
     public void Add(VersionSpec spec, Sided<FlatMap> renames)
