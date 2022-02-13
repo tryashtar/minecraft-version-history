@@ -109,11 +109,11 @@ public class VersionedRenames
             }
             foreach (var item in client_items.Except(server_items))
             {
-                adder(server, item.OldName, item.NewName);
+                adder(client, item.OldName, item.NewName);
             }
             foreach (var item in server_items.Except(client_items))
             {
-                adder(client, item.OldName, item.NewName);
+                adder(server, item.OldName, item.NewName);
             }
         }
         send(x => x.ClassMap, (x, y, z) => x.AddClass(y, z));

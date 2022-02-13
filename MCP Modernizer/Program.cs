@@ -49,7 +49,7 @@ public static class Program
             if (mcps.TryGetValue(mcp.ClientVersion, out var existing))
             {
                 if (MCP.Sorter.Compare(mcp, existing) > 0)
-                    MergeMCPs(mcps[mcp.ClientVersion], mcps[mcp.ClientVersion], mcp);
+                    Merge2MCPs(mcps[mcp.ClientVersion], mcp);
                 else
                     MergeMCPs(mcps[mcp.ClientVersion], mcp, mcps[mcp.ClientVersion]);
             }

@@ -126,11 +126,11 @@ public class Equivalencies
             }
             foreach (var item in client_items.Except(server_items, comparer))
             {
-                adder(server, item);
+                adder(client, item);
             }
             foreach (var item in server_items.Except(client_items, comparer))
             {
-                adder(client, item);
+                adder(server, item);
             }
         }
         send(x => x.Classes, (x, y) => x.AddClasses(y));
@@ -253,9 +253,6 @@ public class Equivalencies
         if (!items.Any())
             return;
         var set = FindOrCreateSet(list, items.First());
-        foreach (var item in items)
-        {
-            set.Add(item);
-        }
+        set.UnionWith(items);
     }
 }
