@@ -110,16 +110,19 @@ public class JavaVersion : Version
             Util.DownloadFile(side.MappingsURL, mappings_path);
         else
         {
-            var mcp = config.GetBestMCP(this);
+            var mcp = config.GetMCPMappings(this);
             if (mcp == null)
                 return null;
             Profiler.Start("Using MCP mappings");
-            if (side.Name == "server")
-                mcp.CreateServerMappings(mappings_path);
-            else if (side.Name == "client")
-                mcp.CreateClientMappings(mappings_path);
-            else
-                mcp = null;
+            using (var writer = new StreamWriter(mappings_path))
+            {
+                if (side.Name == "server")
+                    MappingsIO.WriteTsrg(mcp.Server, writer);
+                else if (side.Name == "client")
+                    MappingsIO.WriteTsrg(mcp.Client, writer);
+                else
+                    mcp = null;
+            }
             Profiler.Stop();
             if (mcp == null)
                 return null;

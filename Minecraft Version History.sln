@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30011.22
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Minecraft Version History", "Minecraft Version History\Minecraft Version History.csproj", "{72B2765F-9241-4D00-9D40-98E006FE9B92}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Nbt", "utils.nbt\TryashtarUtils.Nbt.csproj", "{39D5A421-C3CE-4D15-A782-EADC30ABE57E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Utility", "utils.utility\TryashtarUtils.Utility.csproj", "{8A7342FF-1239-495B-82C7-4ACAB00FE66F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCP Modernizer", "MCP Modernizer\MCP Modernizer.csproj", "{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{8A7342FF-1239-495B-82C7-4ACAB00FE66F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A7342FF-1239-495B-82C7-4ACAB00FE66F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A7342FF-1239-495B-82C7-4ACAB00FE66F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

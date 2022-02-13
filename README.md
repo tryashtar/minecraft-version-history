@@ -1,5 +1,5 @@
 ## Minecraft Version History
-I use this program to generate a git history that shows the changes to Minecraft with every release.
+I use this program to generate a git history that shows the changes to Minecraft with every release. As far as I know, only I use it, so the documentation isn't amazing. But if you want to use it, just ask and I'd be happy to help you set it up!
 
 <img src="https://i.imgur.com/lOSNnVi.png" width=300> <img src="https://i.imgur.com/UGVEbv9.png" width=200>
 

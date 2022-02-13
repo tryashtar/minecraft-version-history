@@ -94,7 +94,6 @@ public abstract class Updater
         VersionConfig.GitRepo.Init();
         if (Config.GitIgnoreContents != null)
             File.WriteAllText(Path.Combine(VersionConfig.GitRepo.Folder, ".gitignore"), Config.GitIgnoreContents);
-        VersionConfig.GitRepo.Commit("Initial commit");
         // create branch
         VersionConfig.GitRepo.CheckoutBranch(GetBranchName(version));
         Profiler.Stop();
