@@ -2,6 +2,7 @@ using MinecraftVersionHistory;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using TryashtarUtils.Utility;
+using YamlDotNet.RepresentationModel;
 
 namespace MCPModernizer;
 
@@ -64,51 +65,51 @@ public static class Program
         static void Merge2MCPs(MCP destination, MCP mcp1)
         {
             Console.WriteLine($"Merging {destination.ClientVersion} and {mcp1.ClientVersion}");
-            foreach (var item in mcp1.LocalMappings.Client.ClassList)
+            foreach (var item in mcp1.LocalMappings.Client.ClassList.ToList())
             {
                 var cl = destination.LocalMappings.Client.AddClass(item.OldName, item.NewName);
-                foreach (var i in item.FieldList)
+                foreach (var i in item.FieldList.ToList())
                 {
                     cl.AddField(i.OldName, i.NewName);
                 }
-                foreach (var i in item.MethodList)
+                foreach (var i in item.MethodList.ToList())
                 {
                     cl.AddMethod(i.OldName, i.NewName, i.Signature);
                 }
             }
-            foreach (var item in mcp1.LocalMappings.Server.ClassList)
+            foreach (var item in mcp1.LocalMappings.Server.ClassList.ToList())
             {
                 var cl = destination.LocalMappings.Server.AddClass(item.OldName, item.NewName);
-                foreach (var i in item.FieldList)
+                foreach (var i in item.FieldList.ToList())
                 {
                     cl.AddField(i.OldName, i.NewName);
                 }
-                foreach (var i in item.MethodList)
+                foreach (var i in item.MethodList.ToList())
                 {
                     cl.AddMethod(i.OldName, i.NewName, i.Signature);
                 }
             }
-            foreach (var item in mcp1.FriendlyNames.Client.ClassMap)
+            foreach (var item in mcp1.FriendlyNames.Client.ClassMap.ToList())
             {
                 destination.FriendlyNames.Client.AddClass(item.OldName, item.NewName);
             }
-            foreach (var item in mcp1.FriendlyNames.Client.MethodMap)
+            foreach (var item in mcp1.FriendlyNames.Client.MethodMap.ToList())
             {
                 destination.FriendlyNames.Client.AddMethod(item.OldName, item.NewName);
             }
-            foreach (var item in mcp1.FriendlyNames.Client.FieldMap)
+            foreach (var item in mcp1.FriendlyNames.Client.FieldMap.ToList())
             {
                 destination.FriendlyNames.Client.AddField(item.OldName, item.NewName);
             }
-            foreach (var item in mcp1.FriendlyNames.Server.ClassMap)
+            foreach (var item in mcp1.FriendlyNames.Server.ClassMap.ToList())
             {
                 destination.FriendlyNames.Server.AddClass(item.OldName, item.NewName);
             }
-            foreach (var item in mcp1.FriendlyNames.Server.MethodMap)
+            foreach (var item in mcp1.FriendlyNames.Server.MethodMap.ToList())
             {
                 destination.FriendlyNames.Server.AddMethod(item.OldName, item.NewName);
             }
-            foreach (var item in mcp1.FriendlyNames.Server.FieldMap)
+            foreach (var item in mcp1.FriendlyNames.Server.FieldMap.ToList())
             {
                 destination.FriendlyNames.Server.AddField(item.OldName, item.NewName);
             }
@@ -212,6 +213,7 @@ public static class Program
         var method_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var latest = new Sided<FlatMap>();
         var equivs = new Sided<Equivalencies>();
+        var not_found_report = new Dictionary<string, HashSet<string>>();
         static void add_to(Dictionary<(Rename, string), HashSet<string>> dict, IEnumerable<Rename> stuff, string side, string version)
         {
             foreach (var item in stuff)
@@ -306,6 +308,80 @@ public static class Program
         {
             versioned_map.WriteTo(Path.Combine(output, "mappings_found.yaml"));
             Equivalencies.WriteTo(equivs, Path.Combine(output, "equivalencies_found.yaml"));
+        }
+
+        foreach (var mcp in mcps.Values)
+        {
+            Console.WriteLine(mcp.ClientVersion);
+            foreach (var c in mcp.LocalMappings.Client.ClassList)
+            {
+                foreach (var m in c.MethodList)
+                {
+                    if (!m.NewName.StartsWith("func_"))
+                        continue;
+                    var match = versioned_map.GetClientMethod(mcp.ClientVersion, m.NewName, equivs.Client);
+                    if (match == null)
+                    {
+                        if (!not_found_report.ContainsKey(m.NewName))
+                            not_found_report[m.NewName] = new();
+                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                    }
+                }
+            }
+            foreach (var c in mcp.LocalMappings.Server.ClassList)
+            {
+                foreach (var m in c.MethodList)
+                {
+                    if (!m.NewName.StartsWith("func_"))
+                        continue;
+                    var match = versioned_map.GetServerMethod(mcp.ClientVersion, m.NewName, equivs.Server);
+                    if (match == null)
+                    {
+                        if (!not_found_report.ContainsKey(m.NewName))
+                            not_found_report[m.NewName] = new();
+                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                    }
+                }
+            }
+            foreach (var c in mcp.LocalMappings.Client.ClassList)
+            {
+                foreach (var m in c.FieldList)
+                {
+                    if (!m.NewName.StartsWith("field_"))
+                        continue;
+                    var match = versioned_map.GetClientField(mcp.ClientVersion, m.NewName, equivs.Client);
+                    if (match == null)
+                    {
+                        if (!not_found_report.ContainsKey(m.NewName))
+                            not_found_report[m.NewName] = new();
+                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                    }
+                }
+            }
+            foreach (var c in mcp.LocalMappings.Server.ClassList)
+            {
+                foreach (var m in c.FieldList)
+                {
+                    if (!m.NewName.StartsWith("field_"))
+                        continue;
+                    var match = versioned_map.GetServerField(mcp.ClientVersion, m.NewName, equivs.Server);
+                    if (match == null)
+                    {
+                        if (!not_found_report.ContainsKey(m.NewName))
+                            not_found_report[m.NewName] = new();
+                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                    }
+                }
+            }
+        }
+        var nfp = new YamlMappingNode();
+        foreach (var pair in not_found_report.OrderBy(x => x.Value.Count).ThenBy(x => x.Key))
+        {
+            nfp.Add(pair.Key, new YamlSequenceNode(pair.Value.Select(x => new YamlScalarNode(x))));
+        }
+        foreach (var output in sorted[ArgType.Output])
+        {
+            YamlHelper.SaveToFile(nfp, Path.Combine(output, "missing.yaml"));
         }
     }
     class HistoryComparer : IComparer<MCP>
