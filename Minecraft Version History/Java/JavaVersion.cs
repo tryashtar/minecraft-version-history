@@ -75,7 +75,6 @@ public class JavaVersion : Version
             var destination = Path.Combine(folder, entry.FullName);
             entry.ExtractToFile(destination);
         }
-        config.JsonSort(folder, this);
         Profiler.Stop();
     }
 
@@ -112,6 +111,7 @@ public class JavaVersion : Version
             steps.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
 
         Task.WaitAll(steps.ToArray());
+        java_config.JsonSort(folder, this);
     }
 
     public record EndpointData(string Name, string JarPath, string MappingsURL);
