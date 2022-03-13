@@ -35,9 +35,9 @@ public class MergingSpec
         if (Path != null)
         {
             var split = Util.Split(path);
-            if (split.Length != Path.Length)
+            if (split.Length < Path.Length)
                 return false;
-            for (int i = 0; i < split.Length; i++)
+            for (int i = 0; i < Path.Length; i++)
             {
                 if (split[i] != Path[i])
                     return false;
@@ -57,7 +57,7 @@ public class MergingSpec
         {
             var current = JToken.Parse(File.ReadAllText(current_path));
             var newer = JToken.Parse(File.ReadAllText(newer_path));
-            Merge(current, newer);
+            TopLevelMerge(current, newer);
             File.WriteAllText(current_path, Util.ToMinecraftJson(current));
         }
         else if (Operation == MergeOperation.AppendLines)
@@ -68,12 +68,12 @@ public class MergingSpec
         }
     }
 
-    public void Merge(JToken current, JToken newer)
+    public void TopLevelMerge(JToken current, JToken newer)
     {
         if (current is JObject cj && newer is JObject nj)
             MergeObjects(cj, nj);
         else if (current is JArray ca && newer is JArray na)
-            MergeArrays(ca, na);
+            MergeTopArray(ca, na);
     }
 
     public void MergeObjects(JObject current, JObject newer)
@@ -85,15 +85,15 @@ public class MergingSpec
                 current[item.Key] = item.Value;
             else
             {
-                if (item.Value is JObject || item.Value is JArray)
-                    Merge(existing, item.Value);
+                if (existing is JObject j1 && item.Value is JObject j2)
+                    MergeObjects(j1, j2);
                 else
                     current[item.Key] = item.Value;
             }
         }
     }
 
-    public void MergeArrays(JArray current, JArray newer)
+    public void MergeTopArray(JArray current, JArray newer)
     {
         foreach (var sub in newer)
         {

@@ -15,7 +15,7 @@ java:
   # Minecraft builtin java, seems to work well
   java install:
   - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
-  - C:\Program Files (x86)\Common Files\Oracle\Java\javapath\java.exe
+  - C:\Program Files\Common Files\Oracle\Java\javapath\java.exe
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
@@ -72,6 +72,9 @@ java:
         operation: sort_keys
       - path: [structures]
         operation: sort_keys
+    reports/worldgen/minecraft/worldgen/configured_structure_feature:
+      path: [spawn_overrides]
+      operation: sort_keys
     jar/assets/minecraft/blockstates:
       after: 2020-03-04
       multi:
@@ -147,6 +150,7 @@ java:
       versions: []
     parents:
       1.18_experimental-snapshot-1: 1.17.1-pre1
+      1.19_deep_dark_experimental_snapshot-1: 1.18.1
     releases:
       regex:
         ^2\.0-blue$: April Fools 2013 (Blue)
@@ -162,6 +166,7 @@ java:
         ^1\.15_combat-6$: Combat Test 4
         ^1\.16_combat-\d$: Combat Test 5
         ^1\.18_experimental-snapshot-(\d+)$: 1.18
+        ^1\.19_deep_dark_experimental-snapshot-(\d+)$: 1.19
         ^rd-.+$: Pre-Classic
         ^c0\..+$: Classic
         ^in-.+$: Indev
@@ -228,9 +233,12 @@ bedrock:
       - vanilla_1.18.0
       - vanilla_1.18.10
       - vanilla_1.18.20
+      - vanilla_1.18.30
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
       - experimental_wild_update
+      merging:
+      - path: contents.json
     resource:
       layers:
       - vanilla_base
@@ -251,10 +259,13 @@ bedrock:
       - vanilla_1.18.0
       - vanilla_1.18.10
       - vanilla_1.18.20
+      - vanilla_1.18.30
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
       - experimental_wild_update
       merging:
+      - path: contents.json
+      - path: entity
       - path: materials/entity.material
       - path: biomes_client.json
       - path: contents.json
@@ -304,6 +315,7 @@ bedrock:
       1.18.100.0: 1.18.1021.0
       1.18.1023.0: 1.18.1022.0
       1.18.2021.0: 1.18.1028.0
+      1.18.3020.0: 1.18.2029.0
     releases:
       regex:
         ^(\d+\.\d+)\.\d\d?\.0$: $1

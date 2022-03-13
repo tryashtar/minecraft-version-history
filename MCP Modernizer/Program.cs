@@ -213,7 +213,7 @@ public static class Program
         var method_renames = new Dictionary<(Rename rename, string side), HashSet<string>>();
         var latest = new Sided<FlatMap>();
         var equivs = new Sided<Equivalencies>();
-        var not_found_report = new Dictionary<string, HashSet<string>>();
+        var not_found_report = new Dictionary<string, Dictionary<string, string>>();
         static void add_to(Dictionary<(Rename, string), HashSet<string>> dict, IEnumerable<Rename> stuff, string side, string version)
         {
             foreach (var item in stuff)
@@ -315,6 +315,13 @@ public static class Program
             Console.WriteLine(mcp.ClientVersion);
             foreach (var c in mcp.LocalMappings.Client.ClassList)
             {
+                var end_name = c.NewName.Split('.')[^1];
+                if (end_name.StartsWith("C_"))
+                {
+                    if (!not_found_report.ContainsKey(c.NewName))
+                        not_found_report[c.NewName] = new();
+                    not_found_report[c.NewName][mcp.ClientVersion] = c.NewName;
+                }
                 foreach (var m in c.MethodList)
                 {
                     if (!m.NewName.StartsWith("func_"))
@@ -324,12 +331,19 @@ public static class Program
                     {
                         if (!not_found_report.ContainsKey(m.NewName))
                             not_found_report[m.NewName] = new();
-                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                        not_found_report[m.NewName][mcp.ClientVersion] = c.NewName;
                     }
                 }
             }
             foreach (var c in mcp.LocalMappings.Server.ClassList)
             {
+                var end_name = c.NewName.Split('.')[^1];
+                if (end_name.StartsWith("C_"))
+                {
+                    if (!not_found_report.ContainsKey(c.NewName))
+                        not_found_report[c.NewName] = new();
+                    not_found_report[c.NewName][mcp.ClientVersion] = c.NewName;
+                }
                 foreach (var m in c.MethodList)
                 {
                     if (!m.NewName.StartsWith("func_"))
@@ -339,7 +353,7 @@ public static class Program
                     {
                         if (!not_found_report.ContainsKey(m.NewName))
                             not_found_report[m.NewName] = new();
-                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                        not_found_report[m.NewName][mcp.ClientVersion] = c.NewName;
                     }
                 }
             }
@@ -354,7 +368,7 @@ public static class Program
                     {
                         if (!not_found_report.ContainsKey(m.NewName))
                             not_found_report[m.NewName] = new();
-                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                        not_found_report[m.NewName][mcp.ClientVersion] = c.NewName;
                     }
                 }
             }
@@ -369,7 +383,7 @@ public static class Program
                     {
                         if (!not_found_report.ContainsKey(m.NewName))
                             not_found_report[m.NewName] = new();
-                        not_found_report[m.NewName].Add(mcp.ClientVersion);
+                        not_found_report[m.NewName][mcp.ClientVersion] = c.NewName;
                     }
                 }
             }
@@ -377,7 +391,13 @@ public static class Program
         var nfp = new YamlMappingNode();
         foreach (var pair in not_found_report.OrderBy(x => x.Value.Count).ThenBy(x => x.Key))
         {
-            nfp.Add(pair.Key, new YamlSequenceNode(pair.Value.Select(x => new YamlScalarNode(x))));
+            var v = new YamlMappingNode();
+            foreach (var pair2 in pair.Value)
+            {
+                v.Add(pair2.Key, pair2.Value);
+            }
+            if (!pair.Value.ContainsKey("1.14.4"))
+                nfp.Add(pair.Key, v);
         }
         foreach (var output in sorted[ArgType.Output])
         {
