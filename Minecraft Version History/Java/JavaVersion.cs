@@ -1,4 +1,6 @@
-﻿namespace MinecraftVersionHistory;
+﻿using System.Threading.Tasks;
+
+namespace MinecraftVersionHistory;
 
 public class JavaVersion : Version
 {
@@ -34,71 +36,82 @@ public class JavaVersion : Version
         return File.Exists(jsonpath) && File.Exists(jarpath);
     }
 
-    public override void ExtractData(string folder, AppConfig config)
+    private void RunDataGenerators(JavaConfig config, string folder)
     {
-        var java_config = config.Java;
+        string reports_path = Path.Combine(config.ServerJarFolder, "generated");
+        if (Directory.Exists(reports_path))
+            Directory.Delete(reports_path, true);
 
-        if (ReleaseTime > java_config.DataGenerators)
+        DownloadServerJar(config);
+        if (Server.JarPath is not null)
         {
-            string reports_path = Path.Combine(java_config.ServerJarFolder, "generated");
+            Profiler.Start("Fetching data reports");
+            string args1 = $"-cp \"{Server.JarPath}\" net.minecraft.data.Main --reports";
+            string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{Server.JarPath}\" --reports";
+            var result = CommandRunner.RunJavaCombos(
+                config.ServerJarFolder,
+                config.JavaInstallationPaths,
+                new[] { args1, args2 }
+            );
+            if (result.ExitCode != 0)
+                throw new ApplicationException("Failed to get data reports");
+            Directory.CreateDirectory(folder);
+            FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), folder);
             if (Directory.Exists(reports_path))
                 Directory.Delete(reports_path, true);
-
-            DownloadServerJar(java_config);
-            if (Server.JarPath is not null)
-            {
-                Profiler.Start("Fetching data reports");
-                string args1 = $"-cp \"{Server.JarPath}\" net.minecraft.data.Main --reports";
-                string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{Server.JarPath}\" --reports";
-                var result = CommandRunner.RunJavaCombos(
-                    java_config.ServerJarFolder,
-                    java_config.JavaInstallationPaths,
-                    new[] { args1, args2 }
-                );
-                if (result.ExitCode != 0)
-                    throw new ApplicationException("Failed to get data reports");
-                var outputfolder = Path.Combine(folder, "reports");
-                Directory.CreateDirectory(outputfolder);
-                FileSystem.CopyDirectory(Path.Combine(reports_path, "reports"), outputfolder);
-                if (Directory.Exists(reports_path))
-                    Directory.Delete(reports_path, true);
-                Profiler.Stop();
-            }
+            Profiler.Stop();
         }
-        DecompileMinecraft(java_config, Path.Combine(folder, "source"));
+    }
 
+    private void ExtractJar(JavaConfig config, string folder)
+    {
         Profiler.Start($"Extracting jar");
         using ZipArchive zip = ZipFile.OpenRead(Client.JarPath);
         foreach (var entry in zip.Entries)
         {
-            if (entry.FullName.EndsWith("/") || java_config.ExcludeJarEntry(entry.FullName))
+            if (entry.FullName.EndsWith("/") || config.ExcludeJarEntry(entry.FullName))
                 continue;
-            Directory.CreateDirectory(Path.Combine(folder, "jar", Path.GetDirectoryName(entry.FullName)));
-            var destination = Path.Combine(folder, "jar", entry.FullName);
+            Directory.CreateDirectory(Path.Combine(folder, Path.GetDirectoryName(entry.FullName)));
+            var destination = Path.Combine(folder, entry.FullName);
             entry.ExtractToFile(destination);
         }
-        java_config.JsonSort(folder, this);
+        config.JsonSort(folder, this);
         Profiler.Stop();
+    }
 
-        if (AssetsURL != null)
+    private void FetchAssets(JavaConfig config, string json_path, string folder)
+    {
+        Profiler.Start("Fetching assets");
+        var assets_file = Util.DownloadString(AssetsURL);
+        File.WriteAllText(json_path, assets_file);
+        var json = JObject.Parse(assets_file);
+        foreach ((string path, JToken data) in (JObject)json["objects"])
         {
-            Profiler.Start("Fetching assets");
-            var assets_file = Util.DownloadString(AssetsURL);
-            File.WriteAllText(Path.Combine(folder, "assets.json"), assets_file);
-            var json = JObject.Parse(assets_file);
-            foreach ((string path, JToken data) in (JObject)json["objects"])
-            {
-                var hash = (string)data["hash"];
-                var cached = Path.Combine(java_config.AssetsFolder, "objects", hash[0..2], hash);
-                var destination = Path.Combine(folder, "assets", path);
-                Directory.CreateDirectory(Path.GetDirectoryName(destination));
-                if (File.Exists(cached))
-                    File.Copy(cached, destination, true);
-                else
-                    Util.DownloadFile($"https://resources.download.minecraft.net/{hash[0..2]}/{hash}", destination);
-            }
-            Profiler.Stop();
+            var hash = (string)data["hash"];
+            var cached = Path.Combine(config.AssetsFolder, "objects", hash[0..2], hash);
+            var destination = Path.Combine(folder, path);
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            if (File.Exists(cached))
+                File.Copy(cached, destination, true);
+            else
+                Util.DownloadFile($"https://resources.download.minecraft.net/{hash[0..2]}/{hash}", destination);
         }
+        Profiler.Stop();
+    }
+
+    public override void ExtractData(string folder, AppConfig config)
+    {
+        var java_config = config.Java;
+        var steps = new List<Task>();
+
+        if (ReleaseTime > java_config.DataGenerators)
+            steps.Add(Task.Run(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
+        steps.Add(Task.Run(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
+        steps.Add(Task.Run(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
+        if (AssetsURL != null)
+            steps.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
+
+        Task.WaitAll(steps.ToArray());
     }
 
     public record EndpointData(string Name, string JarPath, string MappingsURL);
