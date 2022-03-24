@@ -23,6 +23,8 @@ public static class JsonSorterFactory
             var op = StringUtils.ParseUnderscoredEnum<SortOperation>((string)node["operation"]);
             if (op == SortOperation.SortKeys)
                 return new KeysJsonSorter(required, path);
+            else if (op == SortOperation.Sort)
+                return new ListJsonSorter(required, path);
             else if (op == SortOperation.SortBy)
             {
                 var sort = node.Go("by").String();
@@ -41,6 +43,7 @@ public static class JsonSorterFactory
 public enum SortOperation
 {
     SortKeys,
+    Sort,
     SortBy,
     Order
 }

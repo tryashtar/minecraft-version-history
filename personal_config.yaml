@@ -75,6 +75,16 @@ java:
     reports/worldgen/minecraft/worldgen/configured_structure_feature:
       path: [spawn_overrides]
       operation: sort_keys
+    reports/worldgen/minecraft/worldgen/structure:
+      path: [spawn_overrides]
+      operation: sort_keys
+    reports/worldgen/minecraft/worldgen/world_preset:
+      path: [dimensions]
+      operation: order
+      order: ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']
+    reports/worldgen/minecraft/worldgen/flat_level_generator_preset:
+      path: [settings, structure_overrides]
+      operation: sort
     jar/assets/minecraft/blockstates:
       after: 2020-03-04
       multi:
@@ -201,7 +211,8 @@ java:
       - {year: 2020, weeks: [45,51], release: 1.17}
       - {year: 2021, weeks: [3,36], release: 1.17}
       - {year: 2021, weeks: [37,44], release: 1.18}
-      - {year: 2022, weeks: [3,44], release: 1.18}
+      - {year: 2022, weeks: [3,10], release: 1.18}
+      - {year: 2022, weeks: [11,44], release: 1.19}
 
 bedrock:
   repo: D:\Minecraft\Bedrock Storage\History
