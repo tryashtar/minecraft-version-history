@@ -10,11 +10,7 @@ public abstract class PathedJsonSorter : BaseJsonSorter
 
     public override void Sort(JObject root)
     {
-        IEnumerable<JToken> selected = new[] { root };
-        foreach (var matcher in Path)
-        {
-            selected = matcher.Follow(selected);
-        }
+        var selected = NodeMatcher.FollowPath(Path, root);
         foreach (var item in selected)
         {
             SortSelected(item);

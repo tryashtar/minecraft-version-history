@@ -25,7 +25,54 @@ public abstract class NodeMatcher
         }
     }
 
+    public IEnumerable<JProperty> FollowProps(IEnumerable<JProperty> starts)
+    {
+        foreach (var start in starts)
+        {
+            foreach (var item in FollowProp(start))
+                yield return item;
+        }
+    }
+
     public abstract IEnumerable<JToken> Follow(JToken start);
+    public abstract IEnumerable<JProperty> FollowProp(JToken start);
+
+    public static IEnumerable<JToken> FollowPath(IEnumerable<NodeMatcher> path, JToken start)
+    {
+        IEnumerable<JToken> selected = new[] { start };
+        foreach (var matcher in path)
+        {
+            selected = matcher.Follow(selected);
+        }
+        return selected;
+    }
+
+    public static IEnumerable<JProperty> FollowPropPath(IEnumerable<NodeMatcher> path, JToken start)
+    {
+        IEnumerable<JProperty> selected = path.First().FollowProp(start);
+        foreach (var matcher in path.Skip(1))
+        {
+            selected = matcher.FollowProps(selected);
+        }
+        return selected;
+    }
+
+    public static JObject CreatePath(IEnumerable<NameNodeMatcher> path, JObject start)
+    {
+        foreach (var item in path)
+        {
+            JObject next;
+            if (start.TryGetValue(item.Name, out var existing))
+                next = (JObject)existing;
+            else
+            {
+                next = new JObject();
+                start.Add(item.Name, next);
+            }
+            start = next;
+        }
+        return start;
+    }
 }
 
 public class NameNodeMatcher : NodeMatcher
@@ -36,10 +83,16 @@ public class NameNodeMatcher : NodeMatcher
         Name = name;
     }
 
-    public override IEnumerable<JToken> Follow(JToken start)
+    public override IEnumerable<JToken> Follow(JToken start) => FollowProp(start).Select(x => x.Value);
+
+    public override IEnumerable<JProperty> FollowProp(JToken start)
     {
-        if (start is JObject obj && obj.TryGetValue(Name, out var result))
-            yield return result;
+        if (start is JObject obj)
+        {
+            var prop = obj.Property(Name);
+            if (prop != null)
+                yield return prop;
+        }
     }
 }
 
@@ -51,14 +104,16 @@ public class RegexNodeMatcher : NodeMatcher
         Regex = regex;
     }
 
-    public override IEnumerable<JToken> Follow(JToken start)
+    public override IEnumerable<JToken> Follow(JToken start) => FollowProp(start).Select(x => x.Value);
+
+    public override IEnumerable<JProperty> FollowProp(JToken start)
     {
         if (start is JObject obj)
         {
-            foreach (var (name, child) in obj)
+            foreach (var prop in obj.Properties())
             {
-                if (Regex.IsMatch(name))
-                    yield return child;
+                if (Regex.IsMatch(prop.Name))
+                    yield return prop;
             }
         }
     }
@@ -82,6 +137,11 @@ public class TemplateNodeMatcher : NodeMatcher
                     yield return obj;
             }
         }
+    }
+
+    public override IEnumerable<JProperty> FollowProp(JToken start)
+    {
+        yield break;
     }
 
     private bool Matches(JObject obj)

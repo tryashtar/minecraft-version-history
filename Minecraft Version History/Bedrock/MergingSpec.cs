@@ -6,6 +6,7 @@ public class MergingSpec
     private readonly string[] Path;
     private readonly List<string> OverwriteKeys;
     public readonly MergeOperation Operation;
+    public readonly KeyMover KeyMover;
     public MergingSpec(YamlMappingNode node)
     {
         var path_node = node.TryGet("path");
@@ -28,6 +29,7 @@ public class MergingSpec
             Operation = MergeOperation.MergeJson;
         else
             Operation = ParseMergeOperation((string)operation_node);
+        KeyMover = node.Go("move_keys").NullableParse(x => new KeyMover((YamlMappingNode)x));
     }
 
     public bool Matches(string path)
@@ -55,16 +57,27 @@ public class MergingSpec
     {
         if (Operation == MergeOperation.MergeJson)
         {
-            var current = JToken.Parse(File.ReadAllText(current_path));
             var newer = JToken.Parse(File.ReadAllText(newer_path));
-            TopLevelMerge(current, newer);
-            File.WriteAllText(current_path, Util.ToMinecraftJson(current));
+            if (KeyMover != null && newer is JObject obj)
+                KeyMover.MoveKeys(obj);
+            JToken result = newer;
+            if (File.Exists(current_path))
+            {
+                result = JToken.Parse(File.ReadAllText(current_path));
+                TopLevelMerge(result, newer);
+            }
+            File.WriteAllText(current_path, Util.ToMinecraftJson(result));
         }
         else if (Operation == MergeOperation.AppendLines)
         {
-            using Stream input = File.OpenRead(newer_path);
-            using Stream output = new FileStream(current_path, FileMode.Append, FileAccess.Write, FileShare.None);
-            input.CopyTo(output);
+            if (File.Exists(current_path))
+            {
+                using Stream input = File.OpenRead(newer_path);
+                using Stream output = new FileStream(current_path, FileMode.Append, FileAccess.Write, FileShare.None);
+                input.CopyTo(output);
+            }
+            else
+                File.Copy(newer_path, current_path);
         }
     }
 

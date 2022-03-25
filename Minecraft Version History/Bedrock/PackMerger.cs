@@ -27,7 +27,8 @@ public class PackMerger
                 var relative = Path.GetRelativePath(pack, file);
                 var dest = Path.Combine(output_folder, relative);
                 var specs = MergingSpecs.Where(x => x.Matches(relative));
-                if (specs.Any() && File.Exists(dest))
+                Directory.CreateDirectory(Path.GetDirectoryName(dest));
+                if (specs.Any())
                 {
                     foreach (var spec in specs)
                     {

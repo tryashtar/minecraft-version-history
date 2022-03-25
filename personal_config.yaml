@@ -283,18 +283,10 @@ bedrock:
       - path: splashes.json
       - path: textures/textures_list.json
       - path: textures/flipbook_textures.json
-      - path: blocks.json
-        overwrite: [format_version]
-      - path: sounds.json
-        overwrite: [volume, pitch]
-      - path: textures/item_texture.json
-        overwrite: [textures]
-      - path: textures/terrain_texture.json
-        overwrite: [textures]
       - path: sounds/sound_definitions.json
-        overwrite: [volume, pitch, sounds]
-      - path: sounds/music_definitions.json
-        overwrite: [volume, pitch]
+        move_keys:
+          from: ['@(?!^format_version$)(?!^sound_definitions$)(^.*$)']
+          to: ['sound_definitions']
       - extension: lang
         operation: append_lines
   version facts:
