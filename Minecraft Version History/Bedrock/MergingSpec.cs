@@ -28,7 +28,7 @@ public class MergingSpec
         if (operation_node == null)
             Operation = MergeOperation.MergeJson;
         else
-            Operation = ParseMergeOperation((string)operation_node);
+            Operation = StringUtils.ParseUnderscoredEnum<MergeOperation>((string)operation_node);
         KeyMover = node.Go("move_keys").NullableParse(x => new KeyMover((YamlMappingNode)x));
     }
 
@@ -72,8 +72,9 @@ public class MergingSpec
         {
             if (File.Exists(current_path))
             {
-                using Stream input = File.OpenRead(newer_path);
-                using Stream output = new FileStream(current_path, FileMode.Append, FileAccess.Write, FileShare.None);
+                using var input = File.OpenRead(newer_path);
+                using var output = new FileStream(current_path, FileMode.Append, FileAccess.Write, FileShare.None);
+                output.Write(Encoding.UTF8.GetBytes(Environment.NewLine));
                 input.CopyTo(output);
             }
             else
@@ -112,15 +113,6 @@ public class MergingSpec
         {
             current.Add(sub);
         }
-    }
-
-    private static MergeOperation ParseMergeOperation(string str)
-    {
-        if (String.Equals(str, "append_lines", StringComparison.OrdinalIgnoreCase))
-            return MergeOperation.AppendLines;
-        else if (String.Equals(str, "merge_json", StringComparison.OrdinalIgnoreCase))
-            return MergeOperation.MergeJson;
-        throw new ArgumentException($"Unknown merge operation: {str}");
     }
 }
 

@@ -75,9 +75,6 @@ java:
     reports/worldgen/minecraft/worldgen/configured_structure_feature:
       path: [spawn_overrides]
       operation: sort_keys
-    reports/worldgen/minecraft/worldgen/structure:
-      path: [spawn_overrides]
-      operation: sort_keys
     reports/worldgen/minecraft/worldgen/world_preset:
       path: [dimensions]
       operation: order
@@ -85,6 +82,18 @@ java:
     reports/worldgen/minecraft/worldgen/flat_level_generator_preset:
       path: [settings, structure_overrides]
       operation: sort
+    reports/worldgen/minecraft/worldgen/structure:
+      multi:
+      - path: []
+        operation: order
+        order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
+      - path: [value]
+        operation: order
+        order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
+      - path: [spawn_overrides]
+        operation: sort_keys
+      - path: [value, spawn_overrides]
+        operation: sort_keys
     jar/assets/minecraft/blockstates:
       after: 2020-03-04
       multi:
