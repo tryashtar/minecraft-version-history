@@ -8,11 +8,12 @@ public class JavaVersion : Version
     public EndpointData Client { get; private set; }
     public readonly string AssetsURL;
     public readonly string ServerJarURL;
+    public readonly string LauncherJsonPath;
     public JavaVersion(string folder)
     {
         Name = Path.GetFileName(folder);
-        string jsonpath = Path.Combine(folder, Name + ".json");
-        var json = JObject.Parse(File.ReadAllText(jsonpath));
+        LauncherJsonPath = Path.Combine(folder, Name + ".json");
+        var json = JObject.Parse(File.ReadAllText(LauncherJsonPath));
         ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
         Client = new(
             "client",
@@ -111,6 +112,7 @@ public class JavaVersion : Version
             steps.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
 
         Task.WaitAll(steps.ToArray());
+        File.Copy(LauncherJsonPath, Path.Combine(folder, "launcher.json"));
         java_config.JsonSort(folder, this);
     }
 
