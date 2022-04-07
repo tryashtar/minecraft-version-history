@@ -170,6 +170,7 @@ java:
     parents:
       1.18_experimental-snapshot-1: 1.17.1-pre1
       1.19_deep_dark_experimental_snapshot-1: 1.18.1
+      22w13oneblockatatime: 1.18.2
     releases:
       regex:
         ^2\.0-blue$: April Fools 2013 (Blue)
@@ -179,6 +180,7 @@ java:
         ^1\.RV-Pre1$: April Fools 2016
         ^3D Shareware v1\.34$: April Fools 2019
         ^20w14infinite$: April Fools 2020
+        ^22w13oneblockatatime$: April Fools 2022
         ^1\.14_combat-212796$: Combat Test 1
         ^1\.14_combat-\d$: Combat Test 2
         ^1\.15_combat-1$: Combat Test 3
@@ -254,6 +256,7 @@ bedrock:
       - vanilla_1.18.10
       - vanilla_1.18.20
       - vanilla_1.18.30
+      - vanilla_1.19.0
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
       - experimental_wild_update
@@ -280,16 +283,21 @@ bedrock:
       - vanilla_1.18.10
       - vanilla_1.18.20
       - vanilla_1.18.30
+      - vanilla_1.19.0
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs
       - experimental_wild_update
       merging:
       - path: contents.json
-      - path: entity
-      - path: materials/entity.material
       - path: biomes_client.json
+      - path: blocks.json
+      - path: sounds.json
       - path: contents.json
       - path: splashes.json
+      - path: entity
+      - path: materials/entity.material
+      - path: textures/item_texture.json
+      - path: textures/terrain_texture.json
       - path: textures/textures_list.json
       - path: textures/flipbook_textures.json
       - path: sounds/sound_definitions.json
