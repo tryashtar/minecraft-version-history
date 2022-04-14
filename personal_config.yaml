@@ -62,7 +62,19 @@ java:
     jar/data/minecraft/advancements/nether/all_potions.json:
       path: [criteria, all_effects, conditions, effects]
       operation: sort_keys
+    jar/data/minecraft/advancements/husbandry/complete_catalogue.json:
+      after: 2022-04-05
+      multi:
+      - path: [criteria]
+        operation: sort_keys
+      - path: [requirements]
+        operation: sort_by
+        by: 0
     jar/data/minecraft/loot_tables/chests/shipwreck_supply.json:
+      path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
+      operation: sort_by
+      by: type
+    jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       operation: sort_by
       by: type

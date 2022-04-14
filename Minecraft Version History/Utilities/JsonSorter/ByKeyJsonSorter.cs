@@ -12,9 +12,18 @@ public class ByKeyJsonSorter : PathedJsonSorter
     {
         if (token is JArray arr)
         {
-            var sorted = arr.OrderBy(x => x[SortBy]).ToList();
+            var sorted = arr.OrderBy(GetChild).ToList();
             arr.Clear();
             foreach (var entry in sorted) arr.Add(entry);
         }
+    }
+
+    private JToken GetChild(JToken t)
+    {
+        if (t is JObject obj)
+            return obj[SortBy];
+        if (t is JArray arr)
+            return arr[int.Parse(SortBy)];
+        return null;
     }
 }
