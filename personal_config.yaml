@@ -58,112 +58,131 @@ java:
   json sorting:
     jar/data/minecraft/advancements/nether/all_effects.json:
       path: [criteria, all_effects, conditions, effects]
-      operation: sort_keys
     jar/data/minecraft/advancements/nether/all_potions.json:
       path: [criteria, all_effects, conditions, effects]
-      operation: sort_keys
-    jar/data/minecraft/advancements/husbandry/complete_catalogue.json:
-      after: 2022-04-05
-      multi:
-      - path: [criteria]
-        operation: sort_keys
-      - path: [requirements]
-        operation: sort_by
-        by: [0]
     jar/data/minecraft/loot_tables/chests/shipwreck_supply.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
-      operation: sort_by
       by: [type]
+      pick: value
     jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
-      operation: sort_by
       by: [type]
+      pick: value
     reports/worldgen/minecraft/worldgen/noise_settings:
       multi:
       - path: [structures, structures]
-        operation: sort_keys
       - path: [structures]
-        operation: sort_keys
     reports/worldgen/minecraft/worldgen/configured_structure_feature:
       path: [spawn_overrides]
-      operation: sort_keys
     reports/worldgen/minecraft/worldgen/world_preset:
       path: [dimensions]
-      operation: order
       order: ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']
     reports/worldgen/minecraft/worldgen/flat_level_generator_preset:
       path: [settings, structure_overrides]
-      operation: sort
     reports/worldgen/minecraft/worldgen/structure:
       multi:
       - path: []
-        operation: order
         order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
       - path: [value]
-        operation: order
         order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
       - path: [spawn_overrides]
-        operation: sort_keys
       - path: [value, spawn_overrides]
-        operation: sort_keys
+    # 14w06a added models to the jar
+    # 20w10a started to generate them with code
+    # 22w18a alphabetized them
+    jar/assets/minecraft/models:
+      require:
+        after: 2020-03-04
+        seems_generated: true
+      multi:
+      - path: [textures]
+      - path: [textures]
+        order: [texture, all, particle, top, bottom, side, end, up, down, north, south, east, west]
+    # 17w13a added advancements to the jar
+    # 17w43a moved them from assets to data
+    # 18w09a started to generated them with code
+    # 22w18a alphabetized them
     jar/data/minecraft/advancements:
-      after: 2022-05-04
       multi:
       - path: []
-        operation: order
         order: [parent, display, rewards, criteria, requirements]
       - path: [display]
-        operation: order
         order: [icon, title, description, frame, show_toast, announce_to_chat, hidden]
-      - path: [criteria, '@.*']
-        operation: order
+      - path: [criteria, '*']
         order: [trigger, conditions]
+      - path: [criteria]
+      - path: [criteria]
+        order: [has_the_recipe]
+        after: true
+      - path: [requirements, '*']
+      - path: [requirements, '*']
+        order: [has_the_recipe]
+        after: true
+      - path: [requirements]
+        by: [0]
+        pick: value
+      - path: [criteria, '*', conditions]
+        order: [signal_strength, projectile, start_position, distance, item, player, entity, lightning, bystander, location, parent, partner, child, block, num_bees_inside]
+      - up_path: [{"condition":"minecraft:entity_properties"}]
+        order: [condition, entity, predicate]
+      - up_path: [type_specific]
+        order: [type, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
+      - up_path: [type, damage]
+        order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
+      - up_path: [killing_blow]
+        order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
+      - up_path: [damage]
+        order: [dealt, taken, blocked, type, source_entity]
+      - up_path: [predicate]
+        order: [type, team, nbt, flags, distance, type_specific, passenger, vehicle, targeted_entity, equipment, effects, location, stepping_on]
+      - up_path: [location]
+        order: [position, smokey, biome, dimension, feature, block, fluid, light]
+    # 15w43a added loot tables to the jar
+    # 17w43a moved them from assets to data
+    # 18w43a started to generated them with code
+    # 22w18a alphabetized them
     jar/data/minecraft/loot_tables:
-      after: 2022-05-04
       multi:
       - path: []
-        operation: order
         order: [type, pools, functions]
-      - path: [{}, pools]
-        operation: order
+      - path: [pools, {}]
         order: [rolls, bonus_rolls, entries, conditions, functions]
       - up_path: [{}, conditions]
-        operation: order
-        order: [condition, name, inverse, term, terms, offsetX, offsetY, offsetZ, raining, thundering, chance, looting_multiplier, value, period, range, enchantment, block, properties, predicate, entity, scores, chances]
+        order: [condition, name, inverse, term, terms, offsetX, offsetY, offsetZ, raining, thundering, chance, looting_multiplier, value, period, range, enchantment, block, properties, entity, predicate, scores, chances]
       - up_path: [{}, functions]
-        operation: order
-        order: [function, conditions, append, enchantment, formula, parameters, source, ops, block, properties, enchantments, treasure, levels, destination, search_radius, skip_existing_chunks, decoration, zoom, entity, count, limit, modifiers, patterns, type, entries, damage, name, seed, lore, tag, id, effects, add]
+        order: [function, conditions, append, enchantment, formula, parameters, source, ops, block, properties, enchantments, levels, treasure, destination, search_radius, skip_existing_chunks, decoration, zoom, entity, count, limit, modifiers, patterns, type, entries, damage, name, seed, lore, tag, id, effects, add]
       - up_path: [{}, ops]
-        operation: order
         order: [source, target, op]
       - up_path: [{}, entries]
-        operation: order
-        order: [type, children, conditions, functions]
+        order: [type, name, weight, quality, children, conditions, functions]
       - up_path: [{"type":"minecraft:uniform"}]
-        operation: order
         order: [type, min, max]
-    jar/assets/minecraft/blockstates:
-      after: 2020-03-04
+    # 17w13a added recipes to the jar
+    # 17w48a moved them from assets to data
+    # 22w18a alphabetized them
+    jar/data/minecraft/recipes:
       multi:
-      - path: [variants, '@.*', {}]
-        operation: order
+      - path: []
+        order: [type, group, pattern, key, ingredients, ingredient, result, count, experience, cookingtime]
+      - path: [result]
+        order: [item, count]
+      - path: [key]
+    jar/assets/minecraft/blockstates:
+      require:
+        after: 2020-03-04
+      multi:
+      - path: [variants, '*', {}]
         order: [model, x, y, z, uvlock, weight]
-      - path: [variants, '@.*']
-        operation: order
+      - path: [variants, '*']
         order: [model, x, y, z, uvlock, weight]
       - path: [multipart, {}]
-        operation: order
         order: [when, apply]
       - path: [multipart, {}, apply]
-        operation: order
         order: [model, x, y, z, uvlock, weight]
       - path: [multipart, {}, apply, {}]
-        operation: order
         order: [model, x, y, z, uvlock, weight]
       - path: [multipart, {}, when, OR, {}]
-        operation: sort_keys
       - path: [multipart, {}, when]
-        operation: sort_keys
   version facts:
     skip:
     - (?i)optifine

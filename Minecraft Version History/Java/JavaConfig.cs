@@ -87,6 +87,8 @@ public class JavaConfig : VersionConfig
             if (File.Exists(path))
             {
                 Console.WriteLine($"Sorting {key}");
+                if (!sort.ShouldSort(path))
+                    continue;
                 SortJsonFile(path, sort);
             }
             else if (Directory.Exists(path))
@@ -95,6 +97,8 @@ public class JavaConfig : VersionConfig
                 Console.WriteLine($"Sorting {files.Length} files in {key}");
                 foreach (var sub in files)
                 {
+                    if (!sort.ShouldSort(sub))
+                        continue;
                     SortJsonFile(sub, sort);
                 }
             }

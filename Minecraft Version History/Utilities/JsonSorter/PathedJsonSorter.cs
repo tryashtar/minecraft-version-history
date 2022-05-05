@@ -3,7 +3,7 @@
 public abstract class PathedJsonSorter : BaseJsonSorter
 {
     public readonly INodeFinder Finder;
-    public PathedJsonSorter(DateTime? required, INodeFinder finder) : base(required)
+    public PathedJsonSorter(SorterRequirements required, INodeFinder finder) : base(required)
     {
         Finder = finder;
     }

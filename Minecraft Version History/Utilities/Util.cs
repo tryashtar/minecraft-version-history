@@ -64,25 +64,6 @@ public static class Util
         }
     }
 
-    public static void SortKeys(JsonObject obj, string[] order = null)
-    {
-        var tokens = new List<KeyValuePair<string, JsonNode>>();
-        foreach (var item in obj)
-        {
-            tokens.Add(item);
-        }
-        obj.Clear();
-        var ordered = order == null ? tokens.OrderBy(x => x.Key) : tokens.OrderBy(x =>
-        {
-            var index = Array.IndexOf(order, x.Key);
-            return index < 0 ? int.MaxValue : index;
-        }).ThenBy(x => x.Key);
-        foreach (var item in ordered)
-        {
-            obj.Add(item.Key, item.Value);
-        }
-    }
-
     public static string ToMinecraftJson(JsonNode value)
     {
         return value.ToJsonString(new JsonSerializerOptions()

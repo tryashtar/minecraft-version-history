@@ -2,16 +2,21 @@
 
 public abstract class BaseJsonSorter : IJsonSorter
 {
-    public readonly DateTime? RequiredTime;
+    public readonly SorterRequirements Requirements;
 
-    public BaseJsonSorter(DateTime? required)
+    public BaseJsonSorter(SorterRequirements required)
     {
-        RequiredTime = required;
+        Requirements = required;
     }
 
     public bool ShouldSort(Version version)
     {
-        return RequiredTime == null || version.ReleaseTime >= RequiredTime;
+        return Requirements.MetBy(version);
+    }
+
+    public bool ShouldSort(string path)
+    {
+        return Requirements.MetBy(path);
     }
 
     public abstract void Sort(JsonObject root);

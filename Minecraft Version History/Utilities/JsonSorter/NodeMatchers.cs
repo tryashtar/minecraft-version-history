@@ -9,6 +9,8 @@ public abstract class NodeMatcher
             string val = scalar.Value;
             if (val.StartsWith("@"))
                 return new RegexNodeMatcher(new Regex(val[1..]));
+            if (val == "*")
+                return new AlwaysNodeMatcher();
             return new NameNodeMatcher(val);
         }
         if (node is YamlMappingNode map)
@@ -112,6 +114,14 @@ public class TemplateNodeMatcher : NodeMatcher
             if (!(obj.TryGetPropertyValue((string)item.Key, out var value) && ValueEquals(value, item.Value)))
                 return false;
         }
+        return true;
+    }
+}
+
+public class AlwaysNodeMatcher : NodeMatcher
+{
+    public override bool Matches(string name, JsonNode node)
+    {
         return true;
     }
 }
