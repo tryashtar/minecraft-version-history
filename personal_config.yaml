@@ -69,15 +69,15 @@ java:
         operation: sort_keys
       - path: [requirements]
         operation: sort_by
-        by: 0
+        by: [0]
     jar/data/minecraft/loot_tables/chests/shipwreck_supply.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       operation: sort_by
-      by: type
+      by: [type]
     jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       operation: sort_by
-      by: type
+      by: [type]
     reports/worldgen/minecraft/worldgen/noise_settings:
       multi:
       - path: [structures, structures]
@@ -106,6 +106,42 @@ java:
         operation: sort_keys
       - path: [value, spawn_overrides]
         operation: sort_keys
+    jar/data/minecraft/advancements:
+      after: 2022-05-04
+      multi:
+      - path: []
+        operation: order
+        order: [parent, display, rewards, criteria, requirements]
+      - path: [display]
+        operation: order
+        order: [icon, title, description, frame, show_toast, announce_to_chat, hidden]
+      - path: [criteria, '@.*']
+        operation: order
+        order: [trigger, conditions]
+    jar/data/minecraft/loot_tables:
+      after: 2022-05-04
+      multi:
+      - path: []
+        operation: order
+        order: [type, pools, functions]
+      - path: [{}, pools]
+        operation: order
+        order: [rolls, bonus_rolls, entries, conditions, functions]
+      - up_path: [{}, conditions]
+        operation: order
+        order: [condition, name, inverse, term, terms, offsetX, offsetY, offsetZ, raining, thundering, chance, looting_multiplier, value, period, range, enchantment, block, properties, predicate, entity, scores, chances]
+      - up_path: [{}, functions]
+        operation: order
+        order: [function, conditions, append, enchantment, formula, parameters, source, ops, block, properties, enchantments, treasure, levels, destination, search_radius, skip_existing_chunks, decoration, zoom, entity, count, limit, modifiers, patterns, type, entries, damage, name, seed, lore, tag, id, effects, add]
+      - up_path: [{}, ops]
+        operation: order
+        order: [source, target, op]
+      - up_path: [{}, entries]
+        operation: order
+        order: [type, children, conditions, functions]
+      - up_path: [{"type":"minecraft:uniform"}]
+        operation: order
+        order: [type, min, max]
     jar/assets/minecraft/blockstates:
       after: 2020-03-04
       multi:
@@ -115,6 +151,9 @@ java:
       - path: [variants, '@.*']
         operation: order
         order: [model, x, y, z, uvlock, weight]
+      - path: [multipart, {}]
+        operation: order
+        order: [when, apply]
       - path: [multipart, {}, apply]
         operation: order
         order: [model, x, y, z, uvlock, weight]

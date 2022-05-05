@@ -29,6 +29,9 @@
     <None Update="all_effects.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="test_up_path.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="shipwreck_supply.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

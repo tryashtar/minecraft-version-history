@@ -11,7 +11,7 @@ public class JavaVersionDownloader
     public void DownloadMissing(List<string> folders, AppConfig config)
     {
         Profiler.Start("Checking for new versions");
-        var versions = JObject.Parse(Util.DownloadString(LAUNCHER_MANIFEST))["versions"];
+        var versions = (JsonArray)JsonNode.Parse(Util.DownloadString(LAUNCHER_MANIFEST))["versions"];
         var commits = config.Java.GitRepo.CommittedVersions().ToList();
         foreach (var version in versions)
         {
@@ -36,7 +36,7 @@ public class JavaVersionDownloader
             Directory.CreateDirectory(download_location.destination);
             if (!File.Exists(download_location.json_file))
                 Util.DownloadFile(url, download_location.json_file);
-            var client_jar = (string)JObject.Parse(File.ReadAllText(download_location.json_file))["downloads"]["client"]["url"];
+            var client_jar = (string)JsonObject.Parse(File.ReadAllText(download_location.json_file))["downloads"]["client"]["url"];
             if (!File.Exists(download_location.jar_file))
                 Util.DownloadFile(client_jar, download_location.jar_file);
         }

@@ -2,20 +2,20 @@
 
 public abstract class PathedJsonSorter : BaseJsonSorter
 {
-    public readonly NodeMatcher[] Path;
-    public PathedJsonSorter(DateTime? required, IEnumerable<NodeMatcher> path) : base(required)
+    public readonly INodeFinder Finder;
+    public PathedJsonSorter(DateTime? required, INodeFinder finder) : base(required)
     {
-        Path = path.ToArray();
+        Finder = finder;
     }
 
-    public override void Sort(JObject root)
+    public override void Sort(JsonObject root)
     {
-        var selected = NodeMatcher.FollowPath(Path, root);
+        var selected = Finder.FindNodes(root);
         foreach (var item in selected)
         {
-            SortSelected(item);
+            SortSelected(item.node);
         }
     }
 
-    public abstract void SortSelected(JToken token);
+    public abstract void SortSelected(JsonNode token);
 }

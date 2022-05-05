@@ -57,13 +57,13 @@ public class MergingSpec
     {
         if (Operation == MergeOperation.MergeJson)
         {
-            var newer = JToken.Parse(File.ReadAllText(newer_path));
-            if (KeyMover != null && newer is JObject obj)
+            var newer = JsonNode.Parse(File.ReadAllText(newer_path));
+            if (KeyMover != null && newer is JsonObject obj)
                 KeyMover.MoveKeys(obj);
-            JToken result = newer;
+            JsonNode result = newer;
             if (File.Exists(current_path))
             {
-                result = JToken.Parse(File.ReadAllText(current_path));
+                result = JsonNode.Parse(File.ReadAllText(current_path));
                 TopLevelMerge(result, newer);
             }
             File.WriteAllText(current_path, Util.ToMinecraftJson(result));
@@ -82,24 +82,24 @@ public class MergingSpec
         }
     }
 
-    public void TopLevelMerge(JToken current, JToken newer)
+    public void TopLevelMerge(JsonNode current, JsonNode newer)
     {
-        if (current is JObject cj && newer is JObject nj)
+        if (current is JsonObject cj && newer is JsonObject nj)
             MergeObjects(cj, nj);
-        else if (current is JArray ca && newer is JArray na)
+        else if (current is JsonArray ca && newer is JsonArray na)
             MergeTopArray(ca, na);
     }
 
-    public void MergeObjects(JObject current, JObject newer)
+    public void MergeObjects(JsonObject current, JsonObject newer)
     {
         foreach (var item in newer)
         {
-            bool exists = current.TryGetValue(item.Key, out var existing);
+            bool exists = current.TryGetPropertyValue(item.Key, out var existing);
             if (!exists || OverwriteKeys.Contains(item.Key))
                 current[item.Key] = item.Value;
             else
             {
-                if (existing is JObject j1 && item.Value is JObject j2)
+                if (existing is JsonObject j1 && item.Value is JsonObject j2)
                     MergeObjects(j1, j2);
                 else
                     current[item.Key] = item.Value;
@@ -107,7 +107,7 @@ public class MergingSpec
         }
     }
 
-    public void MergeTopArray(JArray current, JArray newer)
+    public void MergeTopArray(JsonArray current, JsonArray newer)
     {
         foreach (var sub in newer)
         {

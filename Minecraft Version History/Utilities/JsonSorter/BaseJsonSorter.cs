@@ -14,5 +14,5 @@ public abstract class BaseJsonSorter : IJsonSorter
         return RequiredTime == null || version.ReleaseTime >= RequiredTime;
     }
 
-    public abstract void Sort(JObject root);
+    public abstract void Sort(JsonObject root);
 }

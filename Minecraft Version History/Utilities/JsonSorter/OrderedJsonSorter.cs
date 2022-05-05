@@ -3,14 +3,14 @@
 public class OrderedJsonSorter : PathedJsonSorter
 {
     public readonly string[] Order;
-    public OrderedJsonSorter(DateTime? required, IEnumerable<NodeMatcher> path, IEnumerable<string> order) : base(required, path)
+    public OrderedJsonSorter(DateTime? required, INodeFinder finder, IEnumerable<string> order) : base(required, finder)
     {
         Order = order.ToArray();
     }
 
-    public override void SortSelected(JToken token)
+    public override void SortSelected(JsonNode token)
     {
-        if (token is JObject obj)
+        if (token is JsonObject obj)
             Util.SortKeys(obj, Order);
     }
 }

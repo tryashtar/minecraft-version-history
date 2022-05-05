@@ -2,28 +2,24 @@
 
 public class ByKeyJsonSorter : PathedJsonSorter
 {
-    public readonly string SortBy;
-    public ByKeyJsonSorter(DateTime? required, IEnumerable<NodeMatcher> path, string sort_by) : base(required, path)
+    public readonly INodeFinder SortBy;
+    public ByKeyJsonSorter(DateTime? required, INodeFinder finder, INodeFinder sort_by) : base(required, finder)
     {
         SortBy = sort_by;
     }
 
-    public override void SortSelected(JToken token)
+    public override void SortSelected(JsonNode token)
     {
-        if (token is JArray arr)
+        if (token is JsonArray arr)
         {
-            var sorted = arr.OrderBy(GetChild).ToList();
+            var sorted = arr.OrderBy(GetSortName).ToList();
             arr.Clear();
             foreach (var entry in sorted) arr.Add(entry);
         }
     }
 
-    private JToken GetChild(JToken t)
+    private string GetSortName(JsonNode t)
     {
-        if (t is JObject obj)
-            return obj[SortBy];
-        if (t is JArray arr)
-            return arr[int.Parse(SortBy)];
-        return null;
+        return SortBy.FindNodes(t).First().name;
     }
 }

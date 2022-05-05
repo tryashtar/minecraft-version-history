@@ -1,4 +1,6 @@
-﻿namespace MinecraftVersionHistory;
+﻿using System.Text.Encodings.Web;
+
+namespace MinecraftVersionHistory;
 
 public static class Util
 {
@@ -32,9 +34,9 @@ public static class Util
         File.Copy(from, to, true);
     }
 
-    private static T PathToThing<T>(JObject root, Func<T> create_default, params string[] path) where T : JToken
+    private static T PathToThing<T>(JsonObject root, Func<T> create_default, params string[] path) where T : JsonNode
     {
-        JToken start = root;
+        JsonNode start = root;
         foreach (var item in path)
         {
             start = start[item];
@@ -44,8 +46,8 @@ public static class Util
         return start as T ?? create_default();
     }
 
-    public static JObject PathToObject(JObject root, params string[] path) => PathToThing(root, () => new JObject(), path);
-    public static JArray PathToArray(JObject root, params string[] path) => PathToThing(root, () => new JArray(), path);
+    public static JsonObject PathToObject(JsonObject root, params string[] path) => PathToThing(root, () => new JsonObject(), path);
+    public static JsonArray PathToArray(JsonObject root, params string[] path) => PathToThing(root, () => new JsonArray(), path);
 
     public static void RemoveEmptyFolders(string root)
     {
@@ -62,14 +64,14 @@ public static class Util
         }
     }
 
-    public static void SortKeys(JObject obj, string[] order = null)
+    public static void SortKeys(JsonObject obj, string[] order = null)
     {
-        var tokens = new List<KeyValuePair<string, JToken>>();
+        var tokens = new List<KeyValuePair<string, JsonNode>>();
         foreach (var item in obj)
         {
             tokens.Add(item);
         }
-        obj.RemoveAll();
+        obj.Clear();
         var ordered = order == null ? tokens.OrderBy(x => x.Key) : tokens.OrderBy(x =>
         {
             var index = Array.IndexOf(order, x.Key);
@@ -81,21 +83,13 @@ public static class Util
         }
     }
 
-    public static string ToMinecraftJson(JToken value)
+    public static string ToMinecraftJson(JsonNode value)
     {
-        var sb = new StringBuilder(256);
-        var sw = new StringWriter(sb, CultureInfo.InvariantCulture);
-
-        var serializer = JsonSerializer.CreateDefault();
-        using (var writer = new JsonTextWriter(sw))
+        return value.ToJsonString(new JsonSerializerOptions()
         {
-            writer.Formatting = Formatting.Indented;
-            writer.IndentChar = ' ';
-            writer.Indentation = 2;
-            serializer.Serialize(writer, value, value.GetType());
-        }
-
-        return sw.ToString();
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
     }
 
     const int BYTES_TO_READ = sizeof(Int64);

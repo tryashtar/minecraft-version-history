@@ -2,7 +2,7 @@
 
 public interface IJsonSorter
 {
-    void Sort(JObject root);
+    void Sort(JsonObject root);
     bool ShouldSort(Version version);
 }
 
@@ -19,21 +19,27 @@ public static class JsonSorterFactory
             var multi = node.Go("multi").ToList(JsonSorterFactory.Create);
             if (multi != null)
                 return new MultiJsonSorter(required, multi);
-            var path = node.Go("path").ToList(x => NodeMatcher.Create(x));
+            INodeFinder finder = null;
+            var path = node.Go("path");
+            if (path != null)
+                finder = new ForwardNodeFinder(path.ToList(x => NodeMatcher.Create(x)));
+            var up_path = node.Go("up_path");
+            if (up_path != null)
+                finder = new BackwardNodeFinder(up_path.ToList(x => NodeMatcher.Create(x)));
             var op = StringUtils.ParseUnderscoredEnum<SortOperation>((string)node["operation"]);
             if (op == SortOperation.SortKeys)
-                return new KeysJsonSorter(required, path);
+                return new KeysJsonSorter(required, finder);
             else if (op == SortOperation.Sort)
-                return new ListJsonSorter(required, path);
+                return new ListJsonSorter(required, finder);
             else if (op == SortOperation.SortBy)
             {
-                var sort = node.Go("by").String();
-                return new ByKeyJsonSorter(required, path, sort);
+                var sort = node.Go("by");
+                return new ByKeyJsonSorter(required, finder, new ForwardNodeFinder(sort.ToList(x => NodeMatcher.Create(x))));
             }
             else if (op == SortOperation.Order)
             {
                 var order = node.Go("order").ToStringList();
-                return new OrderedJsonSorter(required, path, order);
+                return new OrderedJsonSorter(required, finder, order);
             }
         }
         throw new ArgumentException($"Can't turn {node} into a json sorter");

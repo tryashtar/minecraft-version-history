@@ -14,8 +14,9 @@ global using System.Globalization;
 
 global using Microsoft.VisualBasic.FileIO;
 global using YamlDotNet.RepresentationModel;
-global using Newtonsoft.Json;
-global using Newtonsoft.Json.Linq;
+global using System.Text.Json;
+global using System.Text.Json.Nodes;
+global using System.Text.Json.Serialization;
 global using fNbt;
 
 global using TryashtarUtils.Utility;

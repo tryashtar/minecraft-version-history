@@ -13,8 +13,8 @@ public class JavaVersion : Version
     {
         Name = Path.GetFileName(folder);
         LauncherJsonPath = Path.Combine(folder, Name + ".json");
-        var json = JObject.Parse(File.ReadAllText(LauncherJsonPath));
-        ReleaseTime = DateTime.Parse((string)json["releaseTime"]);
+        var json = JsonObject.Parse(File.ReadAllText(LauncherJsonPath));
+        ReleaseTime = DateTime.Parse(json["releaseTime"].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
         Client = new(
             "client",
             Path.Combine(folder, Name + ".jar"),
@@ -84,8 +84,8 @@ public class JavaVersion : Version
         Profiler.Start("Fetching assets");
         var assets_file = Util.DownloadString(AssetsURL);
         File.WriteAllText(json_path, assets_file);
-        var json = JObject.Parse(assets_file);
-        foreach ((string path, JToken data) in (JObject)json["objects"])
+        var json = JsonObject.Parse(assets_file);
+        foreach ((string path, JsonNode data) in (JsonObject)json["objects"])
         {
             var hash = (string)data["hash"];
             var cached = Path.Combine(config.AssetsFolder, "objects", hash[0..2], hash);
@@ -102,18 +102,20 @@ public class JavaVersion : Version
     public override void ExtractData(string folder, AppConfig config)
     {
         var java_config = config.Java;
+        var json_exporting = new List<Task>();
         var steps = new List<Task>();
 
         if (ReleaseTime > java_config.DataGenerators)
-            steps.Add(Task.Run(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
-        steps.Add(Task.Run(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
-        steps.Add(Task.Run(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
+            json_exporting.Add(Task.Run(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
         if (AssetsURL != null)
-            steps.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
+            json_exporting.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
+        json_exporting.Add(Task.Run(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
+        steps.Add(Task.Run(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
 
+        Task.WaitAll(json_exporting.ToArray());
+        java_config.JsonSort(folder, this);
         Task.WaitAll(steps.ToArray());
         File.Copy(LauncherJsonPath, Path.Combine(folder, "launcher.json"));
-        java_config.JsonSort(folder, this);
     }
 
     public record EndpointData(string Name, string JarPath, string MappingsURL);

@@ -91,7 +91,7 @@ public class JavaConfig : VersionConfig
             }
             else if (Directory.Exists(path))
             {
-                var files = Directory.GetFiles(path);
+                var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
                 Console.WriteLine($"Sorting {files.Length} files in {key}");
                 foreach (var sub in files)
                 {
@@ -105,7 +105,7 @@ public class JavaConfig : VersionConfig
 
     private void SortJsonFile(string path, IJsonSorter sorter)
     {
-        var json = JObject.Parse(File.ReadAllText(path));
+        var json = (JsonObject)JsonNode.Parse(File.ReadAllText(path));
         sorter.Sort(json);
         File.WriteAllText(path, Util.ToMinecraftJson(json));
     }
