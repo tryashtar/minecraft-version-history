@@ -18,9 +18,9 @@ public class JsonSorter : PathedJsonSorter
     {
         if (token is JsonObject obj)
         {
-            var tokens = new List<KeyValuePair<string, JsonNode>>(obj);
+            IEnumerable<KeyValuePair<string, JsonNode>> tokens = new List<KeyValuePair<string, JsonNode>>(obj);
             obj.Clear();
-            tokens.Sort(new Comparer(this));
+            tokens = tokens.OrderBy(x => x, new Comparer(this));
             foreach (var item in tokens)
             {
                 obj.Add(item.Key, item.Value);
@@ -28,9 +28,9 @@ public class JsonSorter : PathedJsonSorter
         }
         else if (token is JsonArray arr)
         {
-            var tokens = new List<JsonNode>(arr);
+            IEnumerable<JsonNode> tokens = new List<JsonNode>(arr);
             arr.Clear();
-            tokens.Sort(new Comparer(this));
+            tokens = tokens.OrderBy(x => x, new Comparer(this));
             foreach (var item in tokens)
             {
                 arr.Add(item);
