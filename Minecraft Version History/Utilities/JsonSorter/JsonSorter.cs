@@ -6,7 +6,7 @@ public class JsonSorter : PathedJsonSorter
     private readonly KeyOrValue Pick;
     private readonly List<string> Order;
     private readonly bool After;
-    public JsonSorter(SorterRequirements required, INodeFinder finder, INodeFinder sort_by, KeyOrValue pick, IEnumerable<string> order, bool after) : base(required, finder)
+    public JsonSorter(SorterRequirements required, INodeFinder finder, INodeFinder sort_by, KeyOrValue pick, IEnumerable<string> order, bool after, NodeMatcher matches) : base(required, finder, matches)
     {
         SortBy = sort_by;
         Pick = pick;
@@ -57,7 +57,11 @@ public class JsonSorter : PathedJsonSorter
         private int Compare(string xs, string ys)
         {
             if (Owner.Order == null)
+            {
+                if (decimal.TryParse(xs, out decimal xn) && decimal.TryParse(ys, out decimal yn))
+                    return xn.CompareTo(yn);
                 return xs.CompareTo(ys);
+            }
             int xi = Owner.Order.IndexOf(xs);
             int yi = Owner.Order.IndexOf(ys);
             if (xi == -1)

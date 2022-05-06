@@ -45,6 +45,8 @@ public class BackwardNodeFinder : INodeFinder
 
     private bool MatchesPath(JsonNode node)
     {
+        if (Count == 0)
+            return true;
         var parent = node;
         for (int i = 0; i < Count; i++)
         {

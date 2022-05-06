@@ -28,7 +28,8 @@ public static class JsonSorterFactory
             var pick = node.Go("pick").NullableStructParse(x => StringUtils.ParseUnderscoredEnum<KeyOrValue>((string)x)) ?? KeyOrValue.Auto;
             var order = node.Go("order").ToStringList();
             bool after = node.Go("after").NullableStructParse(x => Boolean.Parse(x.String())) ?? false;
-            return new JsonSorter(require, finder, select, pick, order, after);
+            var matches = node.Go("matches").NullableParse(NodeMatcher.Create);
+            return new JsonSorter(require, finder, select, pick, order, after, matches);
         }
         throw new ArgumentException($"Can't turn {node} into a json sorter");
     }

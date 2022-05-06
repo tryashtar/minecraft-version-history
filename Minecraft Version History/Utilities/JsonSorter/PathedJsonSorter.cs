@@ -3,17 +3,20 @@
 public abstract class PathedJsonSorter : BaseJsonSorter
 {
     public readonly INodeFinder Finder;
-    public PathedJsonSorter(SorterRequirements required, INodeFinder finder) : base(required)
+    private readonly NodeMatcher Matches;
+    public PathedJsonSorter(SorterRequirements required, INodeFinder finder, NodeMatcher matches) : base(required)
     {
         Finder = finder;
+        Matches = matches;
     }
 
     public override void Sort(JsonObject root)
     {
         var selected = Finder.FindNodes(root);
-        foreach (var item in selected)
+        foreach (var (name, node) in selected)
         {
-            SortSelected(item.node);
+            if (Matches == null || Matches.Matches(name, node))
+                SortSelected(node);
         }
     }
 
