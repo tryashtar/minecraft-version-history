@@ -10,7 +10,7 @@ public abstract class PathedJsonSorter : BaseJsonSorter
         Matches = matches;
     }
 
-    public override void Sort(JsonObject root)
+    public override void Sort(JsonNode root)
     {
         var selected = Finder.FindNodes(root);
         foreach (var (name, node) in selected)

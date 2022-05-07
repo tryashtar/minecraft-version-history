@@ -8,7 +8,7 @@ public class MultiJsonSorter : BaseJsonSorter
         Sorters = sorters.ToArray();
     }
 
-    public override void Sort(JsonObject root)
+    public override void Sort(JsonNode root)
     {
         foreach (var sorter in Sorters)
         {

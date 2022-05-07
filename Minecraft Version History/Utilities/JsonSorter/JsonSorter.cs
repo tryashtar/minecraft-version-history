@@ -45,7 +45,7 @@ public class JsonSorter : PathedJsonSorter
         if (name != null && Pick != KeyOrValue.Value)
             return name;
         if (node is JsonValue val)
-            return (string)val;
+            return val.ToString();
         return null;
     }
 
@@ -60,7 +60,7 @@ public class JsonSorter : PathedJsonSorter
             {
                 if (decimal.TryParse(xs, out decimal xn) && decimal.TryParse(ys, out decimal yn))
                     return xn.CompareTo(yn);
-                return xs.CompareTo(ys);
+                return String.Compare(xs, ys);
             }
             int xi = Owner.Order.IndexOf(xs);
             int yi = Owner.Order.IndexOf(ys);

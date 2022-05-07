@@ -109,7 +109,7 @@ public class JavaConfig : VersionConfig
 
     private void SortJsonFile(string path, IJsonSorter sorter)
     {
-        var json = (JsonObject)JsonNode.Parse(File.ReadAllText(path));
+        var json = JsonNode.Parse(File.ReadAllText(path));
         sorter.Sort(json);
         File.WriteAllText(path, Util.ToMinecraftJson(json));
     }

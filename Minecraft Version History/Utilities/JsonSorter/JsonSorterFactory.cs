@@ -2,7 +2,7 @@
 
 public interface IJsonSorter
 {
-    void Sort(JsonObject root);
+    void Sort(JsonNode root);
     bool ShouldSort(Version version);
     bool ShouldSort(string path);
 }

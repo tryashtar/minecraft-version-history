@@ -87,6 +87,59 @@ java:
         order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
       - path: [spawn_overrides]
       - path: [value, spawn_overrides]
+    reports/biome_parameters:
+      multi:
+      - path: [biomes, {}]
+        order: [biome, parameters]
+      - path: [biomes, {}, parameters]
+      - path: [biomes, {}, parameters]
+        order: [depth, offset]
+    reports/worldgen/minecraft/dimension_type:
+      multi:
+      - path: []
+    reports/worldgen/minecraft/worldgen:
+      multi:
+      - up_path: []
+      - up_path: []
+        order: [type, min, min_inclusive, max, max_inclusive]
+    reports/commands.json:
+      multi:
+      - up_path: ['*', children]
+        order: [type, parser, properties, executable, children]
+    reports/blocks.json:
+      after: 2022-05-04
+      multi:
+      - path: []
+        by: ["states", 0, "id"]
+        pick: value
+      - path: ['*', states, {}]
+        order: [properties, id, default]
+      - path: ['minecraft:piston_head', properties]
+        order: [facing, short, type]
+      - path: ['minecraft:piston_head', states, {}, properties]
+        order: [facing, short, type]
+      - path: ['minecraft:moving_piston', properties]
+        order: [facing, type]
+      - path: ['minecraft:moving_piston', states, {}, properties]
+        order: [facing, type]
+      - path: ['minecraft:chest', properties]
+        order: [facing, type, waterlogged]
+      - path: ['minecraft:chest', states, {}, properties]
+        order: [facing, type, waterlogged]
+      - path: ['minecraft:trapped_chest', properties]
+        order: [facing, type, waterlogged]
+      - path: ['minecraft:trapped_chest', states, {}, properties]
+        order: [facing, type, waterlogged]
+    reports/registries.json:
+      multi:
+      - path: []
+        by: ["protocol_id"]
+        pick: value
+      - path: ['*', entries]
+        by: ["protocol_id"]
+        pick: value
+      - path: ['*']
+        order: [default, protocol_id, entries]
     # 14w06a added models to the jar
     # 20w10a started to generate them with code
     # 22w18a alphabetized them

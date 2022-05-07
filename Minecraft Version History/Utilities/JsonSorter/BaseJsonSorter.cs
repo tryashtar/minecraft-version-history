@@ -19,5 +19,5 @@ public abstract class BaseJsonSorter : IJsonSorter
         return Requirements.MetBy(path);
     }
 
-    public abstract void Sort(JsonObject root);
+    public abstract void Sort(JsonNode root);
 }
