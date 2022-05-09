@@ -16,6 +16,7 @@ java:
   java install:
   - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
   - C:\Program Files\Common Files\Oracle\Java\javapath\java.exe
+  - C:\Program Files\Microsoft\jdk-11.0.12.7-hotspot\bin\java.exe
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
@@ -100,12 +101,19 @@ java:
     reports/worldgen/minecraft/worldgen:
       multi:
       - up_path: []
+        matches: {}
       - up_path: []
-        order: [type, min, min_inclusive, max, max_inclusive]
+        matches: {}
+        order: [type, min, max, min_inclusive, max_inclusive, minCount, maxCount, min_dist, max_dist, min_chance, max_chance, min_threshold, max_threshold, min_delay, max_delay, min_gen_offset, max_gen_offset]
     reports/commands.json:
       multi:
       - up_path: ['*', children]
-        order: [type, parser, properties, executable, children]
+        order: [type, parser, properties, executable, redirect, children]
+      - up_path: []
+        matches: properties
+        order: [type, amount, min, max]
+      - up_path: []
+        matches: children
     reports/blocks.json:
       after: 2022-05-04
       multi:
@@ -185,6 +193,9 @@ java:
       - up_path: []
         matches: killing_blow
         order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
+      - up_path: [damage]
+        matches: type
+        order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
       - up_path: []
         matches: damage
         order: [dealt, taken, blocked, type, source_entity]
@@ -217,6 +228,9 @@ java:
       - up_path: []
         matches: {"type":"minecraft:uniform"}
         order: [type, min, max]
+      - up_path: []
+        matches: type_specific
+        order: [type, size, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
     # 17w13a added recipes to the jar
     # 17w48a moved them from assets to data
     # 22w18a alphabetized them
