@@ -57,7 +57,7 @@ public class MergingSpec
     {
         if (Operation == MergeOperation.MergeJson)
         {
-            var newer = JsonNode.Parse(File.ReadAllText(newer_path));
+            var newer = JsonNode.Parse(File.ReadAllText(newer_path), null, new JsonDocumentOptions() { CommentHandling = JsonCommentHandling.Skip });
             if (KeyMover != null && newer is JsonObject obj)
                 KeyMover.MoveKeys(obj);
             JsonNode result = newer;
@@ -96,13 +96,13 @@ public class MergingSpec
         {
             bool exists = current.TryGetPropertyValue(item.Key, out var existing);
             if (!exists || OverwriteKeys.Contains(item.Key))
-                current[item.Key] = item.Value;
+                current[item.Key] = JsonNode.Parse(item.Value.ToJsonString());
             else
             {
                 if (existing is JsonObject j1 && item.Value is JsonObject j2)
                     MergeObjects(j1, j2);
                 else
-                    current[item.Key] = item.Value;
+                    current[item.Key] = JsonNode.Parse(item.Value.ToJsonString());
             }
         }
     }
@@ -111,7 +111,7 @@ public class MergingSpec
     {
         foreach (var sub in newer)
         {
-            current.Add(sub);
+            current.Add(JsonNode.Parse(sub.ToJsonString()));
         }
     }
 }

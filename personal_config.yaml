@@ -69,6 +69,13 @@ java:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       by: [type]
       pick: value
+    reports/biome_parameters:
+      multi:
+      - path: [biomes, {}]
+        order: [biome, parameters]
+      - path: [biomes, {}, parameters]
+      - path: [biomes, {}, parameters]
+        order: [depth, offset]
     reports/worldgen/minecraft/worldgen/noise_settings:
       multi:
       - path: [structures, structures]
@@ -88,17 +95,39 @@ java:
         order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
       - path: [spawn_overrides]
       - path: [value, spawn_overrides]
-    reports/biome_parameters:
-      multi:
-      - path: [biomes, {}]
-        order: [biome, parameters]
-      - path: [biomes, {}, parameters]
-      - path: [biomes, {}, parameters]
-        order: [depth, offset]
     reports/worldgen/minecraft/dimension_type:
       multi:
       - path: []
     reports/worldgen/minecraft/worldgen:
+      multi:
+      - up_path: []
+        matches: {}
+      - up_path: []
+        matches: {}
+        order: [type, min, max, min_inclusive, max_inclusive, minCount, maxCount, min_dist, max_dist, min_chance, max_chance, min_threshold, max_threshold, min_delay, max_delay, min_gen_offset, max_gen_offset]
+    reports/minecraft/worldgen/noise_settings:
+      multi:
+      - path: [structures, structures]
+      - path: [structures]
+    reports/minecraft/worldgen/configured_structure_feature:
+      path: [spawn_overrides]
+    reports/minecraft/worldgen/world_preset:
+      path: [dimensions]
+      order: ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']
+    reports/minecraft/worldgen/flat_level_generator_preset:
+      path: [settings, structure_overrides]
+    reports/minecraft/worldgen/structure:
+      multi:
+      - path: []
+        order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
+      - path: [value]
+        order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
+      - path: [spawn_overrides]
+      - path: [value, spawn_overrides]
+    reports/minecraft/dimension_type:
+      multi:
+      - path: []
+    reports/minecraft/worldgen:
       multi:
       - up_path: []
         matches: {}
