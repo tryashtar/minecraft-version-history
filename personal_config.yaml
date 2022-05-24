@@ -55,6 +55,7 @@ java:
   - extension: nbt
     remove keys: [DataVersion]
     endian: big
+    structure: true
   # these files change constantly due to hash order, so sort them to prevent unneeded diffs
   json sorting:
     jar/data/minecraft/advancements/nether/all_effects.json:
@@ -430,9 +431,13 @@ bedrock:
       - vanilla_1.18.20
       - vanilla_1.18.30
       - vanilla_1.19.0
+      - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
+      - experimental_caves_and_cliffs_internal
       - experimental_caves_and_cliffs
+      - experimental_wild_update_internal
       - experimental_wild_update
+      - experimental_spectator_internal
       merging:
       - path: contents.json
     resource:
@@ -457,9 +462,13 @@ bedrock:
       - vanilla_1.18.20
       - vanilla_1.18.30
       - vanilla_1.19.0
+      - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
+      - experimental_caves_and_cliffs_internal
       - experimental_caves_and_cliffs
+      - experimental_wild_update_internal
       - experimental_wild_update
+      - experimental_spectator_internal
       merging:
       - path: contents.json
       - path: biomes_client.json
@@ -480,6 +489,9 @@ bedrock:
       - extension: lang
         operation: append_lines
   version facts:
+    insane:
+      releases:
+      - Editor Tests
     skip:
     - 1.1.0.0
     - 1.7.5.0
@@ -511,6 +523,8 @@ bedrock:
       1.18.3020.0: 1.18.2029.0
     releases:
       regex:
+        ^1\.18\.100\.0$: Editor Tests
+        ^1\.18\.1023\.0$: Preview
         ^(\d+\.\d+)\.\d\d?\.0$: $1
         ^(\d+\.\d+\.\d)\d\d\.0$: $1
         ^(\d+\.\d+\.\d\d)\d\d?\d?\.0$: $1
