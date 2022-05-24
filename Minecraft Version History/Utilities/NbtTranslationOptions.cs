@@ -46,20 +46,24 @@ public class NbtTranslationOptions
         {
             var palettes = root.Get<NbtList>("palettes");
             var palette = palettes != null ? (NbtList)palettes[0] : root.Get<NbtList>("palette");
-            var new_palette = new NbtList(palette.Tags.Cast<NbtCompound>().Select(PackBlockState));
-            root["palette"] = new_palette;
-            if (palettes != null)
+            NbtList new_palette = null;
+            if (palette != null)
             {
-                var new_palettes = new NbtList();
-                foreach (NbtList p in palettes)
+                new_palette = new NbtList(palette.Tags.Cast<NbtCompound>().Select(PackBlockState));
+                root["palette"] = new_palette;
+                if (palettes != null)
                 {
-                    var compound = new NbtCompound();
-                    for (int i = 0; i < palettes.Count; i++)
+                    var new_palettes = new NbtList();
+                    foreach (NbtList p in palettes)
                     {
-                        compound[i.ToString()] = PackBlockState((NbtCompound)p[i]);
+                        var compound = new NbtCompound();
+                        for (int i = 0; i < palettes.Count; i++)
+                        {
+                            compound[i.ToString()] = PackBlockState((NbtCompound)p[i]);
+                        }
                     }
+                    root["palettes"] = new_palettes;
                 }
-                root["palettes"] = new_palettes;
             }
             var entities = root.Get<NbtList>("entities");
             if (entities != null)
@@ -79,8 +83,11 @@ public class NbtTranslationOptions
             blocks.Clear();
             foreach (var block in new_blocks)
             {
-                var state = block.Get<NbtInt>("state");
-                block["state"] = (NbtTag)new_palette[state.Value].Clone();
+                if (new_palette != null)
+                {
+                    var state = block.Get<NbtInt>("state");
+                    block["state"] = (NbtTag)new_palette[state.Value].Clone();
+                }
                 block.Sort(new BlockOrder(), false);
             }
             root["blocks"] = new NbtList(new_blocks);
