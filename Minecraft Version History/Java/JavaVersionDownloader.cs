@@ -7,7 +7,7 @@ public class JavaVersionDownloader
 
     }
 
-    const string LAUNCHER_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json";
+    const string LAUNCHER_MANIFEST = "https://piston-meta.mojang.com/mc/game/version_manifest.json";
     public void DownloadMissing(List<string> folders, AppConfig config)
     {
         Profiler.Start("Checking for new versions");

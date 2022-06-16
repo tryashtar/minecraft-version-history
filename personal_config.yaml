@@ -409,6 +409,7 @@ bedrock:
     endian: little
   - extension: nbt
     endian: big
+    structure: true
   pack merging:
     behavior:
       layers:
@@ -431,6 +432,7 @@ bedrock:
       - vanilla_1.18.20
       - vanilla_1.18.30
       - vanilla_1.19.0
+      - vanilla_1.19.10
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -462,6 +464,7 @@ bedrock:
       - vanilla_1.18.20
       - vanilla_1.18.30
       - vanilla_1.19.0
+      - vanilla_1.19.10
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -482,6 +485,7 @@ bedrock:
       - path: textures/terrain_texture.json
       - path: textures/textures_list.json
       - path: textures/flipbook_textures.json
+      - path: sounds/music_definitions.json
       - path: sounds/sound_definitions.json
         move_keys:
           from: ['@(?!^format_version$)(?!^sound_definitions$)(^.*$)']
