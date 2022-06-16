@@ -73,6 +73,11 @@ public class NbtTranslationOptions
                     .ThenBy(x => x.Get<NbtList>("pos")[0].DoubleValue)
                     .ThenBy(x => x.Get<NbtList>("pos")[2].DoubleValue).ToList();
                 entities.Clear();
+                foreach (var entity in sorted)
+                {
+                    entity.Sort(new SpecificOrder("blockPos", "pos", "nbt"), false);
+                    entity.Get<NbtCompound>("nbt").Sort(new SpecificOrder("id"), false);
+                }
                 root["entities"] = new NbtList(sorted);
             }
             var blocks = root.Get<NbtList>("blocks");
@@ -88,12 +93,13 @@ public class NbtTranslationOptions
                     var state = block.Get<NbtInt>("state");
                     block["state"] = (NbtTag)new_palette[state.Value].Clone();
                 }
-                block.Sort(new BlockOrder(), false);
+                block.Sort(new SpecificOrder("pos", "state", "nbt"), false);
             }
+            // overwrite existing, then rename
             root["blocks"] = new NbtList(new_blocks);
             root["blocks"].Name = "data";
         }
-        root.Sort(new StructureOrder(), false);
+        root.Sort(new SpecificOrder("size", "data", "entities", "palette"), false);
         if (!Mini)
         {
             Options.ShouldIndent = tag =>
@@ -115,40 +121,23 @@ public class NbtTranslationOptions
         File.WriteAllText(Path.ChangeExtension(path, NewExtension), root.ToSnbt(Options) + Environment.NewLine);
     }
 
-    private class StructureOrder : IComparer<NbtTag>
+    public class SpecificOrder : IComparer<NbtTag>
     {
+        public readonly string[] Order;
+        public SpecificOrder(params string[] order)
+        {
+            Order = order;
+        }
         public int Compare(NbtTag x, NbtTag y)
         {
             return Index(x.Name).CompareTo(Index(y.Name));
         }
         private int Index(string name)
         {
-            if (name == "size")
-                return 0;
-            if (name == "data")
-                return 1;
-            if (name == "entities")
-                return 2;
-            if (name == "palette")
-                return 3;
-            return 4;
-        }
-    }
-    private class BlockOrder : IComparer<NbtTag>
-    {
-        public int Compare(NbtTag x, NbtTag y)
-        {
-            return Index(x.Name).CompareTo(Index(y.Name));
-        }
-        private int Index(string name)
-        {
-            if (name == "pos")
-                return 0;
-            if (name == "state")
-                return 1;
-            if (name == "nbt")
-                return 2;
-            return 3;
+            int index = Array.IndexOf(Order, name);
+            if (index == -1)
+                return int.MaxValue;
+            return index;
         }
     }
 
