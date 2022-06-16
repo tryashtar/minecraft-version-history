@@ -10,7 +10,9 @@ public abstract class Updater
     public Updater(AppConfig config)
     {
         Config = config;
+        Profiler.Start("Building version graph");
         Graph = CreateGraph();
+        Profiler.Stop();
     }
 
     public void Perform()
@@ -49,7 +51,7 @@ public abstract class Updater
     protected abstract VersionConfig VersionConfig { get; }
     private void LoadCommits()
     {
-        var versions = Graph.Flatten();
+        var versions = Graph.Flatten().ToList();
         CommitToVersion = new Dictionary<string, VersionNode>();
         VersionToCommit = new Dictionary<VersionNode, string>();
         Profiler.Start("Loading commits");
