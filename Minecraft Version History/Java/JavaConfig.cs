@@ -123,9 +123,16 @@ public class JavaConfig : VersionConfig
 
     private void SortJsonFile(string path, IJsonSorter sorter)
     {
-        var json = JsonNode.Parse(File.ReadAllText(path));
-        sorter.Sort(json);
-        File.WriteAllText(path, Util.ToMinecraftJson(json));
+        try
+        {
+            var json = JsonNode.Parse(File.ReadAllText(path), documentOptions: new JsonDocumentOptions() { });
+            sorter.Sort(json);
+            File.WriteAllText(path, Util.ToMinecraftJson(json));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Couldn't sort {path}: {ex.Message}");
+        }
     }
 
     private static DecompilerType? ParseDecompiler(string input)

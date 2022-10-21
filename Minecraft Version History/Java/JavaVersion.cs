@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace MinecraftVersionHistory;
 
@@ -104,13 +105,23 @@ public class JavaVersion : Version
         var java_config = config.Java;
         var json_exporting = new List<Task>();
         var steps = new List<Task>();
+        static Task step(Action action)
+        {
+            var task = Task.Run(action);
+            task.ContinueWith(x =>
+            {
+                if (x.IsFaulted)
+                    throw x.Exception;
+            });
+            return task;
+        }
 
         if (ReleaseTime > java_config.DataGenerators)
-            json_exporting.Add(Task.Run(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
+            json_exporting.Add(step(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
         if (AssetsURL != null)
-            json_exporting.Add(Task.Run(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
-        json_exporting.Add(Task.Run(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
-        steps.Add(Task.Run(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
+            json_exporting.Add(step(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
+        json_exporting.Add(step(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
+        steps.Add(step(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
 
         Task.WaitAll(json_exporting.ToArray());
         java_config.JsonSort(folder, this);
