@@ -408,8 +408,8 @@ bedrock:
   pack merging:
     behavior:
       layers:
-      - vanilla_gametest
       - vanilla
+      - vanilla_gametest
       - vanilla_1.14
       - vanilla_1.15
       - vanilla_1.16
@@ -442,10 +442,14 @@ bedrock:
       - experimental_next_major_update
       merging:
       - path: contents.json
+        operation: append_list
+        list: [content]
+      - path: manifest.json
+        operation: no_merge
     resource:
       layers:
-      - vanilla_base
       - vanilla
+      - vanilla_base
       - vanilla_music
       - vanilla_1.14
       - vanilla_1.15
@@ -478,11 +482,9 @@ bedrock:
       - experimental_spectator_internal
       - experimental_next_major_update
       merging:
-      - path: contents.json
       - path: biomes_client.json
       - path: blocks.json
       - path: sounds.json
-      - path: contents.json
       - path: splashes.json
       - path: entity
       - path: materials/entity.material
@@ -497,6 +499,14 @@ bedrock:
           to: ['sound_definitions']
       - extension: lang
         operation: append_lines
+      - path: contents.json
+        operation: append_list
+        list: [content]
+      - path: textures/textures_list.json
+        operation: append_list
+        list: []
+      - path: manifest.json
+        operation: no_merge
   version facts:
     insane:
       releases:
