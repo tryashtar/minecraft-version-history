@@ -14,7 +14,7 @@ public class JavaConfig : VersionConfig
     public readonly string FernflowerArgs;
     public readonly DateTime DataGenerators;
     public readonly DecompilerType? Decompiler;
-    private readonly Dictionary<string, IJsonSorter> JsonSorters;
+    private readonly List<(List<string> files, IJsonSorter sorter)> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
     public JavaConfig(string folder, AppConfig parent, YamlMappingNode yaml) : base(folder, parent, yaml)
@@ -34,7 +34,18 @@ public class JavaConfig : VersionConfig
         CfrArgs = (string)yaml["cfr args"];
         FernflowerArgs = (string)yaml["fernflower args"];
         DataGenerators = DateTime.Parse((string)yaml["data generators"]);
-        JsonSorters = yaml.Go("json sorting").ToDictionary(x => (string)x, JsonSorterFactory.Create) ?? new();
+        JsonSorters = new();
+        foreach (YamlMappingNode entry in (YamlSequenceNode)yaml.Go("json sorting"))
+        {
+            var files = entry["file"];
+            var list = new List<string>();
+            if (files is YamlScalarNode single)
+                list.Add(single.Value);
+            else
+                list.AddRange(((YamlSequenceNode)files).ToStringList());
+            var sort = JsonSorterFactory.Create(entry["sort"]);
+            JsonSorters.Add((list, sort));
+        }
         ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new();
         ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new();
     }
@@ -83,27 +94,30 @@ public class JavaConfig : VersionConfig
         {
             if (!sort.ShouldSort(version))
                 continue;
-            var path = Path.Combine(folder, key);
-            if (File.Exists(path))
+            foreach (var f in key)
             {
-                Console.WriteLine($"Sorting {key}");
-                if (!sort.ShouldSort(path))
-                    continue;
-                SortJsonFile(path, sort);
-            }
-            else if (Directory.Exists(path))
-            {
-                var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
-                Console.WriteLine($"Sorting {files.Length} files in {key}");
-                foreach (var sub in files)
+                var path = Path.Combine(folder, f);
+                if (File.Exists(path))
                 {
-                    if (!sort.ShouldSort(sub))
+                    Console.WriteLine($"Sorting {f}");
+                    if (!sort.ShouldSort(path))
                         continue;
-                    SortJsonFile(sub, sort);
+                    SortJsonFile(path, sort);
                 }
+                else if (Directory.Exists(path))
+                {
+                    var files = Directory.GetFiles(path, "*", SearchOption.AllDirectories);
+                    Console.WriteLine($"Sorting {files.Length} files in {f}");
+                    foreach (var sub in files)
+                    {
+                        if (!sort.ShouldSort(sub))
+                            continue;
+                        SortJsonFile(sub, sort);
+                    }
+                }
+                else
+                    Console.WriteLine($"Not sorting {f}, no file found");
             }
-            else
-                Console.WriteLine($"Not sorting {key}, no file found");
         }
     }
 

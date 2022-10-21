@@ -14,9 +14,6 @@ public static class JsonSorterFactory
         if (node is YamlMappingNode map)
         {
             var require = node.Go("require").NullableParse(x => new SorterRequirements((YamlMappingNode)x)) ?? new SorterRequirements();
-            var multi = node.Go("multi").ToList(JsonSorterFactory.Create);
-            if (multi != null)
-                return new MultiJsonSorter(require, multi);
             INodeFinder finder = null;
             var path = node.Go("path");
             if (path != null)
@@ -31,6 +28,8 @@ public static class JsonSorterFactory
             var matches = node.Go("matches").NullableParse(NodeMatcher.Create);
             return new JsonSorter(require, finder, select, pick, order, after, matches);
         }
+        else if (node is YamlSequenceNode seq)
+            return new MultiJsonSorter(new SorterRequirements(), seq.ToList(JsonSorterFactory.Create));
         throw new ArgumentException($"Can't turn {node} into a json sorter");
     }
 }

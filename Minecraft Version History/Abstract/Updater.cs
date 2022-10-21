@@ -144,6 +144,8 @@ public abstract class Updater
         Directory.CreateDirectory(workspace);
         Profiler.Run("Extracting", () =>
         { version.Version.ExtractData(workspace, Config); });
+        Profiler.Run("Unzipping", () =>
+        { UnzipZips(workspace); });
         Profiler.Run("Translating NBT Files", () =>
         { TranslateNbtFiles(workspace); });
         Profiler.Run($"Merging", () =>
@@ -170,6 +172,16 @@ public abstract class Updater
         foreach (var path in Directory.GetFiles(root_folder, "*", SearchOption.AllDirectories))
         {
             VersionConfig.TranslateNbt(path);
+        }
+    }
+
+    private void UnzipZips(string root_folder)
+    {
+        foreach (var path in Directory.GetFiles(root_folder, "*.zip", SearchOption.AllDirectories))
+        {
+            ZipFile.ExtractToDirectory(path, path + "_dir");
+            File.Delete(path);
+            Directory.Move(path + "_dir", path);
         }
     }
 

@@ -57,7 +57,7 @@ public class GitRepo
 
     public void DeleteBranch(string branch)
     {
-        Run($"branch -d \"{branch}\"");
+        Run($"branch -D \"{branch}\"");
     }
 
     public string BranchHash(string branch)

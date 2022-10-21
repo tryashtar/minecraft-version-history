@@ -14,9 +14,8 @@ java:
     matched: 1.14.4
   # Minecraft builtin java, seems to work well
   java install:
-  - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-beta\windows-x64\java-runtime-beta\bin\java.exe
-  - C:\Program Files\Common Files\Oracle\Java\javapath\java.exe
-  - C:\Program Files\Microsoft\jdk-11.0.12.7-hotspot\bin\java.exe
+  - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-gamma\windows-x64\java-runtime-gamma\bin\java.exe
+  - java
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
@@ -58,235 +57,231 @@ java:
     structure: true
   # these files change constantly due to hash order, so sort them to prevent unneeded diffs
   json sorting:
-    jar/data/minecraft/advancements/nether/all_effects.json:
+  - file:
+    - jar/data/minecraft/advancements/nether/all_effects.json
+    - jar/data/minecraft/advancements/nether/all_potions.json
+    sort:
       path: [criteria, all_effects, conditions, effects]
-    jar/data/minecraft/advancements/nether/all_potions.json:
-      path: [criteria, all_effects, conditions, effects]
-    jar/data/minecraft/loot_tables/chests/shipwreck_supply.json:
+  - file:
+    - jar/data/minecraft/loot_tables/chests/shipwreck_supply.json
+    - jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json
+    sort:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       by: [type]
       pick: value
-    jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json:
-      path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
-      by: [type]
-      pick: value
-    reports/biome_parameters:
-      multi:
-      - path: [biomes, {}]
-        order: [biome, parameters]
-      - path: [biomes, {}, parameters]
-      - path: [biomes, {}, parameters]
-        order: [depth, offset]
-    reports/worldgen/minecraft/worldgen/noise_settings:
-      multi:
-      - path: [structures, structures]
-      - path: [structures]
-    reports/worldgen/minecraft/worldgen/configured_structure_feature:
+  - file: reports/biome_parameters
+    sort:
+    - path: [biomes, {}]
+      order: [biome, parameters]
+    - path: [biomes, {}, parameters]
+    - path: [biomes, {}, parameters]
+      order: [depth, offset]
+  - file:
+    - reports/worldgen/minecraft/worldgen/noise_settings
+    - reports/minecraft/worldgen/noise_settings
+    - jar/data/minecraft/worldgen/noise_settings
+    sort:
+    - path: [structures, structures]
+    - path: [structures]
+  - file:
+    - reports/worldgen/minecraft/worldgen/configured_structure_feature
+    - reports/minecraft/worldgen/configured_structure_feature
+    - jar/data/minecraft/worldgen/configured_structure_feature
+    sort:
       path: [spawn_overrides]
-    reports/worldgen/minecraft/worldgen/world_preset:
+  - file:
+    - reports/worldgen/minecraft/worldgen/world_preset
+    - reports/minecraft/worldgen/world_preset
+    - jar/data/minecraft/worldgen/world_preset
+    sort:
       path: [dimensions]
       order: ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']
-    reports/worldgen/minecraft/worldgen/flat_level_generator_preset:
+  - file:
+    - reports/worldgen/minecraft/worldgen/flat_level_generator_preset
+    - reports/minecraft/worldgen/flat_level_generator_preset
+    - jar/data/minecraft/worldgen/flat_level_generator_preset
+    sort:
       path: [settings, structure_overrides]
-    reports/worldgen/minecraft/worldgen/structure:
-      multi:
-      - path: []
-        order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
-      - path: [value]
-        order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
-      - path: [spawn_overrides]
-      - path: [value, spawn_overrides]
-    reports/worldgen/minecraft/dimension_type:
-      multi:
-      - path: []
-    reports/worldgen/minecraft/worldgen:
-      multi:
-      - up_path: []
-        matches: {}
-      - up_path: []
-        matches: {}
-        order: [type, min, max, min_inclusive, max_inclusive, minCount, maxCount, min_dist, max_dist, min_chance, max_chance, min_threshold, max_threshold, min_delay, max_delay, min_gen_offset, max_gen_offset]
-    reports/minecraft/worldgen/noise_settings:
-      multi:
-      - path: [structures, structures]
-      - path: [structures]
-    reports/minecraft/worldgen/configured_structure_feature:
-      path: [spawn_overrides]
-    reports/minecraft/worldgen/world_preset:
-      path: [dimensions]
-      order: ['minecraft:overworld', 'minecraft:the_nether', 'minecraft:the_end']
-    reports/minecraft/worldgen/flat_level_generator_preset:
-      path: [settings, structure_overrides]
-    reports/minecraft/worldgen/structure:
-      multi:
-      - path: []
-        order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
-      - path: [value]
-        order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
-      - path: [spawn_overrides]
-      - path: [value, spawn_overrides]
-    reports/minecraft/dimension_type:
-      multi:
-      - path: []
-    reports/minecraft/worldgen:
-      multi:
-      - up_path: []
-        matches: {}
-      - up_path: []
-        matches: {}
-        order: [type, min, max, min_inclusive, max_inclusive, minCount, maxCount, min_dist, max_dist, min_chance, max_chance, min_threshold, max_threshold, min_delay, max_delay, min_gen_offset, max_gen_offset]
-    reports/commands.json:
-      multi:
-      - up_path: ['*', children]
-        order: [type, parser, properties, executable, redirect, children]
-      - up_path: []
-        matches: properties
-        order: [type, amount, min, max]
-      - up_path: []
-        matches: children
-    reports/blocks.json:
+  - file:
+    - reports/worldgen/minecraft/worldgen/structure
+    - reports/minecraft/worldgen/structure
+    - jar/data/minecraft/worldgen/structure
+    sort:
+    - path: []
+      order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
+    - path: [value]
+      order: [biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, spawn_overrides]
+    - path: [spawn_overrides]
+    - path: [value, spawn_overrides]
+  - file:
+    - reports/worldgen/minecraft/dimension_type
+    - reports/minecraft/dimension_type
+    - jar/data/minecraft/dimension_type
+    sort:
+    - path: []
+  - file:
+    - reports/worldgen/minecraft/worldgen
+    - reports/minecraft/worldgen
+    - jar/data/minecraft/worldgen
+    sort:
+    - up_path: []
+      matches: {}
+    - up_path: []
+      matches: {}
+      order: [type, min, max, min_inclusive, max_inclusive, minCount, maxCount, min_dist, max_dist, min_chance, max_chance, min_threshold, max_threshold, min_delay, max_delay, min_gen_offset, max_gen_offset]
+  - file: reports/commands.json
+    sort:
+    - up_path: ['*', children]
+      order: [type, parser, properties, executable, redirect, children]
+    - up_path: []
+      matches: properties
+      order: [type, amount, min, max]
+    - up_path: []
+      matches: children
+  - file: reports/blocks.json
+    require:
       after: 2022-05-04
-      multi:
-      - path: []
-        by: ["states", 0, "id"]
-        pick: value
-      - path: ['*', states, {}]
-        order: [properties, id, default]
-      - path: ['minecraft:piston_head', properties]
-        order: [facing, short, type]
-      - path: ['minecraft:piston_head', states, {}, properties]
-        order: [facing, short, type]
-      - path: ['minecraft:moving_piston', properties]
-        order: [facing, type]
-      - path: ['minecraft:moving_piston', states, {}, properties]
-        order: [facing, type]
-      - path: ['minecraft:chest', properties]
-        order: [facing, type, waterlogged]
-      - path: ['minecraft:chest', states, {}, properties]
-        order: [facing, type, waterlogged]
-      - path: ['minecraft:trapped_chest', properties]
-        order: [facing, type, waterlogged]
-      - path: ['minecraft:trapped_chest', states, {}, properties]
-        order: [facing, type, waterlogged]
-    reports/registries.json:
-      multi:
-      - path: []
-        by: ["protocol_id"]
-        pick: value
-      - path: ['*', entries]
-        by: ["protocol_id"]
-        pick: value
-      - path: ['*']
-        order: [default, protocol_id, entries]
+    sort:
+    - path: []
+      by: ["states", 0, "id"]
+      pick: value
+    - path: ['*', states, {}]
+      order: [properties, id, default]
+    - path: ['minecraft:piston_head', properties]
+      order: [facing, short, type]
+    - path: ['minecraft:piston_head', states, {}, properties]
+      order: [facing, short, type]
+    - path: ['minecraft:moving_piston', properties]
+      order: [facing, type]
+    - path: ['minecraft:moving_piston', states, {}, properties]
+      order: [facing, type]
+    - path: ['minecraft:chest', properties]
+      order: [facing, type, waterlogged]
+    - path: ['minecraft:chest', states, {}, properties]
+      order: [facing, type, waterlogged]
+    - path: ['minecraft:trapped_chest', properties]
+      order: [facing, type, waterlogged]
+    - path: ['minecraft:trapped_chest', states, {}, properties]
+      order: [facing, type, waterlogged]
+  - file: reports/registries.json
+    sort:
+    - path: []
+      by: ["protocol_id"]
+      pick: value
+    - path: ['*', entries]
+      by: ["protocol_id"]
+      pick: value
+    - path: ['*']
+      order: [default, protocol_id, entries]
     # 14w06a added models to the jar
     # 20w10a started to generate them with code
     # 22w18a alphabetized them
-    jar/assets/minecraft/models:
-      require:
-        after: 2020-03-04
-        seems_generated: true
-      multi:
-      - path: [textures]
-      - path: [textures]
-        order: [texture, all, particle, top, bottom, side, end, up, down, north, south, east, west]
+  - file: jar/assets/minecraft/models
+    require:
+      after: 2020-03-04
+      seems_generated: true
+    sort:
+    - path: [textures]
+    - path: [textures]
+      order: [texture, all, particle, top, bottom, side, end, up, down, north, south, east, west]
     # 17w13a added advancements to the jar
     # 17w43a moved them from assets to data
     # 18w09a started to generated them with code
     # 22w18a alphabetized them
-    jar/data/minecraft/advancements:
-      multi:
-      - path: []
-        order: [parent, display, rewards, criteria, requirements]
-      - path: [display]
-        order: [icon, title, description, frame, show_toast, announce_to_chat, hidden]
-      - path: [criteria, '*']
-        order: [trigger, conditions]
-      - path: [criteria]
-      - path: [criteria]
-        order: [has_the_recipe]
-        after: true
-      - path: [requirements, '*']
-      - path: [requirements, '*']
-        order: [has_the_recipe]
-        after: true
-      - path: [requirements]
-        by: [0]
-        pick: value
-      - path: [criteria, '*', conditions]
-        order: [signal_strength, projectile, start_position, distance, item, player, entity, lightning, bystander, location, parent, partner, child, block, num_bees_inside]
-      - up_path: []
-        matches: {"condition":"minecraft:entity_properties"}
-        order: [condition, entity, predicate]
-      - up_path: []
-        matches: type_specific
-        order: [type, size, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
-      - up_path: []
-        matches: killing_blow
-        order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
-      - up_path: [damage]
-        matches: type
-        order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
-      - up_path: []
-        matches: damage
-        order: [dealt, taken, blocked, type, source_entity]
-      - up_path: []
-        matches: predicate
-        order: [type, team, nbt, flags, distance, type_specific, passenger, vehicle, targeted_entity, equipment, effects, location, stepping_on]
-      - up_path: []
-        matches: location
-        order: [position, smokey, biome, dimension, feature, block, fluid, light]
+  - file: jar/data/minecraft/advancements
+    sort:
+    - path: []
+      order: [parent, display, rewards, criteria, requirements]
+    - path: [display]
+      order: [icon, title, description, frame, show_toast, announce_to_chat, hidden]
+    - path: [criteria, '*']
+      order: [trigger, conditions]
+    - path: [criteria]
+    - path: [criteria]
+      order: [has_the_recipe]
+      after: true
+    - path: [requirements, '*']
+    - path: [requirements, '*']
+      order: [has_the_recipe]
+      after: true
+    - path: [requirements]
+      by: [0]
+      pick: value
+    - path: [criteria, '*', conditions]
+      order: [signal_strength, projectile, start_position, distance, item, player, entity, lightning, bystander, location, parent, partner, child, block, num_bees_inside]
+    - up_path: []
+      matches: {"condition":"minecraft:entity_properties"}
+      order: [condition, entity, predicate]
+    - up_path: []
+      matches: type_specific
+      order: [type, size, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
+    - up_path: []
+      matches: killing_blow
+      order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
+    - up_path: [damage]
+      matches: type
+      order: [is_explosion, is_fire, is_magic, is_projectile, is_lightning, bypasses_armor, bypasses_invulnerability, bypasses_magic, direct_entity, source_entity]
+    - up_path: []
+      matches: damage
+      order: [dealt, taken, blocked, type, source_entity]
+    - up_path: []
+      matches: predicate
+      order: [type, team, nbt, flags, distance, type_specific, passenger, vehicle, targeted_entity, equipment, effects, location, stepping_on]
+    - up_path: []
+      matches: location
+      order: [position, smokey, biome, dimension, feature, block, fluid, light]
     # 15w43a added loot tables to the jar
     # 17w43a moved them from assets to data
     # 18w43a started to generated them with code
     # 22w18a alphabetized them
-    jar/data/minecraft/loot_tables:
-      multi:
-      - path: []
-        order: [type, pools, functions]
-      - path: [pools, {}]
-        order: [rolls, bonus_rolls, entries, conditions, functions]
-      - up_path: [{}, conditions]
-        order: [condition, name, inverse, term, terms, offsetX, offsetY, offsetZ, raining, thundering, chance, looting_multiplier, value, period, range, enchantment, block, properties, entity, predicate, scores, chances]
-      - up_path: [{}, functions]
-        order: [function, conditions, append, enchantment, formula, parameters, source, ops, block, properties, enchantments, levels, treasure, destination, search_radius, skip_existing_chunks, decoration, zoom, entity, count, limit, modifiers, patterns, type, entries, damage, name, seed, lore, tag, id, effects, add]
-      - up_path: [{}, ops]
-        order: [source, target, op]
-      - up_path: [{}, entries]
-        order: [type, name, weight, quality, children, conditions, functions]
-      - up_path: [{}, children]
-        order: [type, name, weight, quality, children, conditions, functions]
-      - up_path: []
-        matches: {"type":"minecraft:uniform"}
-        order: [type, min, max]
-      - up_path: []
-        matches: type_specific
-        order: [type, size, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
+  - file: jar/data/minecraft/loot_tables
+    sort:
+    - path: []
+      order: [type, pools, functions]
+    - path: [pools, {}]
+      order: [rolls, bonus_rolls, entries, conditions, functions]
+    - up_path: [{}, conditions]
+      order: [condition, name, inverse, term, terms, offsetX, offsetY, offsetZ, raining, thundering, chance, looting_multiplier, value, period, range, enchantment, block, properties, entity, predicate, scores, chances]
+    - up_path: [{}, functions]
+      order: [function, conditions, append, enchantment, formula, parameters, source, ops, block, properties, enchantments, levels, treasure, destination, search_radius, skip_existing_chunks, decoration, zoom, entity, count, limit, modifiers, patterns, type, entries, damage, name, seed, lore, tag, id, effects, add]
+    - up_path: [{}, ops]
+      order: [source, target, op]
+    - up_path: [{}, entries]
+      order: [type, name, weight, quality, children, conditions, functions]
+    - up_path: [{}, children]
+      order: [type, name, weight, quality, children, conditions, functions]
+    - up_path: []
+      matches: {"type":"minecraft:uniform"}
+      order: [type, min, max]
+    - up_path: []
+      matches: type_specific
+      order: [type, size, variant, in_open_water, blocks_set_on_fire, entity_struck, gamemode, level, looking_at, recipes, stats, advancements]
     # 17w13a added recipes to the jar
     # 17w48a moved them from assets to data
     # 22w18a alphabetized them
-    jar/data/minecraft/recipes:
-      multi:
-      - path: []
-        order: [type, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
-      - path: [result]
-        order: [item, count]
-      - path: [key]
-    jar/assets/minecraft/blockstates:
-      require:
-        after: 2020-03-04
-      multi:
-      - path: [variants, '*', {}]
-        order: [model, x, y, z, uvlock, weight]
-      - path: [variants, '*']
-        order: [model, x, y, z, uvlock, weight]
-      - path: [multipart, {}]
-        order: [when, apply]
-      - path: [multipart, {}, apply]
-        order: [model, x, y, z, uvlock, weight]
-      - path: [multipart, {}, apply, {}]
-        order: [model, x, y, z, uvlock, weight]
-      - path: [multipart, {}, when, OR, {}]
-      - path: [multipart, {}, when]
+  - file: jar/data/minecraft/recipes
+    sort:
+    - path: []
+      order: [type, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
+    - path: [result]
+      order: [item, count]
+    - path: [key]
+  - file: jar/assets/minecraft/blockstates
+    require:
+      after: 2020-03-04
+    sort:
+    - path: [variants, '*', {}]
+      order: [model, x, y, z, uvlock, weight]
+    - path: [variants, '*']
+      order: [model, x, y, z, uvlock, weight]
+    - path: [multipart, {}]
+      order: [when, apply]
+    - path: [multipart, {}, apply]
+      order: [model, x, y, z, uvlock, weight]
+    - path: [multipart, {}, apply, {}]
+      order: [model, x, y, z, uvlock, weight]
+    - path: [multipart, {}, when, OR, {}]
+    - path: [multipart, {}, when]
   version facts:
     skip:
     - (?i)optifine
@@ -433,6 +428,10 @@ bedrock:
       - vanilla_1.18.30
       - vanilla_1.19.0
       - vanilla_1.19.10
+      - vanilla_1.19.20
+      - vanilla_1.19.30
+      - vanilla_1.19.40
+      - vanilla_1.19.50
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -440,6 +439,7 @@ bedrock:
       - experimental_wild_update_internal
       - experimental_wild_update
       - experimental_spectator_internal
+      - experimental_next_major_update
       merging:
       - path: contents.json
     resource:
@@ -465,6 +465,10 @@ bedrock:
       - vanilla_1.18.30
       - vanilla_1.19.0
       - vanilla_1.19.10
+      - vanilla_1.19.20
+      - vanilla_1.19.30
+      - vanilla_1.19.40
+      - vanilla_1.19.50
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -472,6 +476,7 @@ bedrock:
       - experimental_wild_update_internal
       - experimental_wild_update
       - experimental_spectator_internal
+      - experimental_next_major_update
       merging:
       - path: contents.json
       - path: biomes_client.json
@@ -525,6 +530,12 @@ bedrock:
       1.18.1023.0: 1.18.1022.0
       1.18.2021.0: 1.18.1028.0
       1.18.3020.0: 1.18.2029.0
+      1.18.3104.0: 1.18.3004.0
+      1.19.1020.0: 1.19.5.0
+      1.19.2101.0: 1.19.2002.0
+      1.19.4020.0: 1.19.3023.0
+      1.19.3101.0: 1.19.3004.0
+      1.19.5021.0: 1.19.4024.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests
