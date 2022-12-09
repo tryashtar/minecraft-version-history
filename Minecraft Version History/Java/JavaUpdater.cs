@@ -14,7 +14,7 @@ public class JavaUpdater : Updater
             foreach (var version in Directory.EnumerateDirectories(folder))
             {
                 if (JavaVersion.LooksValid(version))
-                    yield return new JavaVersion(version);
+                    yield return new JavaVersion(version, VersionConfig.VersionFacts);
             }
         }
     }

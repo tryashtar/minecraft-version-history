@@ -21,7 +21,7 @@ public static class JsonSorterFactory
             var up_path = node.Go("up_path");
             if (up_path != null)
                 finder = new BackwardNodeFinder(up_path.ToList(NodeMatcher.Create));
-            var select = node.Go("by").NullableParse(x => new ForwardNodeFinder(x.ToList(NodeMatcher.Create)));
+            var select = node.Go("by").NullableParse(x => x.ToList(y => new ForwardNodeFinder(y.ToList(NodeMatcher.Create))));
             var pick = node.Go("pick").NullableStructParse(x => StringUtils.ParseUnderscoredEnum<KeyOrValue>((string)x)) ?? KeyOrValue.Auto;
             var order = node.Go("order").ToStringList();
             bool after = node.Go("after").NullableStructParse(x => Boolean.Parse(x.String())) ?? false;

@@ -10,9 +10,10 @@ public class JavaVersion : Version
     public readonly string AssetsURL;
     public readonly string ServerJarURL;
     public readonly string LauncherJsonPath;
-    public JavaVersion(string folder)
+    public JavaVersion(string folder, VersionFacts facts)
     {
         Name = Path.GetFileName(folder);
+        Name = facts.CustomName(Name) ?? Name;
         LauncherJsonPath = Path.Combine(folder, Name + ".json");
         var json = JsonObject.Parse(File.ReadAllText(LauncherJsonPath));
         ReleaseTime = DateTime.Parse(json["releaseTime"].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);

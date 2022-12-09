@@ -14,7 +14,7 @@ public class BedrockUpdater : Updater
             foreach (var zip in Directory.EnumerateFiles(folder))
             {
                 if (Path.GetExtension(zip) == ".zip")
-                    yield return new BedrockVersion(zip);
+                    yield return new BedrockVersion(zip, VersionConfig.VersionFacts);
             }
         }
     }

@@ -2,13 +2,13 @@
 
 public class JsonSorter : PathedJsonSorter
 {
-    private readonly INodeFinder SortBy;
+    private readonly INodeFinder[] SortBy;
     private readonly KeyOrValue Pick;
     private readonly List<string> Order;
     private readonly bool After;
-    public JsonSorter(SorterRequirements required, INodeFinder finder, INodeFinder sort_by, KeyOrValue pick, IEnumerable<string> order, bool after, NodeMatcher matches) : base(required, finder, matches)
+    public JsonSorter(SorterRequirements required, INodeFinder finder, IEnumerable<INodeFinder> sort_by, KeyOrValue pick, IEnumerable<string> order, bool after, NodeMatcher matches) : base(required, finder, matches)
     {
-        SortBy = sort_by;
+        SortBy = sort_by?.ToArray();
         Pick = pick;
         Order = order?.ToList();
         After = after;
@@ -38,10 +38,14 @@ public class JsonSorter : PathedJsonSorter
         }
     }
 
-    private string GetSortItem(string name, JsonNode node)
+    private string GetSortItem(INodeFinder? find, string name, JsonNode node)
     {
-        if (SortBy != null)
-            (name, node) = SortBy.FindNodes(node).First();
+        if (find != null)
+        {
+            var result = find.FindNodes(node);
+            if (result.Any())
+                (name, node) = result.First();
+        }
         if (name != null && Pick != KeyOrValue.Value)
             return name;
         if (node is JsonValue val)
@@ -73,16 +77,40 @@ public class JsonSorter : PathedJsonSorter
 
         public int Compare(KeyValuePair<string, JsonNode> x, KeyValuePair<string, JsonNode> y)
         {
-            string xs = Owner.GetSortItem(x.Key, x.Value);
-            string ys = Owner.GetSortItem(y.Key, y.Value);
-            return Compare(xs, ys);
+            if (Owner.SortBy == null)
+            {
+                string xs = Owner.GetSortItem(null, x.Key, x.Value);
+                string ys = Owner.GetSortItem(null, y.Key, y.Value);
+                return Compare(xs, ys);
+            }
+            foreach (var item in Owner.SortBy)
+            {
+                string xs = Owner.GetSortItem(item, x.Key, x.Value);
+                string ys = Owner.GetSortItem(item, y.Key, y.Value);
+                int result = Compare(xs, ys);
+                if (result != 0)
+                    return result;
+            }
+            return 0;
         }
 
         public int Compare(JsonNode x, JsonNode y)
         {
-            string xs = Owner.GetSortItem(null, x);
-            string ys = Owner.GetSortItem(null, y);
-            return Compare(xs, ys);
+            if (Owner.SortBy == null)
+            {
+                string xs = Owner.GetSortItem(null, null, x);
+                string ys = Owner.GetSortItem(null, null, y);
+                return Compare(xs, ys);
+            }
+            foreach (var item in Owner.SortBy)
+            {
+                string xs = Owner.GetSortItem(item, null, x);
+                string ys = Owner.GetSortItem(item, null, y);
+                int result = Compare(xs, ys);
+                if (result != 0)
+                    return result;
+            }
+            return 0;
         }
     }
 }

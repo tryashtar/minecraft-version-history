@@ -3,12 +3,12 @@
 public class BedrockVersion : Version
 {
     public readonly string ZipPath;
-    public BedrockVersion(string zip_path)
+    public BedrockVersion(string zip_path, VersionFacts facts)
     {
         using ZipArchive zip = ZipFile.OpenRead(zip_path);
         ZipPath = zip_path;
         var mainappx = GetMainAppx(zip);
-        Name = Path.GetFileName(mainappx.FullName).Split('_')[1];
+        Name = facts.CustomName(Path.GetFileNameWithoutExtension(zip_path)) ?? Path.GetFileName(mainappx.FullName).Split('_')[1];
         ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
     }
 

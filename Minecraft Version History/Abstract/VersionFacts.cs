@@ -6,6 +6,7 @@ public class VersionFacts : IComparer<Version>
     private readonly List<Regex> InsaneBranches;
     private readonly List<Regex> InsaneVersions;
     private readonly Dictionary<string, string> ParentsMap;
+    private readonly Dictionary<string, string> CustomNameMap;
     private readonly Dictionary<Regex, string> RegexReleases;
     private readonly List<SnapshotSpec> SnapshotReleases;
     private readonly List<string> VersionOrder;
@@ -16,6 +17,7 @@ public class VersionFacts : IComparer<Version>
         InsaneBranches = yaml.Go("insane", "releases").ToList(x => new Regex((string)x)) ?? new();
         InsaneVersions = yaml.Go("insane", "versions").ToList(x => new Regex((string)x)) ?? new();
         ParentsMap = yaml.Go("parents").ToDictionary() ?? new();
+        CustomNameMap = yaml.Go("names").ToDictionary() ?? new();
         RegexReleases = yaml.Go("releases", "regex").ToDictionary(x => new Regex((string)x), x => (string)x) ?? new();
         SnapshotReleases = yaml.Go("releases", "snapshots").ToList(x => new SnapshotSpec((YamlMappingNode)x)) ?? new();
         VersionOrder = yaml.Go("ordering", "versions").ToStringList() ?? new();
@@ -30,6 +32,12 @@ public class VersionFacts : IComparer<Version>
                 return true;
         }
         return false;
+    }
+
+    public string? CustomName(string file)
+    {
+        CustomNameMap.TryGetValue(file, out var result);
+        return result;
     }
 
     public bool IsInsaneRelease(string release)

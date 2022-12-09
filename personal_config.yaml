@@ -67,7 +67,8 @@ java:
     - jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json
     sort:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
-      by: [type]
+      by:
+      - [type]
       pick: value
   - file: reports/biome_parameters
     sort:
@@ -143,7 +144,8 @@ java:
       after: 2022-05-04
     sort:
     - path: []
-      by: ["states", 0, "id"]
+      by:
+      - [states, 0, id]
       pick: value
     - path: ['*', states, {}]
       order: [properties, id, default]
@@ -166,10 +168,12 @@ java:
   - file: reports/registries.json
     sort:
     - path: []
-      by: ["protocol_id"]
+      by:
+      - [protocol_id]
       pick: value
     - path: ['*', entries]
-      by: ["protocol_id"]
+      by:
+      - [protocol_id]
       pick: value
     - path: ['*']
       order: [default, protocol_id, entries]
@@ -205,7 +209,8 @@ java:
       order: [has_the_recipe]
       after: true
     - path: [requirements]
-      by: [0]
+      by:
+      - [0]
       pick: value
     - path: [criteria, '*', conditions]
       order: [signal_strength, projectile, start_position, distance, item, player, entity, lightning, bystander, location, parent, partner, child, block, num_bees_inside]
@@ -273,6 +278,9 @@ java:
     - path: [variants, '*', {}]
       order: [model, x, y, z, uvlock, weight]
     - path: [variants, '*']
+    - path: [multipart]
+      by:
+      - [apply, model]
       order: [model, x, y, z, uvlock, weight]
     - path: [multipart, {}]
       order: [when, apply]
@@ -285,6 +293,7 @@ java:
   version facts:
     skip:
     - (?i)optifine
+    - (?i)fabric
     - ^a1\.0\.6$ # can't unzip
     ordering:
       priority:
@@ -392,7 +401,7 @@ java:
       - {year: 2021, weeks: [3,36], release: 1.17}
       - {year: 2021, weeks: [37,44], release: 1.18}
       - {year: 2022, weeks: [3,10], release: 1.18}
-      - {year: 2022, weeks: [11,44], release: 1.19}
+      - {year: 2022, weeks: [11,52], release: 1.19}
 
 bedrock:
   repo: D:\Minecraft\Bedrock Storage\History
@@ -432,6 +441,7 @@ bedrock:
       - vanilla_1.19.30
       - vanilla_1.19.40
       - vanilla_1.19.50
+      - vanilla_1.19.60
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -473,6 +483,7 @@ bedrock:
       - vanilla_1.19.30
       - vanilla_1.19.40
       - vanilla_1.19.50
+      - vanilla_1.19.60
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -508,6 +519,8 @@ bedrock:
       - path: manifest.json
         operation: no_merge
   version facts:
+    names:
+      minecraft-release_bedrock uwp renderdragon x64 win10_12683500: 1.19.6020.1
     insane:
       releases:
       - Editor Tests
@@ -550,6 +563,6 @@ bedrock:
       regex:
         ^1\.18\.100\.0$: Editor Tests
         ^1\.18\.1023\.0$: Preview
-        ^(\d+\.\d+)\.\d\d?\.0$: $1
-        ^(\d+\.\d+\.\d)\d\d\.0$: $1
-        ^(\d+\.\d+\.\d\d)\d\d?\d?\.0$: $1
+        ^(\d+\.\d+)\.\d\d?\.\d$: $1
+        ^(\d+\.\d+\.\d)\d\d\.\d$: $1
+        ^(\d+\.\d+\.\d\d)\d\d?\d?\.\d$: $1
