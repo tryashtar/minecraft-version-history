@@ -278,10 +278,14 @@ java:
     - path: [variants, '*', {}]
       order: [model, x, y, z, uvlock, weight]
     - path: [variants, '*']
+      order: [model, x, y, z, uvlock, weight]
     - path: [multipart]
       by:
       - [apply, model]
-      order: [model, x, y, z, uvlock, weight]
+      - [apply, x]
+      - [apply, y]
+      - [apply, z]
+      pick: value
     - path: [multipart, {}]
       order: [when, apply]
     - path: [multipart, {}, apply]
@@ -289,6 +293,7 @@ java:
     - path: [multipart, {}, apply, {}]
       order: [model, x, y, z, uvlock, weight]
     - path: [multipart, {}, when, OR, {}]
+    - path: [multipart, {}, when, AND, {}]
     - path: [multipart, {}, when]
   version facts:
     skip:
