@@ -24,19 +24,23 @@ public class SorterRequirements
         if (SeemsGenerated != null)
         {
             using var stream = File.OpenText(path);
-            string line;
-            bool seems_generated = true;
-            int i = 0;
-            while ((line = stream.ReadLine()) != null)
-            {
-                i++;
-                if ((i == 2 && line.StartsWith("    \"")) || line.IndexOf(',') != line.LastIndexOf(','))
-                {
-                    seems_generated = false;
-                    break;
-                }
-            }
-            if (SeemsGenerated != seems_generated)
+            bool generated = FileSeemsGenerated(stream);
+            if (SeemsGenerated != generated)
+                return false;
+        }
+        return true;
+    }
+
+    private bool FileSeemsGenerated(StreamReader stream)
+    {
+        string line;
+        int i = 0;
+        while ((line = stream.ReadLine()) != null)
+        {
+            i++;
+            int first_comma = line.IndexOf(',');
+            int last_comma = line.LastIndexOf(',');
+            if (first_comma != last_comma)
                 return false;
         }
         return true;

@@ -14,7 +14,7 @@ public class JavaConfig : VersionConfig
     public readonly string FernflowerArgs;
     public readonly DateTime DataGenerators;
     public readonly DecompilerType? Decompiler;
-    private readonly List<(List<string> files, IJsonSorter sorter)> JsonSorters;
+    private readonly List<FileSorter> JsonSorters;
     private readonly List<Regex> ExcludeJarEntries;
     private readonly List<Regex> ExcludeDecompiledEntries;
     public JavaConfig(string folder, AppConfig parent, YamlMappingNode yaml) : base(folder, parent, yaml)
@@ -44,7 +44,8 @@ public class JavaConfig : VersionConfig
             else
                 list.AddRange(((YamlSequenceNode)files).ToStringList());
             var sort = JsonSorterFactory.Create(entry["sort"]);
-            JsonSorters.Add((list, sort));
+            var require = entry.Go("require").NullableParse(x => new SorterRequirements((YamlMappingNode)x)) ?? new SorterRequirements();
+            JsonSorters.Add(new FileSorter(list.ToArray(), sort, require));
         }
         ExcludeJarEntries = yaml.Go("jar exclude").ToList(x => new Regex((string)x)) ?? new();
         ExcludeDecompiledEntries = yaml.Go("decompile exclude").ToList(x => new Regex((string)x)) ?? new();
@@ -90,19 +91,19 @@ public class JavaConfig : VersionConfig
 
     public void JsonSort(string folder, Version version)
     {
-        foreach (var (key, sort) in JsonSorters)
+        foreach (var sorter in JsonSorters)
         {
-            if (!sort.ShouldSort(version))
+            if (!sorter.Requirements.MetBy(version))
                 continue;
-            foreach (var f in key)
+            foreach (var f in sorter.Files)
             {
                 var path = Path.Combine(folder, f);
                 if (File.Exists(path))
                 {
                     Console.WriteLine($"Sorting {f}");
-                    if (!sort.ShouldSort(path))
+                    if (!sorter.Requirements.MetBy(path))
                         continue;
-                    SortJsonFile(path, sort);
+                    SortJsonFile(path, sorter.Sorter);
                 }
                 else if (Directory.Exists(path))
                 {
@@ -110,9 +111,9 @@ public class JavaConfig : VersionConfig
                     Console.WriteLine($"Sorting {files.Length} files in {f}");
                     foreach (var sub in files)
                     {
-                        if (!sort.ShouldSort(sub))
+                        if (!sorter.Requirements.MetBy(sub))
                             continue;
-                        SortJsonFile(sub, sort);
+                        SortJsonFile(sub, sorter.Sorter);
                     }
                 }
                 else

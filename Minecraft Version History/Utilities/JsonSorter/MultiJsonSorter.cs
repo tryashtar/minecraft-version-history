@@ -3,7 +3,7 @@
 public class MultiJsonSorter : BaseJsonSorter
 {
     public readonly IJsonSorter[] Sorters;
-    public MultiJsonSorter(SorterRequirements required, IEnumerable<IJsonSorter> sorters) : base(required)
+    public MultiJsonSorter(IEnumerable<IJsonSorter> sorters) : base()
     {
         Sorters = sorters.ToArray();
     }

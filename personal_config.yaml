@@ -29,7 +29,7 @@ java:
   # arguments passed to java when invoking the decompiler
   decompiler args: -Xmx2400M -Xms600M
   # arguments passed to the decompiler itself
-  cfr args: --caseinsensitivefs true --comments false --showversion false --sealed true
+  cfr args: --caseinsensitivefs true --comments false --showversion false --sealed true --hideutf false
   fernflower args: -hes=0 -hdc=0 -dgs=1 -log=WARN
   # versions newer than this date will extract data reports
   data generators: 2018-01-01
@@ -564,6 +564,7 @@ bedrock:
       1.19.4020.0: 1.19.3023.0
       1.19.3101.0: 1.19.3004.0
       1.19.5021.0: 1.19.4024.0
+      1.19.5101.0: 1.19.5025.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests

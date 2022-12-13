@@ -6,7 +6,7 @@ public class JsonSorter : PathedJsonSorter
     private readonly KeyOrValue Pick;
     private readonly List<string> Order;
     private readonly bool After;
-    public JsonSorter(SorterRequirements required, INodeFinder finder, IEnumerable<INodeFinder> sort_by, KeyOrValue pick, IEnumerable<string> order, bool after, NodeMatcher matches) : base(required, finder, matches)
+    public JsonSorter(INodeFinder finder, IEnumerable<INodeFinder> sort_by, KeyOrValue pick, IEnumerable<string> order, bool after, NodeMatcher matches) : base(finder, matches)
     {
         SortBy = sort_by?.ToArray();
         Pick = pick;

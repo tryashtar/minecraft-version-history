@@ -3,8 +3,6 @@
 public interface IJsonSorter
 {
     void Sort(JsonNode root);
-    bool ShouldSort(Version version);
-    bool ShouldSort(string path);
 }
 
 public static class JsonSorterFactory
@@ -13,7 +11,6 @@ public static class JsonSorterFactory
     {
         if (node is YamlMappingNode map)
         {
-            var require = node.Go("require").NullableParse(x => new SorterRequirements((YamlMappingNode)x)) ?? new SorterRequirements();
             INodeFinder finder = null;
             var path = node.Go("path");
             if (path != null)
@@ -26,13 +23,15 @@ public static class JsonSorterFactory
             var order = node.Go("order").ToStringList();
             bool after = node.Go("after").NullableStructParse(x => Boolean.Parse(x.String())) ?? false;
             var matches = node.Go("matches").NullableParse(NodeMatcher.Create);
-            return new JsonSorter(require, finder, select, pick, order, after, matches);
+            return new JsonSorter(finder, select, pick, order, after, matches);
         }
         else if (node is YamlSequenceNode seq)
-            return new MultiJsonSorter(new SorterRequirements(), seq.ToList(JsonSorterFactory.Create));
+            return new MultiJsonSorter(seq.ToList(JsonSorterFactory.Create));
         throw new ArgumentException($"Can't turn {node} into a json sorter");
     }
 }
+
+public record FileSorter(string[] Files, IJsonSorter Sorter, SorterRequirements Requirements);
 
 public enum KeyOrValue
 {

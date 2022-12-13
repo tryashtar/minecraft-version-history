@@ -4,7 +4,7 @@ public abstract class PathedJsonSorter : BaseJsonSorter
 {
     public readonly INodeFinder Finder;
     private readonly NodeMatcher Matches;
-    public PathedJsonSorter(SorterRequirements required, INodeFinder finder, NodeMatcher matches) : base(required)
+    public PathedJsonSorter(INodeFinder finder, NodeMatcher matches) : base()
     {
         Finder = finder;
         Matches = matches;
