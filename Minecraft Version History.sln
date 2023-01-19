@@ -5,8 +5,6 @@ VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Minecraft Version History", "Minecraft Version History\Minecraft Version History.csproj", "{72B2765F-9241-4D00-9D40-98E006FE9B92}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{EB3E5FF1-3411-4693-AAD0-0549341E5647}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fNbt", "fNbt\fNbt\fNbt.csproj", "{377B21B7-860C-4994-B48B-2069DB5E0C80}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Nbt", "utils.nbt\TryashtarUtils.Nbt.csproj", "{39D5A421-C3CE-4D15-A782-EADC30ABE57E}"
@@ -25,10 +23,6 @@ Global
 		{72B2765F-9241-4D00-9D40-98E006FE9B92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72B2765F-9241-4D00-9D40-98E006FE9B92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72B2765F-9241-4D00-9D40-98E006FE9B92}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EB3E5FF1-3411-4693-AAD0-0549341E5647}.Release|Any CPU.Build.0 = Release|Any CPU
 		{377B21B7-860C-4994-B48B-2069DB5E0C80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{377B21B7-860C-4994-B48B-2069DB5E0C80}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{377B21B7-860C-4994-B48B-2069DB5E0C80}.Release|Any CPU.ActiveCfg = Release|Any CPU

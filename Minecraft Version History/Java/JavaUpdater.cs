@@ -9,7 +9,7 @@ public class JavaUpdater : Updater
 
     protected override IEnumerable<Version> FindVersions()
     {
-        foreach (var folder in VersionConfig.InputFolders)
+        foreach (var folder in VersionConfig.InputFolders.Where(Directory.Exists))
         {
             foreach (var version in Directory.EnumerateDirectories(folder))
             {

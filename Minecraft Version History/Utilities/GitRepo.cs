@@ -12,7 +12,7 @@ public class GitRepo
 
     public ProcessResult Run(string args, TextWriter output, TextWriter error)
     {
-        return CommandRunner.RunCommand(Folder, $"\"{GitInstall}\" {args}", output, error);
+        return CommandRunner.RunCommand(Folder, GitInstall, args, output, error);
     }
 
     public ProcessResult Run(string args)
@@ -31,7 +31,7 @@ public class GitRepo
         if (date == null)
             Run($"commit -m \"{message}\"");
         else
-            CommandRunner.RunCommand(Folder, $"set GIT_COMMITTER_DATE={date} & \"{GitInstall}\" commit --date=\"{date}\" -m \"{message}\"");
+            CommandRunner.RunCommand(Folder, GitInstall, $"commit --date=\"{date}\" -m \"{message}\"");
     }
 
     public void CheckoutBranch(string branch, string hash = null)

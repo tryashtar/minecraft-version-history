@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="YamlDotNet" Version="11.2.1" />
+    <PackageReference Include="YamlDotNet" Version="12.0.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -24,6 +24,6 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(TargetDir)..\..\config.yaml&quot; &quot;$(SolutionDir)personal_config.yaml&quot;" />
+    <Exec Command="cp &quot;$(TargetDir)..\..\config.yaml&quot; &quot;$(SolutionDir)personal_config.yaml&quot;" />
   </Target>
 </Project>

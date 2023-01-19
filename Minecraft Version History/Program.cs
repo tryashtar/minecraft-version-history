@@ -9,8 +9,8 @@ public static class Program
             try
 #endif
         {
-            var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"..\..\config.yaml");
-            var config = new AppConfig(Path.GetFullPath(@"..\.."), config_file);
+            var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"../../config.yaml");
+            var config = new AppConfig(Path.GetFullPath(@"../.."), config_file);
 
             var downloader = new JavaVersionDownloader();
 #if !DEBUG

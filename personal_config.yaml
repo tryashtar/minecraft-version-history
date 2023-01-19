@@ -1,21 +1,21 @@
 # you can just use 'git' if it's in your PATH
-git install: C:\Program Files\Git\cmd\git.exe
+git install: /usr/bin/git
 
 java:
-  repo: D:\Minecraft\Java Storage\History
+  repo: /d/Minecraft/Java Storage/History
   # new versions will be downloaded to the first folder listed here
   # I use another folder for archived versions so the launcher isn't slowed down
   version folders:
-  - '%appdata%\.minecraft\versions'
-  - '%appdata%\.minecraft\versions\~ARCHIVE'
-  assets folder: '%appdata%\.minecraft\assets'
+  - '~/.minecraft/versions'
+  - '~/.minecraft/versions/~ARCHIVE'
+  assets folder: '~/.minecraft/assets'
   mcp:
-    merged: D:\Minecraft\Java Storage\MCP\Merged
+    merged: /d/Minecraft/Java Storage/MCP/Merged
     matched: 1.14.4
   # Minecraft builtin java, seems to work well
   java install:
-  - C:\Program Files (x86)\Minecraft Launcher\runtime\java-runtime-gamma\windows-x64\java-runtime-gamma\bin\java.exe
-  - java
+  - '~/.minecraft/runtime/java-runtime-gamma/linux/java-runtime-gamma/bin/java'
+  - /usr/bin/java
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/leibnitz27/cfr/releases
@@ -23,7 +23,7 @@ java:
   # I got specialsource from https://ci.md-5.net/job/SpecialSource/148/
   special source jar: SpecialSource-1.10.0-shaded.jar
   # folder to store downloaded server jars
-  server jars: D:\Minecraft\Java Storage\Server Jars
+  server jars: /d/Minecraft/Java Storage/Server Jars
   # choose 'cfr' or 'fernflower'
   decompiler: cfr
   # arguments passed to java when invoking the decompiler
@@ -406,13 +406,14 @@ java:
       - {year: 2021, weeks: [3,36], release: 1.17}
       - {year: 2021, weeks: [37,44], release: 1.18}
       - {year: 2022, weeks: [3,10], release: 1.18}
-      - {year: 2022, weeks: [11,52], release: 1.19}
+      - {year: 2022, weeks: [11,46], release: 1.19}
+      - {year: 2023, weeks: [3,52], release: 1.19}
 
 bedrock:
-  repo: D:\Minecraft\Bedrock Storage\History
+  repo: /d/Minecraft/Bedrock Storage/History
   version folders:
-  - D:\Minecraft\Bedrock Storage\Builds
-  - D:\Minecraft\Bedrock Storage\Builds\~ARCHIVE
+  - /d/Minecraft/Bedrock Storage/Builds
+  - /d/Minecraft/Bedrock Storage/Builds/~ARCHIVE
   nbt translations:
   - extension: mcstructure
     endian: little

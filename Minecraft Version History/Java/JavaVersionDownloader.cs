@@ -29,7 +29,7 @@ public class JavaVersionDownloader
                 );
             }
             var all_data = folders.Select(Data).ToList();
-            if (all_data.Any(x => File.Exists(x.jar_file) && File.Exists(x.jar_file)))
+            if (all_data.Any(x => File.Exists(x.jar_file) && File.Exists(x.json_file)))
                 continue;
             var download_location = all_data[0];
             Console.WriteLine($"Downloading new version: {name}");

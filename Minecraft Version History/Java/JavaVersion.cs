@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace MinecraftVersionHistory;
 
@@ -39,18 +40,22 @@ public class JavaVersion : Version
         return File.Exists(jsonpath) && File.Exists(jarpath);
     }
 
-    private void RunDataGenerators(JavaConfig config, string folder)
+    private Task<string> ServerDownloadTask;
+
+    private async Task RunDataGeneratorsAsync(JavaConfig config, string folder)
     {
         string reports_path = Path.Combine(config.ServerJarFolder, "generated");
         if (Directory.Exists(reports_path))
             Directory.Delete(reports_path, true);
 
-        DownloadServerJar(config);
-        if (Server.JarPath is not null)
+        if (ServerDownloadTask == null)
+            ServerDownloadTask = DownloadServerJarAsync(config);
+        var server_path = await ServerDownloadTask;
+        if (server_path is not null)
         {
             Profiler.Start("Fetching data reports");
-            string args1 = $"-cp \"{Server.JarPath}\" net.minecraft.data.Main --reports";
-            string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{Server.JarPath}\" --reports";
+            string args1 = $"-cp \"{server_path}\" net.minecraft.data.Main --reports";
+            string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{server_path}\" --reports";
             var result = CommandRunner.RunJavaCombos(
                 config.ServerJarFolder,
                 config.JavaInstallationPaths,
@@ -118,7 +123,7 @@ public class JavaVersion : Version
         }
 
         if (ReleaseTime > java_config.DataGenerators)
-            json_exporting.Add(step(() => RunDataGenerators(java_config, Path.Combine(folder, "reports"))));
+            json_exporting.Add(RunDataGeneratorsAsync(java_config, Path.Combine(folder, "reports")));
         if (AssetsURL != null)
             json_exporting.Add(step(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
         json_exporting.Add(step(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
@@ -161,7 +166,7 @@ public class JavaVersion : Version
         return mapped_jar_path;
     }
 
-    private void DecompileJar(JavaConfig config, string jar_path, string folder)
+    private async Task DecompileJarAsync(JavaConfig config, string jar_path, string folder)
     {
         Profiler.Start($"Decompiling");
         if (config.Decompiler == DecompilerType.Cfr)
@@ -214,7 +219,7 @@ public class JavaVersion : Version
         return null;
     }
 
-    private void DecompileMinecraft(JavaConfig config, string destination)
+    private async Task DecompileMinecraft(JavaConfig config, string destination)
     {
         Directory.CreateDirectory(destination);
         string final_jar = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(Client.JarPath)}_final.jar");
@@ -222,8 +227,9 @@ public class JavaVersion : Version
         string used_client = mapped_client ?? Client.JarPath;
         string mapped_server = null;
         string unbundled_server_path = null;
-        DownloadServerJar(config);
-        string final_server_jar = Server.JarPath;
+        if (ServerDownloadTask == null)
+            ServerDownloadTask = DownloadServerJarAsync(config);
+        var final_server_jar = await ServerDownloadTask;
         if (Server.JarPath is not null)
         {
             using (ZipArchive archive = ZipFile.Open(Server.JarPath, ZipArchiveMode.Read))
@@ -275,7 +281,7 @@ public class JavaVersion : Version
         }
         Profiler.Stop();
 
-        DecompileJar(config, final_jar, destination);
+        DecompileJarAsync(config, final_jar, destination).Wait();
 
         if (mapped_client is not null)
             File.Delete(mapped_client);
@@ -314,17 +320,20 @@ public class JavaVersion : Version
         Profiler.Stop();
     }
 
-    public void DownloadServerJar(JavaConfig config)
+    public async Task<string> DownloadServerJarAsync(JavaConfig config)
     {
         if (ServerJarURL is null)
-            return;
+            return null;
         string path = Path.Combine(config.ServerJarFolder, Name + ".jar");
         if (Server.JarPath is null)
             Server = Server with { JarPath = path };
         if (!File.Exists(path))
         {
-            Util.DownloadFile(ServerJarURL, path);
+            await Util.DownloadFileAsync(ServerJarURL, path);
             Server = Server with { JarPath = path };
+            return path;
         }
+
+        return null;
     }
 }

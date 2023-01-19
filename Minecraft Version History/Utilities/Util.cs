@@ -1,4 +1,5 @@
 ﻿using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 
 namespace MinecraftVersionHistory;
 
@@ -13,7 +14,12 @@ public static class Util
     {
         if (nullable && node == null)
             return null;
-        return Path.Combine(base_folder, Environment.ExpandEnvironmentVariables((string)node));
+        string path = (string)node;
+        if (path.StartsWith('~') && OperatingSystem.IsLinux())
+            path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
+        else if (OperatingSystem.IsWindows())
+            path = Environment.ExpandEnvironmentVariables(path);
+        return Path.Combine(base_folder, path);
     }
 
     public static int Depth(this VersionNode node)
@@ -113,6 +119,17 @@ public static class Util
         if (stream.CanSeek)
             stream.Seek(0, SeekOrigin.Begin);
         stream.CopyTo(file);
+        Profiler.Stop();
+    }
+    public static async Task DownloadFileAsync(string url, string path)
+    {
+        Profiler.Start($"Downloading {url} to {path}");
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        await using var stream = await HTTP_CLIENT.GetStreamAsync(url);
+        await using var file = File.Create(path);
+        if (stream.CanSeek)
+            stream.Seek(0, SeekOrigin.Begin);
+        await stream.CopyToAsync(file);
         Profiler.Stop();
     }
     public static string DownloadString(string url)

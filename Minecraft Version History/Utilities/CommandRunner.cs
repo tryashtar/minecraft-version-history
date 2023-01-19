@@ -2,21 +2,21 @@
 
 public static class CommandRunner
 {
-    public static ProcessResult RunCommand(string directory, string input, TextWriter output, TextWriter error)
+    public static ProcessResult RunCommand(string directory, string exe, string args, TextWriter output, TextWriter error)
     {
 #if DEBUG
         Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine($"Running this command: {input}");
+        Console.WriteLine($"Running this command: {exe} {args}");
 #endif
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        var result = new ProcessWrapper(directory, "cmd.exe", $"/S /C \"{input}\"", output, error).Result;
+        var result = new ProcessWrapper(directory, exe, args, output, error).Result;
         Console.ResetColor();
         return result;
     }
 
-    public static ProcessResult RunCommand(string directory, string input)
+    public static ProcessResult RunCommand(string directory, string exe, string args)
     {
-        return RunCommand(directory, input, Console.Out, Console.Out);
+        return RunCommand(directory, exe, args, Console.Out, Console.Out);
     }
 
     public static ProcessResult RunJavaCommand(string cd, IEnumerable<string> java, string input)
@@ -45,10 +45,11 @@ public static class CommandRunner
             Console.WriteLine($"Install: {java}");
             Console.WriteLine($"Input: {input}");
 #endif
-            result = RunCommand(cd, $"\"{java}\" {input}");
+            result = RunCommand(cd, java, input);
             if (result.ExitCode == 0)
                 return result;
         }
+
         return result;
     }
 }
