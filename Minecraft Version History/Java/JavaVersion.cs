@@ -42,20 +42,18 @@ public class JavaVersion : Version
 
     private Task<string> ServerDownloadTask;
 
-    private async Task RunDataGeneratorsAsync(JavaConfig config, string folder)
+    private void RunDataGenerators(JavaConfig config, string folder)
     {
         string reports_path = Path.Combine(config.ServerJarFolder, "generated");
         if (Directory.Exists(reports_path))
             Directory.Delete(reports_path, true);
 
-        if (ServerDownloadTask == null)
-            ServerDownloadTask = DownloadServerJarAsync(config);
-        var server_path = await ServerDownloadTask;
-        if (server_path is not null)
+        DownloadServerJar(config);
+        if (Server.JarPath is not null)
         {
             Profiler.Start("Fetching data reports");
-            string args1 = $"-cp \"{server_path}\" net.minecraft.data.Main --reports";
-            string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{server_path}\" --reports";
+            string args1 = $"-cp \"{Server.JarPath}\" net.minecraft.data.Main --reports";
+            string args2 = $"-DbundlerMainClass=net.minecraft.data.Main -jar \"{Server.JarPath}\" --reports";
             var result = CommandRunner.RunJavaCombos(
                 config.ServerJarFolder,
                 config.JavaInstallationPaths,
@@ -109,29 +107,13 @@ public class JavaVersion : Version
     public override void ExtractData(string folder, AppConfig config)
     {
         var java_config = config.Java;
-        var json_exporting = new List<Task>();
-        var steps = new List<Task>();
-        static Task step(Action action)
-        {
-            var task = Task.Run(action);
-            task.ContinueWith(x =>
-            {
-                if (x.IsFaulted)
-                    throw x.Exception;
-            });
-            return task;
-        }
-
         if (ReleaseTime > java_config.DataGenerators)
-            json_exporting.Add(RunDataGeneratorsAsync(java_config, Path.Combine(folder, "reports")));
+            RunDataGenerators(java_config, Path.Combine(folder, "reports"));
         if (AssetsURL != null)
-            json_exporting.Add(step(() => FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"))));
-        json_exporting.Add(step(() => ExtractJar(java_config, Path.Combine(folder, "jar"))));
-        steps.Add(step(() => DecompileMinecraft(java_config, Path.Combine(folder, "source"))));
-
-        Task.WaitAll(json_exporting.ToArray());
+            FetchAssets(java_config, Path.Combine(folder, "assets.json"), Path.Combine(folder, "assets"));
+        ExtractJar(java_config, Path.Combine(folder, "jar"));
+        DecompileMinecraft(java_config, Path.Combine(folder, "source"));
         java_config.JsonSort(folder, this);
-        Task.WaitAll(steps.ToArray());
         File.Copy(LauncherJsonPath, Path.Combine(folder, "launcher.json"));
     }
 
@@ -166,7 +148,7 @@ public class JavaVersion : Version
         return mapped_jar_path;
     }
 
-    private async Task DecompileJarAsync(JavaConfig config, string jar_path, string folder)
+    private void DecompileJar(JavaConfig config, string jar_path, string folder)
     {
         Profiler.Start($"Decompiling");
         if (config.Decompiler == DecompilerType.Cfr)
@@ -219,7 +201,7 @@ public class JavaVersion : Version
         return null;
     }
 
-    private async Task DecompileMinecraft(JavaConfig config, string destination)
+    private void DecompileMinecraft(JavaConfig config, string destination)
     {
         Directory.CreateDirectory(destination);
         string final_jar = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(Client.JarPath)}_final.jar");
@@ -227,9 +209,8 @@ public class JavaVersion : Version
         string used_client = mapped_client ?? Client.JarPath;
         string mapped_server = null;
         string unbundled_server_path = null;
-        if (ServerDownloadTask == null)
-            ServerDownloadTask = DownloadServerJarAsync(config);
-        var final_server_jar = await ServerDownloadTask;
+        DownloadServerJar(config);
+        string final_server_jar = Server.JarPath;
         if (Server.JarPath is not null)
         {
             using (ZipArchive archive = ZipFile.Open(Server.JarPath, ZipArchiveMode.Read))
@@ -281,7 +262,7 @@ public class JavaVersion : Version
         }
         Profiler.Stop();
 
-        DecompileJarAsync(config, final_jar, destination).Wait();
+        DecompileJar(config, final_jar, destination);
 
         if (mapped_client is not null)
             File.Delete(mapped_client);
@@ -320,20 +301,17 @@ public class JavaVersion : Version
         Profiler.Stop();
     }
 
-    public async Task<string> DownloadServerJarAsync(JavaConfig config)
+    public void DownloadServerJar(JavaConfig config)
     {
         if (ServerJarURL is null)
-            return null;
+            return;
         string path = Path.Combine(config.ServerJarFolder, Name + ".jar");
         if (Server.JarPath is null)
             Server = Server with { JarPath = path };
         if (!File.Exists(path))
         {
-            await Util.DownloadFileAsync(ServerJarURL, path);
+            Util.DownloadFile(ServerJarURL, path);
             Server = Server with { JarPath = path };
-            return path;
         }
-
-        return null;
     }
 }

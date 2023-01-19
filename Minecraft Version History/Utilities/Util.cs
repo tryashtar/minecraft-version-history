@@ -121,17 +121,6 @@ public static class Util
         stream.CopyTo(file);
         Profiler.Stop();
     }
-    public static async Task DownloadFileAsync(string url, string path)
-    {
-        Profiler.Start($"Downloading {url} to {path}");
-        Directory.CreateDirectory(Path.GetDirectoryName(path));
-        await using var stream = await HTTP_CLIENT.GetStreamAsync(url);
-        await using var file = File.Create(path);
-        if (stream.CanSeek)
-            stream.Seek(0, SeekOrigin.Begin);
-        await stream.CopyToAsync(file);
-        Profiler.Stop();
-    }
     public static string DownloadString(string url)
     {
         Profiler.Start($"Downloading {url}");
