@@ -13,8 +13,11 @@ public class BedrockUpdater : Updater
         {
             foreach (var zip in Directory.EnumerateFiles(folder))
             {
-                if (Path.GetExtension(zip) == ".zip")
-                    yield return new BedrockVersion(zip, VersionConfig.VersionFacts);
+                string ext = Path.GetExtension(zip);
+                if (ext == ".zip")
+                    yield return new BedrockVersion(zip, VersionConfig.VersionFacts, true);
+                else if (ext == ".appx")
+                    yield return new BedrockVersion(zip, VersionConfig.VersionFacts, false);
             }
         }
     }

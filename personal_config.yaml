@@ -448,6 +448,7 @@ bedrock:
       - vanilla_1.19.40
       - vanilla_1.19.50
       - vanilla_1.19.60
+      - vanilla_1.19.70
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -490,6 +491,7 @@ bedrock:
       - vanilla_1.19.40
       - vanilla_1.19.50
       - vanilla_1.19.60
+      - vanilla_1.19.70
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -566,6 +568,7 @@ bedrock:
       1.19.3101.0: 1.19.3004.0
       1.19.5021.0: 1.19.4024.0
       1.19.5101.0: 1.19.5025.0
+      1.19.7020.0: 1.19.6027.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests

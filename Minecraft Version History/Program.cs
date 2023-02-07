@@ -5,26 +5,29 @@ public static class Program
     public static void Main(string[] args)
     {
 #if !DEBUG
-            start:
-            try
+        start:
+        try
 #endif
         {
-            var config_file = (YamlMappingNode)YamlHelper.ParseFile(@"../../config.yaml");
-            var config = new AppConfig(Path.GetFullPath(@"../.."), config_file);
+            string config_path = Path.Combine(Directory.GetCurrentDirectory(), "config.yaml");
+            if (args.Length > 0)
+                config_path = args[0];
+            var config_file = (YamlMappingNode)YamlHelper.ParseFile(config_path);
+            var config = new AppConfig(Path.GetDirectoryName(config_path), config_file);
 
             var downloader = new JavaVersionDownloader();
 #if !DEBUG
-                try
+            try
 #endif
             {
                 downloader.DownloadMissing(config.Java.InputFolders, config);
             }
 #if !DEBUG
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Java version downloader failed!");
-                    Console.WriteLine(ex.ToString());
-                }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Java version downloader failed!");
+                Console.WriteLine(ex.ToString());
+            }
 #endif
 
             var java = new JavaUpdater(config);
@@ -36,14 +39,14 @@ public static class Program
             Console.WriteLine("All done!");
         }
 #if !DEBUG
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-                Console.WriteLine();
-                Console.WriteLine("Press enter to try again");
-                Console.ReadLine();
-                goto start;
-            }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+            Console.WriteLine();
+            Console.WriteLine("Press enter to try again");
+            Console.ReadLine();
+            goto start;
+        }
 #endif
     }
 }

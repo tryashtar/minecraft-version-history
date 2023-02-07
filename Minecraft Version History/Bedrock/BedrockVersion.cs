@@ -2,14 +2,37 @@
 
 public class BedrockVersion : Version
 {
-    public readonly string ZipPath;
-    public BedrockVersion(string zip_path, VersionFacts facts)
+    public readonly string AppxPath;
+
+    public BedrockVersion(string path, VersionFacts facts, bool unzip)
     {
-        using ZipArchive zip = ZipFile.OpenRead(zip_path);
-        ZipPath = zip_path;
-        var mainappx = GetMainAppx(zip);
-        Name = facts.CustomName(Path.GetFileNameWithoutExtension(zip_path)) ?? Path.GetFileName(mainappx.FullName).Split('_')[1];
-        ReleaseTime = zip.Entries[0].LastWriteTime.UtcDateTime;
+        if (unzip)
+        {
+            Console.WriteLine($"Extracting APPX for {Path.GetFileName(path)}...");
+            using (ZipArchive zip = ZipFile.OpenRead(path))
+            {
+                var appx = GetMainAppx(zip);
+                AppxPath = Path.ChangeExtension(path, ".appx");
+                appx.ExtractToFile(AppxPath);
+            }
+            //File.Delete(path);
+        }
+        else
+            AppxPath = path;
+
+        using ZipArchive zip2 = ZipFile.OpenRead(AppxPath);
+        Name = facts.CustomName(Path.GetFileNameWithoutExtension(path));
+        if (Name == null)
+        {
+            var manifest = zip2.GetEntry("AppxManifest.xml");
+            using var read = new StreamReader(manifest.Open());
+            string data = read.ReadToEnd();
+            // too lazy to parse xml
+            int version_index = data.IndexOf("Version=\"") + "Version=\"".Length;
+            Name = data[version_index..data.IndexOf("\"", version_index)];
+        }
+
+        ReleaseTime = zip2.Entries[0].LastWriteTime.UtcDateTime;
     }
 
     private ZipArchiveEntry GetMainAppx(ZipArchive zip)
@@ -21,20 +44,14 @@ public class BedrockVersion : Version
             if (filename.StartsWith("Minecraft.Windows") && Path.GetExtension(filename) == ".appx")
                 return entry;
         }
+
         throw new FileNotFoundException($"Could not find main APPX");
     }
 
     public override void ExtractData(string folder, AppConfig config)
     {
         var bedrock_config = config.Bedrock;
-        string appxpath = Path.Combine(folder, "appx.appx");
-        using (ZipArchive zip = ZipFile.OpenRead(ZipPath))
-        {
-            var appx = GetMainAppx(zip);
-            appx.ExtractToFile(appxpath);
-        }
-
-        using (ZipArchive zip = ZipFile.OpenRead(appxpath))
+        using (ZipArchive zip = ZipFile.OpenRead(AppxPath))
         {
             foreach (var entry in zip.Entries)
             {
@@ -45,6 +62,7 @@ public class BedrockVersion : Version
                 }
             }
         }
+
         var merged = Path.Combine(folder, "latest_packs");
         var latest_behavior = Path.Combine(merged, "behavior_pack");
         var latest_resource = Path.Combine(merged, "resource_pack");
@@ -53,6 +71,5 @@ public class BedrockVersion : Version
         Directory.CreateDirectory(latest_resource);
         bedrock_config.BehaviorMerger.Merge(Path.Combine(folder, "data", "behavior_packs"), latest_behavior);
         bedrock_config.ResourceMerger.Merge(Path.Combine(folder, "data", "resource_packs"), latest_resource);
-        File.Delete(appxpath);
     }
 }

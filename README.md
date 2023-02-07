@@ -3,7 +3,7 @@ I use this program to generate a git history that shows the changes to Minecraft
 
 <img src="https://i.imgur.com/lOSNnVi.png" width=300> <img src="https://i.imgur.com/UGVEbv9.png" width=200>
 
-It works for both Java and Bedrock editions. You need to use a `config.yaml` file to determine a lot of functionality. Currently, the config file has to be placed two folders above the executable, because of... reasons. You can view [the config I personally use](personal_config.yaml) as a reference.
+It works for both Java and Bedrock editions. You need to use a `config.yaml` file to determine a lot of functionality. Either put it next to the executable, or pass its path as an argument. You can view [the config I personally use](personal_config.yaml) as a reference.
 
 **Java Features**
 * Versions are read as they appear in the `.minecraft/versions` directory, with a folder containing an identically-named jar and JSON manifest.
@@ -18,7 +18,7 @@ It works for both Java and Bedrock editions. You need to use a `config.yaml` fil
   - If the server jar can be downloaded, it is decompiled as well, ensuring that all endpoint-specific code is included.
 
 **Bedrock Features**
-* The versions are read as zips containing a single folder which contains another single folder which contains the APPX and installation metadata. This is probably not helpful for the general public, but that's how I receive Bedrock builds.
+* The versions are read as APPX archives.
 * The entire contents of the APPX is extracted to the `data` folder.
 * NBT files are converted, as above.
 * Since Bedrock stores its vanilla resource/behavior packs in slices, you can with configuration merge them into a "final" pack. Whether files across slices should be overwritten or merge in some way is also configurable. These final packs are stored in the `latest_packs` folder.
