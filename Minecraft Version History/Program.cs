@@ -11,7 +11,7 @@ public static class Program
         {
             string config_path = Path.Combine(Directory.GetCurrentDirectory(), "config.yaml");
             if (args.Length > 0)
-                config_path = args[0];
+                config_path = Path.Combine(Directory.GetCurrentDirectory(), args[0]);
             var config_file = (YamlMappingNode)YamlHelper.ParseFile(config_path);
             var config = new AppConfig(Path.GetDirectoryName(config_path), config_file);
 
