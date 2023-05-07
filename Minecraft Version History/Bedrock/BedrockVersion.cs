@@ -15,7 +15,7 @@ public class BedrockVersion : Version
                 AppxPath = Path.ChangeExtension(path, ".appx");
                 appx.ExtractToFile(AppxPath);
             }
-            //File.Delete(path);
+            File.Delete(path);
         }
         else
             AppxPath = path;

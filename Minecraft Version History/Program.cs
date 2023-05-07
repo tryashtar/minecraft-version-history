@@ -15,12 +15,13 @@ public static class Program
             var config_file = (YamlMappingNode)YamlHelper.ParseFile(config_path);
             var config = new AppConfig(Path.GetDirectoryName(config_path), config_file);
 
-            var downloader = new JavaVersionDownloader();
+
+            var java = new JavaUpdater(config);
 #if !DEBUG
             try
 #endif
             {
-                downloader.DownloadMissing(config.Java.InputFolders, config);
+                java.DownloadMissing(config.Java.InputFolders[0].Folder, config);
             }
 #if !DEBUG
             catch (Exception ex)
@@ -29,8 +30,6 @@ public static class Program
                 Console.WriteLine(ex.ToString());
             }
 #endif
-
-            var java = new JavaUpdater(config);
             java.Perform();
 
             var bedrock = new BedrockUpdater(config);

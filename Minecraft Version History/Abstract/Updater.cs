@@ -2,17 +2,15 @@
 
 public abstract class Updater
 {
-    public readonly VersionGraph Graph;
+    protected VersionGraph Graph;
+    protected readonly AppConfig Config;
     private Dictionary<string, VersionNode> CommitToVersion;
     private Dictionary<VersionNode, string> VersionToCommit;
-    public readonly AppConfig Config;
 
-    public Updater(AppConfig config)
+    protected Updater(AppConfig config)
     {
         Config = config;
-        Profiler.Start("Building version graph");
-        Graph = CreateGraph();
-        Profiler.Stop();
+        CreateGraph();
     }
 
     public void Perform()
@@ -27,12 +25,14 @@ public abstract class Updater
         }
     }
 
-    private VersionGraph CreateGraph()
+    protected void CreateGraph()
     {
+        Profiler.Start("Building version graph");
         var versions = FindVersions().Distinct(new DuplicateRemover()).ToList();
         var git_versions = VersionConfig.GitRepo.CommittedVersions().Select(x => new GitVersion(x));
         versions.AddRange(git_versions.Where(x => !versions.Any(y => x.Name == y.Name)));
-        return new VersionGraph(VersionConfig.VersionFacts, versions);
+        Graph = new VersionGraph(VersionConfig.VersionFacts, versions);
+        Profiler.Stop();
     }
 
     private class DuplicateRemover : IEqualityComparer<Version>
@@ -49,6 +49,7 @@ public abstract class Updater
     }
 
     protected abstract VersionConfig VersionConfig { get; }
+
     private void LoadCommits()
     {
         var versions = Graph.Flatten().ToList();
@@ -65,6 +66,7 @@ public abstract class Updater
                 VersionToCommit[version] = entry.Hash;
             }
         }
+
         Profiler.Stop();
     }
 
@@ -85,11 +87,13 @@ public abstract class Updater
                 Console.WriteLine("Need to commit parent first");
                 Commit(version.Parent);
             }
+
             InsertCommit(version);
         }
     }
 
     private string GetBranchName(VersionNode version) => version.ReleaseName.Replace(' ', '-');
+
     private void InitialCommit(VersionNode version)
     {
         Profiler.Start("Initializing repo");
@@ -142,12 +146,9 @@ public abstract class Updater
         if (Directory.Exists(workspace))
             Directory.Delete(workspace, true);
         Directory.CreateDirectory(workspace);
-        Profiler.Run("Extracting", () =>
-        { version.Version.ExtractData(workspace, Config); });
-        Profiler.Run("Unzipping", () =>
-        { UnzipZips(workspace); });
-        Profiler.Run("Translating NBT Files", () =>
-        { TranslateNbtFiles(workspace); });
+        Profiler.Run("Extracting", () => { version.Version.ExtractData(workspace, Config); });
+        Profiler.Run("Unzipping", () => { UnzipZips(workspace); });
+        Profiler.Run("Translating NBT Files", () => { TranslateNbtFiles(workspace); });
         Profiler.Run($"Merging", () =>
         {
             MergeWithWorkspace(VersionConfig.GitRepo.Folder, workspace);
@@ -198,6 +199,7 @@ public abstract class Updater
             if (!File.Exists(workspace_version))
                 File.Delete(item);
         }
+
         Profiler.Stop();
 
         // copy new/changed files from workspace
@@ -210,6 +212,7 @@ public abstract class Updater
                 Util.Copy(item, base_version);
             File.Delete(item);
         }
+
         Profiler.Stop();
     }
 

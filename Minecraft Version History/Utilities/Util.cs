@@ -15,10 +15,7 @@ public static class Util
         if (nullable && node == null)
             return null;
         string path = (string)node;
-        if (path.StartsWith('~') && OperatingSystem.IsLinux())
-            path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
-        else if (OperatingSystem.IsWindows())
-            path = Environment.ExpandEnvironmentVariables(path);
+        path = Environment.ExpandEnvironmentVariables(path);
         return Path.Combine(base_folder, path);
     }
 

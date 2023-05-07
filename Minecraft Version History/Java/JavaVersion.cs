@@ -10,11 +10,13 @@ public class JavaVersion : Version
     public EndpointData Client { get; private set; }
     public readonly string AssetsURL;
     public readonly string ServerJarURL;
+    public readonly string JarFilePath;
     public readonly string LauncherJsonPath;
     public JavaVersion(string folder, VersionFacts facts)
     {
         Name = Path.GetFileName(folder);
         Name = facts.CustomName(Name) ?? Name;
+        JarFilePath = Path.Combine(folder, Name + ".jar");
         LauncherJsonPath = Path.Combine(folder, Name + ".json");
         var json = JsonObject.Parse(File.ReadAllText(LauncherJsonPath));
         ReleaseTime = DateTime.Parse(json["releaseTime"].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.None);
@@ -39,8 +41,6 @@ public class JavaVersion : Version
         string jarpath = Path.Combine(folder, name + ".jar");
         return File.Exists(jsonpath) && File.Exists(jarpath);
     }
-
-    private Task<string> ServerDownloadTask;
 
     private void RunDataGenerators(JavaConfig config, string folder)
     {
