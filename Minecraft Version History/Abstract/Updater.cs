@@ -37,7 +37,7 @@ public abstract class Updater
 
     private class DuplicateRemover : IEqualityComparer<Version>
     {
-        public bool Equals(Version x, Version y)
+        public bool Equals(Version? x, Version? y)
         {
             return x.Name == y.Name && x.ReleaseTime == y.ReleaseTime;
         }

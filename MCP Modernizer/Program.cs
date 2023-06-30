@@ -1,6 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using MinecraftVersionHistory;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using TryashtarUtils.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -43,7 +43,6 @@ public static class Program
                 sorted[parsing.Value].Add(arg);
         }
         var versioned_map = new VersionedRenames();
-        var global_map = new Sided<FlatMap>();
         var mcps = new Dictionary<string, MCP>();
         void add_mcp(MCP mcp)
         {
@@ -129,15 +128,14 @@ public static class Program
             }
         }
 
-        var jsons = new Dictionary<JObject, string>();
+        var jsons = new Dictionary<JsonObject, string>();
         foreach (var folder in sorted[ArgType.ModernCSV])
         {
             var file = Path.Combine(folder, "versions.json");
             if (File.Exists(file))
             {
-                using var reader = File.OpenText(file);
-                using var jreader = new JsonTextReader(reader);
-                jsons.Add((JObject)JToken.ReadFrom(jreader), folder);
+                using var reader = File.OpenRead(file);
+                jsons.Add(JsonSerializer.Deserialize<JsonObject>(reader)!, folder);
             }
         }
         void find_version(string parent, string version, string series)
@@ -149,25 +147,25 @@ public static class Program
                 {
                     IEnumerable<(string type, string number)> choose()
                     {
-                        if (!(json.TryGetValue(series, out var r) && r is JObject results))
+                        if (!(json.TryGetPropertyValue(series, out var r) && r is JsonObject results))
                             yield break;
-                        if (results.TryGetValue("snapshot", out var n) && n is JArray snapshot)
+                        if (results.TryGetPropertyValue("snapshot", out var n) && n is JsonArray snapshot)
                         {
-                            foreach (var item in snapshot.Select(x => ("snapshot", x.ToString())).Reverse())
+                            foreach (var item in snapshot.Select(x => ("snapshot", x!.ToString())).Reverse())
                             {
                                 yield return item;
                             }
                         }
-                        if (results.TryGetValue("stable", out var t) && t is JArray stable)
+                        if (results.TryGetPropertyValue("stable", out var t) && t is JsonArray stable)
                         {
-                            foreach (var item in stable.Select(x => ("stable", x.ToString())).Reverse())
+                            foreach (var item in stable.Select(x => ("stable", x!.ToString())).Reverse())
                             {
                                 yield return item;
                             }
                         }
                     }
 
-                    var choices = choose();
+                    var choices = choose().ToList();
                     if (choices.Any())
                     {
                         var csvs = choices.Select(x => Path.Combine(folder, $"mcp_{x.type}", $"{x.number}-{series}", $"mcp_{x.type}-{x.number}-{series}.zip"));
@@ -408,10 +406,10 @@ public static class Program
     {
         public int Compare(MCP? x, MCP? y)
         {
-            int c = CompareSeries(GetSeries(x), GetSeries(y));
+            int c = CompareSeries(GetSeries(x!), GetSeries(y!));
             if (c != 0)
                 return c;
-            return CompareVersions(x, y);
+            return CompareVersions(x!, y!);
         }
 
         private int CompareVersions(MCP x, MCP y)
@@ -427,7 +425,7 @@ public static class Program
 
         private int CompareSnapshots(string x, string y)
         {
-            return x.CompareTo(y);
+            return String.Compare(x, y, StringComparison.Ordinal);
         }
 
         private int CompareSeries(string x, string y)
@@ -472,7 +470,7 @@ public static class Program
                     if (ic != 0)
                         return ic;
                 }
-                int c = xs[i].CompareTo(ys[i]);
+                int c = String.Compare(xs[i], ys[i], StringComparison.Ordinal);
                 if (c != 0)
                     return c;
             }

@@ -156,7 +156,7 @@ public class VersionedRenames
 
     private class RenameSorter : IComparer<string>
     {
-        public int Compare(string x, string y)
+        public int Compare(string? x, string? y)
         {
             string[] x_scores = x.Split('_');
             string[] y_scores = y.Split('_');

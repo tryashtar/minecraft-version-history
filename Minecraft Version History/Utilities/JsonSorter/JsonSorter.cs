@@ -94,7 +94,7 @@ public class JsonSorter : PathedJsonSorter
             return 0;
         }
 
-        public int Compare(JsonNode x, JsonNode y)
+        public int Compare(JsonNode? x, JsonNode? y)
         {
             if (Owner.SortBy == null)
             {

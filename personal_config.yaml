@@ -16,6 +16,7 @@ java:
   java install:
   - '%HOME%/.minecraft/runtime/java-runtime-gamma/linux/java-runtime-gamma/bin/java'
   - /usr/bin/java
+  - '%HOME%/.minecraft/runtime/jre-legacy/linux/jre-legacy/bin/java'
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
   # I got cfr from https://github.com/FabricMC/cfr
@@ -465,6 +466,8 @@ bedrock:
       - vanilla_1.19.70
       - vanilla_1.19.80
       - vanilla_1.20.0
+      - vanilla_1.20.10
+      - vanilla_1.20.20
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -510,6 +513,8 @@ bedrock:
       - vanilla_1.19.70
       - vanilla_1.19.80
       - vanilla_1.20.0
+      - vanilla_1.20.10
+      - vanilla_1.20.20
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -589,6 +594,7 @@ bedrock:
       1.19.7020.0: 1.19.6027.0
       1.19.7102.0: 1.19.7026.0
       1.20.20.0: 1.19.7302.0
+      1.20.1020.0: 1.20.25.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests

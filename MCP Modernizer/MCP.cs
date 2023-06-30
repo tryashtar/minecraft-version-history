@@ -8,7 +8,7 @@ public abstract class MCP
     public static readonly MCPSorter Sorter = new();
     public readonly Sided<FlatMap> FriendlyNames = new();
     public readonly Sided<Mappings> LocalMappings = new();
-    public string ClientVersion { get; protected set; }
+    public string? ClientVersion { get; protected set; }
 
     public void WriteClientMappings(string path)
     {
@@ -124,7 +124,7 @@ public abstract class MCP
         parser.SetDelimiters(",");
         while (!parser.EndOfData)
         {
-            yield return parser.ReadFields();
+            yield return parser.ReadFields()!;
         }
     }
 }
@@ -141,7 +141,7 @@ public class MCPSorter : IComparer<MCP>
             int m2 = cx.MinorVersion.CompareTo(cy.MinorVersion);
             if (m2 != 0)
                 return m2;
-            return cx.ExtraVersion.CompareTo(cy.ExtraVersion);
+            return String.Compare(cx.ExtraVersion, cy.ExtraVersion, StringComparison.Ordinal);
         }
         return 0;
     }

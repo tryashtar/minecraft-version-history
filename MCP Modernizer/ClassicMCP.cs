@@ -38,7 +38,7 @@ public class ClassicMCP : MCP
                 using var reader = new StreamReader(vcfg.Open());
                 while (!reader.EndOfStream && ClientVersion == null)
                 {
-                    var line = reader.ReadLine();
+                    var line = reader.ReadLine()!;
                     var m1 = ClientVersionRegex.Match(line);
                     if (m1.Success)
                         ClientVersion = m1.Groups["ver"].Value;
@@ -59,7 +59,7 @@ public class ClassicMCP : MCP
                 if (readme != null)
                 {
                     using var reader = new StreamReader(readme.Open());
-                    var line = reader.ReadLine();
+                    var line = reader.ReadLine()!;
                     var m = ReadMeRegex.Match(line);
                     if (m.Success)
                     {

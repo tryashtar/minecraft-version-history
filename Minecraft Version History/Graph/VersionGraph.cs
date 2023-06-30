@@ -78,7 +78,7 @@ public class VersionGraph
             Facts = facts;
         }
 
-        public int Compare(ReleaseBranch x, ReleaseBranch y)
+        public int Compare(ReleaseBranch? x, ReleaseBranch? y)
         {
             return Facts.Compare(x.Versions.First().Version, y.Versions.First().Version);
         }

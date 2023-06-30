@@ -128,7 +128,7 @@ public class NbtTranslationOptions
         {
             Order = order;
         }
-        public int Compare(NbtTag x, NbtTag y)
+        public int Compare(NbtTag? x, NbtTag? y)
         {
             return Index(x.Name).CompareTo(Index(y.Name));
         }

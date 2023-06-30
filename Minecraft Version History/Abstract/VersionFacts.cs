@@ -81,7 +81,7 @@ public class VersionFacts : IComparer<Version>
         ListedOrder
     }
 
-    public int Compare(Version x, Version y)
+    public int Compare(Version? x, Version? y)
     {
         if (x == y)
             return 0;

@@ -4,6 +4,7 @@ public class GitRepo
 {
     public readonly string Folder;
     private readonly string GitInstall;
+
     public GitRepo(string repo_folder, string git_install)
     {
         Folder = repo_folder;
@@ -31,10 +32,13 @@ public class GitRepo
         if (date == null)
             Run($"commit -m \"{message}\"");
         else
-            CommandRunner.RunCommand(Folder, GitInstall, $"commit --date=\"{date}\" -m \"{message}\"");
+        {
+            Environment.SetEnvironmentVariable("GIT_COMMITTER_DATE", date.ToString());
+            Run($"commit --date=\"{date}\" -m \"{message}\"");
+        }
     }
 
-    public void CheckoutBranch(string branch, string hash = null)
+    public void CheckoutBranch(string branch, string? hash = null)
     {
         if (hash == null)
             Run($"checkout -b \"{branch}\"");
@@ -47,7 +51,7 @@ public class GitRepo
         Run($"checkout \"{branch}\"");
     }
 
-    public void MakeBranch(string branch, string hash = null)
+    public void MakeBranch(string branch, string? hash = null)
     {
         if (hash == null)
             Run($"branch \"{branch}\"");
@@ -90,6 +94,7 @@ public class GitCommit
     public readonly string Hash;
     public readonly string Message;
     public readonly DateTime CommitTime;
+
     public GitCommit(string hash, string message, DateTime time)
     {
         Hash = hash;

@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.VisualBasic.CompilerServices;
 
 namespace MinecraftVersionHistory;
 
@@ -12,6 +13,7 @@ public class JavaVersion : Version
     public readonly string ServerJarURL;
     public readonly string JarFilePath;
     public readonly string LauncherJsonPath;
+
     public JavaVersion(string folder, VersionFacts facts)
     {
         Name = Path.GetFileName(folder);
@@ -81,6 +83,7 @@ public class JavaVersion : Version
             var destination = Path.Combine(folder, entry.FullName);
             entry.ExtractToFile(destination);
         }
+
         Profiler.Stop();
     }
 
@@ -101,6 +104,7 @@ public class JavaVersion : Version
             else
                 Util.DownloadFile($"https://resources.download.minecraft.net/{hash[0..2]}/{hash}", destination);
         }
+
         Profiler.Stop();
     }
 
@@ -114,6 +118,7 @@ public class JavaVersion : Version
         ExtractJar(java_config, Path.Combine(folder, "jar"));
         DecompileMinecraft(java_config, Path.Combine(folder, "source"));
         java_config.JsonSort(folder, this);
+        DownloadPatchNotes(Path.Combine(folder, "patchnotes"));
         File.Copy(LauncherJsonPath, Path.Combine(folder, "launcher.json"));
     }
 
@@ -139,10 +144,12 @@ public class JavaVersion : Version
                 else
                     mcp = null;
             }
+
             Profiler.Stop();
             if (mcp == null)
                 return null;
         }
+
         string mapped_jar_path = Path.Combine(folder, $"mapped_{side.Name}.jar");
         config.RemapJar(side.JarPath, mappings_path, mapped_jar_path);
         return mapped_jar_path;
@@ -153,7 +160,8 @@ public class JavaVersion : Version
         Profiler.Start($"Decompiling");
         if (config.Decompiler == DecompilerType.Cfr)
         {
-            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
+            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths,
+                $"{config.DecompilerArgs} -jar \"{config.CfrPath}\" \"{jar_path}\" " +
                 $"--outputdir \"{folder}\" {config.CfrArgs}");
             if (result.ExitCode != 0)
                 throw new ApplicationException($"Failed to decompile: {result.Error}");
@@ -169,8 +177,10 @@ public class JavaVersion : Version
         {
             string output_dir = Path.Combine(folder, "decompiled");
             Directory.CreateDirectory(output_dir);
-            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths, $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
-                 $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\""); ;
+            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths,
+                $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
+                $"{config.FernflowerArgs} \"{jar_path}\" \"{output_dir}\"");
+            ;
             if (result.ExitCode != 0)
                 throw new ApplicationException($"Failed to decompile: {result.Error}");
             using (ZipArchive zip = ZipFile.OpenRead(Path.Combine(output_dir, Path.GetFileName(jar_path))))
@@ -181,10 +191,12 @@ public class JavaVersion : Version
                     entry.ExtractToFile(Path.Combine(folder, entry.FullName));
                 }
             }
+
             Directory.Delete(output_dir, true);
         }
         else
             throw new ArgumentException(nameof(config.Decompiler));
+
         Profiler.Stop();
     }
 
@@ -198,7 +210,39 @@ public class JavaVersion : Version
             var files = reader.ReadToEnd().Split(";");
             return files;
         }
+
         return null;
+    }
+
+    private const string LAUNCHER_PATCH_NOTES = "https://launchercontent.mojang.com/javaPatchNotes.json";
+    private static Dictionary<string, JsonObject> CachedPatchNotes;
+
+    private void DownloadPatchNotes(string folder)
+    {
+        if (CachedPatchNotes == null)
+        {
+            var note_list = (JsonArray)JsonNode.Parse(Util.DownloadString(LAUNCHER_PATCH_NOTES))["entries"];
+            CachedPatchNotes = new();
+            foreach (var entry in note_list)
+            {
+                CachedPatchNotes[entry["version"].GetValue<string>()] = (JsonObject)entry;
+            }
+        }
+
+        if (CachedPatchNotes.TryGetValue(this.Name, out var notes))
+        {
+            Profiler.Start("Downloading patch notes");
+            Directory.CreateDirectory(folder);
+            string image_url = "https://launchercontent.mojang.com" + notes["image"]["url"].GetValue<string>();
+            string image_name = "image" + Path.GetExtension(image_url);
+            Util.DownloadFile(image_url, Path.Combine(folder, image_name));
+            string title = notes["title"].GetValue<string>();
+            string html = $"<h1>{title}</h1>\n<img src=\"{image_name}\"/>\n" + notes["body"].GetValue<string>();
+            File.WriteAllText(Path.Combine(folder, "blog.html"), html);
+            Profiler.Stop();
+        }
+        else
+            Console.WriteLine("No patch notes found!");
     }
 
     private void DecompileMinecraft(JavaConfig config, string destination)
@@ -220,7 +264,8 @@ public class JavaVersion : Version
                 {
                     Profiler.Start("Unbundling server");
 
-                    unbundled_server_path = Path.Combine(destination, $"{Path.GetFileNameWithoutExtension(Server.JarPath)}_unbundled.jar");
+                    unbundled_server_path = Path.Combine(destination,
+                        $"{Path.GetFileNameWithoutExtension(Server.JarPath)}_unbundled.jar");
                     final_server_jar = unbundled_server_path;
                     using ZipArchive unbundled = ZipFile.Open(unbundled_server_path, ZipArchiveMode.Create);
 
@@ -241,6 +286,7 @@ public class JavaVersion : Version
                     Profiler.Stop();
                 }
             }
+
             mapped_server = MapJar(config, Server with { JarPath = final_server_jar }, destination);
             string used_server = mapped_server ?? final_server_jar;
             CombineJars(final_jar, used_client, used_server);
@@ -260,6 +306,7 @@ public class JavaVersion : Version
                     entry.Delete();
             }
         }
+
         Profiler.Stop();
 
         DecompileJar(config, final_jar, destination);
@@ -298,6 +345,7 @@ public class JavaVersion : Version
             using ZipArchive zip = ZipFile.OpenRead(path);
             CombineArchives(zip, archive);
         }
+
         Profiler.Stop();
     }
 
