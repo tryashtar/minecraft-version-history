@@ -7,7 +7,7 @@ java:
   # I use another folder for archived versions so the launcher isn't slowed down
   version folders:
   - '%HOME%/.minecraft/versions'
-  - '%HOME%/.minecraft/versions/~ARCHIVE'
+  - '%HOME%/.minecraft/versions/ARCHIVE'
   assets folder: '%HOME%/.minecraft/assets'
   mcp:
     merged: /d/Minecraft/Java Storage/MCP/Merged
@@ -468,6 +468,7 @@ bedrock:
       - vanilla_1.20.0
       - vanilla_1.20.10
       - vanilla_1.20.20
+      - vanilla_1.20.30
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -515,6 +516,7 @@ bedrock:
       - vanilla_1.20.0
       - vanilla_1.20.10
       - vanilla_1.20.20
+      - vanilla_1.20.30
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal

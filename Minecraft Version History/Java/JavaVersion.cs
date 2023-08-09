@@ -194,6 +194,21 @@ public class JavaVersion : Version
 
             Directory.Delete(output_dir, true);
         }
+        else if (config.Decompiler == DecompilerType.FernflowerUnzipped)
+        {
+            var result = CommandRunner.RunJavaCommand(folder, config.JavaInstallationPaths,
+                $"{config.DecompilerArgs} -jar \"{config.FernflowerPath}\" " +
+                $"{config.FernflowerArgs} \"{jar_path}\" \"{folder}\"");
+            ;
+            if (result.ExitCode != 0)
+                throw new ApplicationException($"Failed to decompile: {result.Error}");
+            Directory.Delete(Path.Combine(folder, "assets"), true);
+            Directory.Delete(Path.Combine(folder, "data"), true);
+            foreach (var file in Directory.GetFiles(folder, "*", SearchOption.TopDirectoryOnly))
+            {
+                File.Delete(file);
+            }
+        }
         else
             throw new ArgumentException(nameof(config.Decompiler));
 

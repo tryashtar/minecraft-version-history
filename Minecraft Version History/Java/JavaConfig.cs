@@ -149,5 +149,6 @@ public class JavaConfig : VersionConfig
 public enum DecompilerType
 {
     Fernflower,
+    FernflowerUnzipped,
     Cfr
 }
