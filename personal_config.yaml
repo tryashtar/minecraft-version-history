@@ -109,6 +109,7 @@ java:
     - reports/worldgen/minecraft/worldgen/structure
     - reports/minecraft/worldgen/structure
     - jar/data/minecraft/worldgen/structure
+    - jar/data/minecraft/datapacks/update_1_21/data/minecraft/worldgen/structure
     sort:
     - path: []
       order: [type, biomes, step, start_pool, size, max_distance_from_center, project_start_to_heightmap, start_height, use_expansion_hack, adapt_noise, terrain_adaptation, mineshaft_type, is_beached, biome_temp, large_probability, cluster_probability, height, setups, spawn_overrides, value]
@@ -197,6 +198,7 @@ java:
   - file:
     - jar/data/minecraft/advancements
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/advancements
+    - jar/data/minecraft/datapacks/update_1_21/data/minecraft/advancements
     - jar/data/minecraft/datapacks/bundle/data/minecraft/advancements
     sort:
     - path: []
@@ -247,6 +249,8 @@ java:
   - file:
     - jar/data/minecraft/loot_tables
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/loot_tables
+    - jar/data/minecraft/datapacks/update_1_21/data/minecraft/loot_tables
+    - jar/data/minecraft/datapacks/trade_rebalance/data/minecraft/loot_tables
     sort:
     - path: []
       order: [type, pools, functions]
@@ -274,6 +278,7 @@ java:
   - file:
     - jar/data/minecraft/recipes
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/recipes
+    - jar/data/minecraft/datapacks/update_1_21/data/minecraft/recipes
     - jar/data/minecraft/datapacks/bundle/data/minecraft/recipes
     sort:
     - path: []
@@ -469,6 +474,9 @@ bedrock:
       - vanilla_1.20.10
       - vanilla_1.20.20
       - vanilla_1.20.30
+      - vanilla_1.20.40
+      - vanilla_1.20.50
+      - vanilla_experimental
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -477,6 +485,12 @@ bedrock:
       - experimental_wild_update
       - experimental_spectator_internal
       - experimental_next_major_update
+      - experimental_cameras
+      - experimental_minecraft_explorer
+      - experimental_villager_trade
+      - experimental_update_announced_live2023
+      - editor
+      - server_editor_library
       merging:
       - path: contents.json
         operation: append_list
@@ -517,6 +531,8 @@ bedrock:
       - vanilla_1.20.10
       - vanilla_1.20.20
       - vanilla_1.20.30
+      - vanilla_1.20.40
+      - vanilla_1.20.50
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -525,6 +541,10 @@ bedrock:
       - experimental_wild_update
       - experimental_spectator_internal
       - experimental_next_major_update
+      - experimental_minecraft_explorer
+      - experimental_update_announced_live2023
+      - editor
+      - oreui
       merging:
       - path: biomes_client.json
       - path: blocks.json
@@ -597,6 +617,8 @@ bedrock:
       1.19.7102.0: 1.19.7026.0
       1.20.20.0: 1.19.7302.0
       1.20.1020.0: 1.20.25.0
+      1.20.3102.0: 1.20.3025.0
+      1.20.3203.0: 1.20.3102.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests
