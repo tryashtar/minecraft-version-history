@@ -9,8 +9,10 @@ java:
   - '%HOME%/.minecraft/versions'
   - '%HOME%/.minecraft/versions/ARCHIVE'
   assets folder: '%HOME%/.minecraft/assets'
+  # you probably want to delete this section
+  # it requires some extra setup and just provides mappings for pre-1.14 decompilations
   mcp:
-    merged: /d/Minecraft/Java Storage/MCP/Merged
+    merged: /d/Minecraft/Java Storage/Projects/Version History/MCP/Merged
     matched: 1.14.4
   # Minecraft builtin java, seems to work well
   java install:
@@ -19,10 +21,10 @@ java:
   - '%HOME%/.minecraft/runtime/jre-legacy/linux/jre-legacy/bin/java'
   # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
   fernflower jar: forgeflower.jar
-  # I got cfr from https://github.com/FabricMC/cfr
-  cfr jar: cfr-0.2.0+local.jar
-  # I got specialsource from https://ci.md-5.net/job/SpecialSource/148/
-  special source jar: SpecialSource-1.10.0-shaded.jar
+  # I got cfr from https://mvnrepository.com/artifact/net.fabricmc/cfr
+  cfr jar: cfr-0.2.1.jar
+  # I got specialsource from https://ci.md-5.net/job/SpecialSource/
+  special source jar: SpecialSource-1.11.4-SNAPSHOT-shaded.jar
   # folder to store downloaded server jars
   server jars: /d/Minecraft/Java Storage/Server Jars
   # choose 'cfr' or 'fernflower'
@@ -51,6 +53,8 @@ java:
   - ^com/sun/
   - ^com/google/
   - ^gnu/trove/
+  # remove DataVersion from structures to prevent unneeded diffs
+  # also convert to SNBT using special structure mode
   nbt translations:
   - extension: nbt
     remove keys: [DataVersion]
@@ -311,6 +315,7 @@ java:
     - path: [multipart, {}, when, AND, {}]
     - path: [multipart, {}, when]
   version facts:
+    # don't include versions that match these patterns
     skip:
     - (?i)optifine
     - (?i)fabric
@@ -428,6 +433,7 @@ java:
       - {year: 2022, weeks: [11,46], release: 1.19}
       - {year: 2023, weeks: [3,11], release: 1.19}
       - {year: 2023, weeks: [12,52], release: 1.20}
+      - {year: 2024, weeks: [1,10], release: 1.20}
 
 bedrock:
   repo: /d/Minecraft/Bedrock Storage/History
@@ -476,6 +482,7 @@ bedrock:
       - vanilla_1.20.30
       - vanilla_1.20.40
       - vanilla_1.20.50
+      - vanilla_1.20.60
       - vanilla_experimental
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
@@ -489,6 +496,8 @@ bedrock:
       - experimental_minecraft_explorer
       - experimental_villager_trade
       - experimental_update_announced_live2023
+      - experimental_armadillo_internal
+      - experimental_armadillo
       - editor
       - server_editor_library
       merging:
@@ -533,6 +542,7 @@ bedrock:
       - vanilla_1.20.30
       - vanilla_1.20.40
       - vanilla_1.20.50
+      - vanilla_1.20.60
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -543,6 +553,8 @@ bedrock:
       - experimental_next_major_update
       - experimental_minecraft_explorer
       - experimental_update_announced_live2023
+      - experimental_armadillo_internal
+      - experimental_armadillo
       - editor
       - oreui
       merging:
