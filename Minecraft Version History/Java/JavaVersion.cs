@@ -229,25 +229,26 @@ public class JavaVersion : Version
         return null;
     }
 
-    private const string LAUNCHER_PATCH_NOTES = "https://launchercontent.mojang.com/javaPatchNotes.json";
+    private const string LAUNCHER_PATCH_NOTES = "https://launchercontent.mojang.com/v2/javaPatchNotes.json";
     private static Dictionary<string, JsonObject> CachedPatchNotes;
 
     private void DownloadPatchNotes(string folder)
     {
         if (CachedPatchNotes == null)
         {
-            var note_list = (JsonArray)JsonNode.Parse(Util.DownloadString(LAUNCHER_PATCH_NOTES))["entries"];
             CachedPatchNotes = new();
+            var note_list = (JsonArray)JsonNode.Parse(Util.DownloadString(LAUNCHER_PATCH_NOTES))["entries"];
             foreach (var entry in note_list)
             {
                 CachedPatchNotes[entry["version"].GetValue<string>()] = (JsonObject)entry;
             }
         }
 
-        if (CachedPatchNotes.TryGetValue(this.Name, out var notes))
+        if (CachedPatchNotes.TryGetValue(this.Name, out var data))
         {
             Profiler.Start("Downloading patch notes");
             Directory.CreateDirectory(folder);
+            var notes = (JsonObject)JsonNode.Parse(Util.DownloadString("https://launchercontent.mojang.com/v2/" + data["contentPath"].GetValue<string>()));
             string image_url = "https://launchercontent.mojang.com" + notes["image"]["url"].GetValue<string>();
             string image_name = "image" + Path.GetExtension(image_url);
             Util.DownloadFile(image_url, Path.Combine(folder, image_name));
