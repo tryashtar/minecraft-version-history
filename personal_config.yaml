@@ -19,18 +19,18 @@ java:
   - '%HOME%/.minecraft/runtime/java-runtime-gamma/linux/java-runtime-gamma/bin/java'
   - /usr/bin/java
   - '%HOME%/.minecraft/runtime/jre-legacy/linux/jre-legacy/bin/java'
-  # I got fernflower from https://github.com/hube12/DecompilerMC/blob/master/lib/fernflower.jar 
-  fernflower jar: forgeflower.jar
+  # I got fernflower from https://github.com/Vineflower/vineflower/releases/download/1.9.3/vineflower-1.9.3.jar
+  fernflower jar: vineflower-1.9.3.jar
   # I got cfr from https://mvnrepository.com/artifact/net.fabricmc/cfr
   cfr jar: cfr-0.2.1.jar
   # I got specialsource from https://ci.md-5.net/job/SpecialSource/
   special source jar: SpecialSource-1.11.4-SNAPSHOT-shaded.jar
   # folder to store downloaded server jars
   server jars: /d/Minecraft/Java Storage/Server Jars
-  # choose 'cfr' or 'fernflower'
+  # choose 'cfr' or 'fernflower' or 'fernflower_unzipped'
   decompiler: cfr
   # arguments passed to java when invoking the decompiler
-  decompiler args: -Xmx2400M -Xms600M
+  decompiler args: -Xmx4400M -Xms600M
   # arguments passed to the decompiler itself
   cfr args: --caseinsensitivefs true --comments false --showversion false --sealed true --hideutf false
   fernflower args: -hes=0 -hdc=0 -dgs=1 -log=WARN
@@ -53,7 +53,7 @@ java:
   - ^com/sun/
   - ^com/google/
   - ^gnu/trove/
-  - ^jpountz/
+  - ^net/jpountz/
   # remove DataVersion from structures to prevent unneeded diffs
   # also convert to SNBT using special structure mode
   nbt translations:
@@ -247,6 +247,8 @@ java:
     - up_path: []
       matches: location
       order: [position, smokey, biome, dimension, feature, block, fluid, light]
+    - path: [display, icon]
+      order: [item, id, count, components, nbt]
     # 15w43a added loot tables to the jar
     # 17w43a moved them from assets to data
     # 18w43a started to generated them with code
@@ -289,7 +291,7 @@ java:
     - path: []
       order: [type, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
     - path: [result]
-      order: [item, count]
+      order: [item, id, count, components, nbt]
     - path: [key]
   - file: jar/assets/minecraft/blockstates
     require:
@@ -315,6 +317,10 @@ java:
     - path: [multipart, {}, when, OR, {}]
     - path: [multipart, {}, when, AND, {}]
     - path: [multipart, {}, when]
+  - file: jar/data/minecraft/wolf_variant
+    sort:
+    - path: []
+      order: [biomes, texture, wild_texture, angry_texture, tame_texture]
   version facts:
     # don't include versions that match these patterns
     skip:
@@ -434,7 +440,7 @@ java:
       - {year: 2022, weeks: [11,46], release: 1.19}
       - {year: 2023, weeks: [3,11], release: 1.19}
       - {year: 2023, weeks: [12,52], release: 1.20}
-      - {year: 2024, weeks: [1,10], release: 1.20}
+      - {year: 2024, weeks: [1,20], release: 1.20}
 
 bedrock:
   repo: /d/Minecraft/Bedrock Storage/History
@@ -485,6 +491,7 @@ bedrock:
       - vanilla_1.20.50
       - vanilla_1.20.60
       - vanilla_1.20.70
+      - vanilla_1.20.80
       - vanilla_experimental
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
@@ -546,6 +553,7 @@ bedrock:
       - vanilla_1.20.50
       - vanilla_1.20.60
       - vanilla_1.20.70
+      - vanilla_1.20.80
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal

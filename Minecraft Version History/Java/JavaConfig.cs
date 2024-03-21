@@ -142,6 +142,8 @@ public class JavaConfig : VersionConfig
             return DecompilerType.Fernflower;
         if (String.Equals(input, "cfr", StringComparison.OrdinalIgnoreCase))
             return DecompilerType.Cfr;
+        if (String.Equals(input, "fernflower_unzipped", StringComparison.OrdinalIgnoreCase))
+            return DecompilerType.FernflowerUnzipped;
         return null;
     }
 }
