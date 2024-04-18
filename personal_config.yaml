@@ -22,7 +22,7 @@ java:
   # I got fernflower from https://github.com/Vineflower/vineflower/releases/download/1.9.3/vineflower-1.9.3.jar
   fernflower jar: vineflower-1.9.3.jar
   # I got cfr from https://mvnrepository.com/artifact/net.fabricmc/cfr
-  cfr jar: cfr-0.2.1.jar
+  cfr jar: cfr-0.2.2.jar
   # I got specialsource from https://ci.md-5.net/job/SpecialSource/
   special source jar: SpecialSource-1.11.4-SNAPSHOT-shaded.jar
   # folder to store downloaded server jars
@@ -185,6 +185,12 @@ java:
       pick: value
     - path: ['*']
       order: [default, protocol_id, entries]
+  - file: reports/items.json
+    sort:
+    - path: [{}, components]
+      by:
+      - [type]
+      pick: value
     # 14w06a added models to the jar
     # 20w10a started to generate them with code
     # 22w18a alphabetized them
@@ -383,6 +389,8 @@ java:
       22w13oneblockatatime: 1.18.2
       23w13a_or_b-pre: 23w13a
       23w13a_or_b: 23w13a_or_b-pre
+      24w14potato-pre: 24w12a
+      24w14potato: 24w14potato-pre
     releases:
       regex:
         ^2\.0-blue$: April Fools 2013 (Blue)
@@ -395,6 +403,8 @@ java:
         ^22w13oneblockatatime$: April Fools 2022
         ^23w13a_or_b-pre$: April Fools 2023
         ^23w13a_or_b$: April Fools 2023
+        ^24w14potato$: April Fools 2024
+        ^24w14potato-pre$: April Fools 2024
         ^1\.14_combat-212796$: Combat Test 1
         ^1\.14_combat-\d$: Combat Test 2
         ^1\.15_combat-1$: Combat Test 3
@@ -492,6 +502,7 @@ bedrock:
       - vanilla_1.20.60
       - vanilla_1.20.70
       - vanilla_1.20.80
+      - vanilla_1.21.0
       - vanilla_experimental
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
@@ -554,6 +565,7 @@ bedrock:
       - vanilla_1.20.60
       - vanilla_1.20.70
       - vanilla_1.20.80
+      - vanilla_1.21.0
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -597,6 +609,7 @@ bedrock:
   version facts:
     names:
       minecraft-release_bedrock uwp renderdragon x64 win10_12683500: 1.19.6020.1
+      Minecraft-release_Bedrock_UWP_x64_Win10_23619503: 1.21.21.1
     insane:
       releases:
       - Editor Tests
