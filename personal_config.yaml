@@ -19,8 +19,8 @@ java:
   - '%HOME%/.minecraft/runtime/java-runtime-gamma/linux/java-runtime-gamma/bin/java'
   - /usr/bin/java
   - '%HOME%/.minecraft/runtime/jre-legacy/linux/jre-legacy/bin/java'
-  # I got fernflower from https://github.com/Vineflower/vineflower/releases/download/1.9.3/vineflower-1.9.3.jar
-  fernflower jar: vineflower-1.9.3.jar
+  # I got fernflower from https://github.com/Vineflower/vineflower/releases/
+  fernflower jar: vineflower-1.10.1.jar
   # I got cfr from https://mvnrepository.com/artifact/net.fabricmc/cfr
   cfr jar: cfr-0.2.2.jar
   # I got specialsource from https://ci.md-5.net/job/SpecialSource/
@@ -54,6 +54,11 @@ java:
   - ^com/google/
   - ^gnu/trove/
   - ^net/jpountz/
+  - ^net/minidev/
+  - ^net/jcip/
+  - ^com/fasterxml/
+  - ^com/microsoft/
+  - ^com/nimbusds/
   # remove DataVersion from structures to prevent unneeded diffs
   # also convert to SNBT using special structure mode
   nbt translations:
@@ -66,12 +71,16 @@ java:
   - file:
     - jar/data/minecraft/advancements/nether/all_effects.json
     - jar/data/minecraft/advancements/nether/all_potions.json
+    - jar/data/minecraft/advancement/nether/all_effects.json
+    - jar/data/minecraft/advancement/nether/all_potions.json
     sort:
       path: [criteria, all_effects, conditions, effects]
   - file:
     - jar/data/minecraft/loot_tables/chests/shipwreck_supply.json
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/loot_tables/chests/shipwreck_supply.json
     - jar/data/minecraft/loot_tables/chests/ancient_city_ice_box.json
+    - jar/data/minecraft/loot_table/chests/shipwreck_supply.json
+    - jar/data/minecraft/loot_table/chests/ancient_city_ice_box.json
     sort:
       path: [pools, {}, entries, {name: "minecraft:suspicious_stew"}, functions, {function: "minecraft:set_stew_effect"}, effects]
       by:
@@ -185,6 +194,12 @@ java:
       pick: value
     - path: ['*']
       order: [default, protocol_id, entries]
+  - file: reports/packets.json
+    sort:
+    - path: ['*', '*']
+      by:
+      - [protocol_id]
+      pick: value
   - file: reports/items.json
     sort:
     - path: [{}, components]
@@ -208,9 +223,11 @@ java:
     # 22w18a alphabetized them
   - file:
     - jar/data/minecraft/advancements
+    - jar/data/minecraft/advancement
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/advancements
     - jar/data/minecraft/datapacks/update_1_21/data/minecraft/advancements
     - jar/data/minecraft/datapacks/bundle/data/minecraft/advancements
+    - jar/data/minecraft/datapacks/bundle/data/minecraft/advancement
     sort:
     - path: []
       order: [parent, display, rewards, criteria, requirements]
@@ -261,9 +278,11 @@ java:
     # 22w18a alphabetized them
   - file:
     - jar/data/minecraft/loot_tables
+    - jar/data/minecraft/loot_table
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/loot_tables
     - jar/data/minecraft/datapacks/update_1_21/data/minecraft/loot_tables
     - jar/data/minecraft/datapacks/trade_rebalance/data/minecraft/loot_tables
+    - jar/data/minecraft/datapacks/trade_rebalance/data/minecraft/loot_table
     sort:
     - path: []
       order: [type, pools, functions]
@@ -290,9 +309,11 @@ java:
     # 22w18a alphabetized them
   - file:
     - jar/data/minecraft/recipes
+    - jar/data/minecraft/recipe
     - jar/data/minecraft/datapacks/update_1_20/data/minecraft/recipes
     - jar/data/minecraft/datapacks/update_1_21/data/minecraft/recipes
     - jar/data/minecraft/datapacks/bundle/data/minecraft/recipes
+    - jar/data/minecraft/datapacks/bundle/data/minecraft/recipe
     sort:
     - path: []
       order: [type, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
@@ -327,11 +348,28 @@ java:
     sort:
     - path: []
       order: [biomes, texture, wild_texture, angry_texture, tame_texture]
+  - file: jar/data/minecraft/painting_variant
+    sort:
+    - path: []
+      order: [asset_id, width, height]
+  - file: jar/data/minecraft/enchantment
+    sort:
+    - path: []
+      order: [description, max_level, weight, slots, primary_items, supported_items, exclusive_set, min_cost, max_cost, anvil_cost, effects]
+    - up_path: [{}, tags]
+      order: [id, expected]
+    - up_path: [{}, effects]
+      order: [type, sound, volume, pitch]
+  - file: jar/assets/minecraft/items
+    sort:
+    - up_path: []
+      order: [type, base, threshold, model, models, property, scale, period, on_true, on_false, cases, entries, fallback, tints]
   version facts:
     # don't include versions that match these patterns
     skip:
     - (?i)optifine
     - (?i)fabric
+    - (?i)forge
     - ^a1\.0\.6$ # can't unzip
     ordering:
       priority:
@@ -450,7 +488,8 @@ java:
       - {year: 2022, weeks: [11,46], release: 1.19}
       - {year: 2023, weeks: [3,11], release: 1.19}
       - {year: 2023, weeks: [12,52], release: 1.20}
-      - {year: 2024, weeks: [1,20], release: 1.20}
+      - {year: 2024, weeks: [1,14], release: 1.20}
+      - {year: 2024, weeks: [18,52], release: 1.21}
 
 bedrock:
   repo: /d/Minecraft/Bedrock Storage/History
@@ -468,41 +507,7 @@ bedrock:
       layers:
       - vanilla
       - vanilla_gametest
-      - vanilla_1.14
-      - vanilla_1.15
-      - vanilla_1.16
-      - vanilla_1.16.100
-      - vanilla_1.16.200
-      - vanilla_1.16.210
-      - vanilla_1.16.220
-      - vanilla_1.17.0
-      - vanilla_1.17.10
-      - vanilla_1.17.20
-      - vanilla_1.17.30
-      - vanilla_1.17.40
-      - vanilla_1.18.0
-      - vanilla_1.18.10
-      - vanilla_1.18.20
-      - vanilla_1.18.30
-      - vanilla_1.19.0
-      - vanilla_1.19.10
-      - vanilla_1.19.20
-      - vanilla_1.19.30
-      - vanilla_1.19.40
-      - vanilla_1.19.50
-      - vanilla_1.19.60
-      - vanilla_1.19.70
-      - vanilla_1.19.80
-      - vanilla_1.20.0
-      - vanilla_1.20.10
-      - vanilla_1.20.20
-      - vanilla_1.20.30
-      - vanilla_1.20.40
-      - vanilla_1.20.50
-      - vanilla_1.20.60
-      - vanilla_1.20.70
-      - vanilla_1.20.80
-      - vanilla_1.21.0
+      - vanilla_*
       - vanilla_experimental
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
@@ -531,41 +536,7 @@ bedrock:
       - vanilla
       - vanilla_base
       - vanilla_music
-      - vanilla_1.14
-      - vanilla_1.15
-      - vanilla_1.16
-      - vanilla_1.16.100
-      - vanilla_1.16.200
-      - vanilla_1.16.210
-      - vanilla_1.16.220
-      - vanilla_1.17.0
-      - vanilla_1.17.10
-      - vanilla_1.17.20
-      - vanilla_1.17.30
-      - vanilla_1.17.40
-      - vanilla_1.18.0
-      - vanilla_1.18.10
-      - vanilla_1.18.20
-      - vanilla_1.18.30
-      - vanilla_1.19.0
-      - vanilla_1.19.10
-      - vanilla_1.19.20
-      - vanilla_1.19.30
-      - vanilla_1.19.40
-      - vanilla_1.19.50
-      - vanilla_1.19.60
-      - vanilla_1.19.70
-      - vanilla_1.19.80
-      - vanilla_1.20.0
-      - vanilla_1.20.10
-      - vanilla_1.20.20
-      - vanilla_1.20.30
-      - vanilla_1.20.40
-      - vanilla_1.20.50
-      - vanilla_1.20.60
-      - vanilla_1.20.70
-      - vanilla_1.20.80
-      - vanilla_1.21.0
+      - vanilla_*
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
       - experimental_caves_and_cliffs_internal
@@ -621,40 +592,8 @@ bedrock:
       - listed order
       - release time
       - best guess
-      versions:
-      - 1.16.22002.0
-      - 1.16.22101.0
-      - 1.16.23050.0
-      - 1.16.23052.0
-      - 1.16.23054.0
-      - 1.16.23056.0
-      - 1.17.50.0
-      - 1.17.2.0
-      - 1.17.1020.0
-      - 1.17.1023.0
-      - 1.17.1101.0
-      - 1.17.2023.0
-      - 1.17.3020.0
-      - 1.17.3021.0
-    parents:
-      1.18.102.0: 1.18.2.0
-      1.18.100.0: 1.18.1021.0
-      1.18.1023.0: 1.18.1022.0
-      1.18.2021.0: 1.18.1028.0
-      1.18.3020.0: 1.18.2029.0
-      1.18.3104.0: 1.18.3004.0
-      1.19.1020.0: 1.19.5.0
-      1.19.2101.0: 1.19.2002.0
-      1.19.4020.0: 1.19.3023.0
-      1.19.3101.0: 1.19.3004.0
-      1.19.5021.0: 1.19.4024.0
-      1.19.5101.0: 1.19.5025.0
-      1.19.7020.0: 1.19.6027.0
-      1.19.7102.0: 1.19.7026.0
-      1.20.20.0: 1.19.7302.0
-      1.20.1020.0: 1.20.25.0
-      1.20.3102.0: 1.20.3025.0
-      1.20.3203.0: 1.20.3102.0
+      versions: []
+    parents: {}
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests
