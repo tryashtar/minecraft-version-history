@@ -16,6 +16,7 @@ java:
     matched: 1.14.4
   # Minecraft builtin java, seems to work well
   java install:
+  - '%HOME%/.minecraft/runtime/java-runtime-delta/linux/java-runtime-delta/bin/java'
   - '%HOME%/.minecraft/runtime/java-runtime-gamma/linux/java-runtime-gamma/bin/java'
   - /usr/bin/java
   - '%HOME%/.minecraft/runtime/jre-legacy/linux/jre-legacy/bin/java'
@@ -230,7 +231,7 @@ java:
     - jar/data/minecraft/datapacks/bundle/data/minecraft/advancement
     sort:
     - path: []
-      order: [parent, display, rewards, criteria, requirements]
+      order: [parent, sends_telemetry_event, display, criteria, requirements, rewards]
     - path: [display]
       order: [icon, title, description, frame, show_toast, announce_to_chat, hidden]
     - path: [criteria, '*']
@@ -285,7 +286,7 @@ java:
     - jar/data/minecraft/datapacks/trade_rebalance/data/minecraft/loot_table
     sort:
     - path: []
-      order: [type, pools, functions]
+      order: [type, random_sequence, pools, functions]
     - path: [pools, {}]
       order: [rolls, bonus_rolls, entries, conditions, functions]
     - up_path: [{}, conditions]
@@ -316,7 +317,7 @@ java:
     - jar/data/minecraft/datapacks/bundle/data/minecraft/recipe
     sort:
     - path: []
-      order: [type, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
+      order: [type, category, group, pattern, key, ingredients, ingredient, base, addition, result, count, experience, cookingtime]
     - path: [result]
       order: [item, id, count, components, nbt]
     - path: [key]
@@ -363,7 +364,7 @@ java:
   - file: jar/assets/minecraft/items
     sort:
     - up_path: []
-      order: [type, base, threshold, model, models, property, scale, period, on_true, on_false, cases, entries, fallback, tints]
+      order: [type, base, threshold, when, model, models, property, pattern, source, block_state_property, scale, period, on_true, on_false, cases, entries, fallback, tints]
   version facts:
     # don't include versions that match these patterns
     skip:
@@ -429,6 +430,7 @@ java:
       23w13a_or_b: 23w13a_or_b-pre
       24w14potato-pre: 24w12a
       24w14potato: 24w14potato-pre
+      25w14craftmine: 1.21.5-rc1
     releases:
       regex:
         ^2\.0-blue$: April Fools 2013 (Blue)
@@ -443,6 +445,7 @@ java:
         ^23w13a_or_b$: April Fools 2023
         ^24w14potato$: April Fools 2024
         ^24w14potato-pre$: April Fools 2024
+        ^25w14craftmine$: April Fools 2025
         ^1\.14_combat-212796$: Combat Test 1
         ^1\.14_combat-\d$: Combat Test 2
         ^1\.15_combat-1$: Combat Test 3
@@ -457,9 +460,8 @@ java:
         ^a(\d+\.\d+).*$: Alpha $1
         ^b(\d+\.\d+).*$: Beta $1
         ^(\d+\.\d+).*$: $1
-      # this needs to be updated whenever a new version comes out,
-      # or the program will think new snapshots are for old versions
-      # in the future, it will probably be smart enough to guess that isn't the case
+      # the release to which a snapshot belongs is not found anywhere in its version number, jar, or metadata
+      # we have to tell the program manually
       snapshots:
       - {year: 2011, release: 1.1}
       - {year: 2012, weeks: [1,1], release: 1.1}
@@ -490,6 +492,7 @@ java:
       - {year: 2023, weeks: [12,52], release: 1.20}
       - {year: 2024, weeks: [1,14], release: 1.20}
       - {year: 2024, weeks: [18,52], release: 1.21}
+      - {year: 2025, weeks: [2,52], release: 1.21}
 
 bedrock:
   repo: /d/Minecraft/Bedrock Storage/History
@@ -507,6 +510,7 @@ bedrock:
       layers:
       - vanilla
       - vanilla_gametest
+      # special: all the versioned layers in version order
       - vanilla_*
       - vanilla_experimental
       - experimental_vanilla_experiments_internal
@@ -523,6 +527,11 @@ bedrock:
       - experimental_update_announced_live2023
       - experimental_armadillo_internal
       - experimental_armadillo
+      - experimental_jigsaw_structures
+      - experimental_spawn_rules
+      - experimental_locator_bar
+      - experimental_y_2025_drop_1
+      - experimental_y_2025_drop_2
       - editor
       - server_editor_library
       merging:
@@ -536,6 +545,7 @@ bedrock:
       - vanilla
       - vanilla_base
       - vanilla_music
+      # special: all the versioned layers in version order
       - vanilla_*
       - experimental_vanilla_experiments_internal
       - experimental_vanilla_experiments
@@ -549,6 +559,11 @@ bedrock:
       - experimental_update_announced_live2023
       - experimental_armadillo_internal
       - experimental_armadillo
+      - experimental_vanilla_block_geometry
+      - experimental_locator_bar
+      - experimental_graphics
+      - experimental_y_2025_drop_1
+      - experimental_y_2025_drop_2
       - editor
       - oreui
       merging:
@@ -579,6 +594,7 @@ bedrock:
         operation: no_merge
   version facts:
     names:
+      # separate builds that share a version with an earlier version, bump the final 0 to a 1
       minecraft-release_bedrock uwp renderdragon x64 win10_12683500: 1.19.6020.1
       Minecraft-release_Bedrock_UWP_x64_Win10_23619503: 1.21.21.1
     insane:
@@ -592,12 +608,21 @@ bedrock:
       - listed order
       - release time
       - best guess
-      versions: []
-    parents: {}
+      versions:
+      # 1.18.1023.0 came out early, move it back into place
+      - 1.18.1022.0
+      - 1.18.1023.0
+      - 1.18.1024.0
+    parents:
+      1.10.0.0: 1.9.3.0 # prevent 1.10 parenting to 1.8 since the most recent version before 1.10.0.0 was 1.8.102.0
     releases:
       regex:
         ^1\.18\.100\.0$: Editor Tests
-        ^1\.18\.1023\.0$: Preview
-        ^(\d+\.\d+)\.\d\d?\.\d$: $1
-        ^(\d+\.\d+\.\d)\d\d\.\d$: $1
-        ^(\d+\.\d+\.\d\d)\d\d?\d?\.\d$: $1
+        # releases 1.0 - 1.15 had no relevant minor releases
+        ^(1\.([0-9]|1[0-5]))\.\d+\.\d+$: $1
+        # releases like 1.16.1.0 through 1.16.102.0 are all just 1.16
+        ^(1\.\d+)\.\d\d?\d?\.\d+$: $1
+        # releases like 1.16.2050.0 are 1.16.20
+        ^(1\.\d+\.\d)\d\d\d\.\d+$: ${1}0
+        # releases like 1.16.21050 are 1.16.210
+        ^(1\.\d+\.\d\d)\d\d\d\.\d+$: ${1}0
