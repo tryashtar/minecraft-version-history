@@ -506,92 +506,96 @@ bedrock:
     endian: big
     structure: true
   pack merging:
-    behavior:
-      layers:
-      - vanilla
-      - vanilla_gametest
-      # special: all the versioned layers in version order
-      - vanilla_*
-      - vanilla_experimental
-      - experimental_vanilla_experiments_internal
-      - experimental_vanilla_experiments
-      - experimental_caves_and_cliffs_internal
-      - experimental_caves_and_cliffs
-      - experimental_wild_update_internal
-      - experimental_wild_update
-      - experimental_spectator_internal
-      - experimental_next_major_update
-      - experimental_cameras
-      - experimental_minecraft_explorer
-      - experimental_villager_trade
-      - experimental_update_announced_live2023
-      - experimental_armadillo_internal
-      - experimental_armadillo
-      - experimental_jigsaw_structures
-      - experimental_spawn_rules
-      - experimental_locator_bar
-      - experimental_y_2025_drop_1
-      - experimental_y_2025_drop_2
-      - editor
-      - server_editor_library
-      merging:
-      - path: contents.json
-        operation: append_list
-        list: [content]
-      - path: manifest.json
-        operation: no_merge
-    resource:
-      layers:
-      - vanilla
-      - vanilla_base
-      - vanilla_music
-      # special: all the versioned layers in version order
-      - vanilla_*
-      - experimental_vanilla_experiments_internal
-      - experimental_vanilla_experiments
-      - experimental_caves_and_cliffs_internal
-      - experimental_caves_and_cliffs
-      - experimental_wild_update_internal
-      - experimental_wild_update
-      - experimental_spectator_internal
-      - experimental_next_major_update
-      - experimental_minecraft_explorer
-      - experimental_update_announced_live2023
-      - experimental_armadillo_internal
-      - experimental_armadillo
-      - experimental_vanilla_block_geometry
-      - experimental_locator_bar
-      - experimental_graphics
-      - experimental_y_2025_drop_1
-      - experimental_y_2025_drop_2
-      - editor
-      - oreui
-      merging:
-      - path: biomes_client.json
-      - path: blocks.json
-      - path: sounds.json
-      - path: splashes.json
-      - path: entity
-      - path: materials/entity.material
-      - path: textures/item_texture.json
-      - path: textures/terrain_texture.json
-      - path: textures/textures_list.json
-      - path: textures/flipbook_textures.json
-      - path: sounds/music_definitions.json
-      - path: sounds/sound_definitions.json
-        move_keys:
-          from: ['@(?!^format_version$)(?!^sound_definitions$)(^.*$)']
-          to: ['sound_definitions']
-      - extension: lang
-        operation: append_lines
-      - path: contents.json
-        operation: append_list
-        list: [content]
-      - path: textures/textures_list.json
-        operation: append_list
-        list: []
-      - path: manifest.json
-        operation: no_merge
+  - input: data/behavior_packs
+    output: latest_packs/behavior_pack
+    exclude: [\.brarchive$]
+    layers:
+    - vanilla
+    - vanilla_gametest
+    # special: all the versioned layers in version order
+    - vanilla_*
+    - vanilla_experimental
+    - experimental_vanilla_experiments_internal
+    - experimental_vanilla_experiments
+    - experimental_caves_and_cliffs_internal
+    - experimental_caves_and_cliffs
+    - experimental_wild_update_internal
+    - experimental_wild_update
+    - experimental_spectator_internal
+    - experimental_next_major_update
+    - experimental_cameras
+    - experimental_minecraft_explorer
+    - experimental_villager_trade
+    - experimental_update_announced_live2023
+    - experimental_armadillo_internal
+    - experimental_armadillo
+    - experimental_jigsaw_structures
+    - experimental_spawn_rules
+    - experimental_locator_bar
+    - experimental_y_2025_drop_1
+    - experimental_y_2025_drop_2
+    - editor
+    - server_editor_library
+    merging:
+    - path: contents.json
+      operation: append_list
+      list: [content]
+    - path: manifest.json
+      operation: no_merge
+  - input: data/resource_packs
+    output: latest_packs/resource_pack
+    exclude: [\.brarchive$]
+    layers:
+    - vanilla
+    - vanilla_base
+    - vanilla_music
+    # special: all the versioned layers in version order
+    - vanilla_*
+    - experimental_vanilla_experiments_internal
+    - experimental_vanilla_experiments
+    - experimental_caves_and_cliffs_internal
+    - experimental_caves_and_cliffs
+    - experimental_wild_update_internal
+    - experimental_wild_update
+    - experimental_spectator_internal
+    - experimental_next_major_update
+    - experimental_minecraft_explorer
+    - experimental_update_announced_live2023
+    - experimental_armadillo_internal
+    - experimental_armadillo
+    - experimental_vanilla_block_geometry
+    - experimental_locator_bar
+    - experimental_graphics
+    - experimental_y_2025_drop_1
+    - experimental_y_2025_drop_2
+    - editor
+    - oreui
+    merging:
+    - path: biomes_client.json
+    - path: blocks.json
+    - path: sounds.json
+    - path: splashes.json
+    - path: entity
+    - path: materials/entity.material
+    - path: textures/item_texture.json
+    - path: textures/terrain_texture.json
+    - path: textures/textures_list.json
+    - path: textures/flipbook_textures.json
+    - path: sounds/music_definitions.json
+    - path: sounds/sound_definitions.json
+      move_keys:
+        from: ['@(?!^format_version$)(?!^sound_definitions$)(^.*$)']
+        to: ['sound_definitions']
+    - extension: lang
+      operation: append_lines
+    - path: contents.json
+      operation: append_list
+      list: [content]
+    - path: textures/textures_list.json
+      operation: append_list
+      list: []
+    - path: manifest.json
+      operation: no_merge
   version facts:
     names:
       # separate builds that share a version with an earlier version, bump the final 0 to a 1

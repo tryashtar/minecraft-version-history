@@ -2,22 +2,31 @@
 
 public class PackMerger
 {
+    private readonly string LayersFolder;
+    private readonly string OutputFolder;
+    private readonly List<Regex> Exclude;
     private readonly List<string> Layers;
     private readonly List<MergingSpec> MergingSpecs;
     public PackMerger(YamlMappingNode node)
     {
+        LayersFolder = (string)node.TryGet("input");
+        OutputFolder = (string)node.TryGet("output");
+        Exclude = node.Go("exclude").ToList(x => new Regex((string)x)) ?? new();
         Layers = node.Go("layers").ToStringList() ?? new List<string>();
         MergingSpecs = node.Go("merging").ToList(x => new MergingSpec((YamlMappingNode)x)) ?? new List<MergingSpec>();
     }
 
-    public void Merge(string layers_folder, string output_folder)
+    public void Merge(string root)
     {
         Profiler.Start("Merging vanilla packs");
+        string input_folder = Path.Combine(root, LayersFolder);
+        string output_folder = Path.Combine(root, OutputFolder);
+        Directory.CreateDirectory(output_folder);
         foreach (var layer in Layers)
         {
             if (layer == "vanilla_*")
             {
-                var vanilla_slice_folders = Directory.GetDirectories(layers_folder, "vanilla_*", SearchOption.TopDirectoryOnly);
+                var vanilla_slice_folders = Directory.GetDirectories(input_folder, "vanilla_*", SearchOption.TopDirectoryOnly);
                 var vanilla_slices = new List<(int[], string)>();
                 foreach (var folder in vanilla_slice_folders)
                 {
@@ -46,7 +55,7 @@ public class PackMerger
             }
             else
             {
-                var pack = Path.Combine(layers_folder, layer);
+                var pack = Path.Combine(input_folder, layer);
                 if (!Directory.Exists(pack))
                 {
                     Console.WriteLine($"Skipping {layer} (doesn't exist)");
@@ -77,6 +86,20 @@ public class PackMerger
         foreach (var file in Directory.GetFiles(layer_folder, "*", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(layer_folder, file);
+            bool include = true;
+            foreach (var exclude in Exclude)
+            {
+                if (exclude.IsMatch(relative))
+                {
+                    include = false;
+                    break;
+                }
+            }
+
+            if (!include)
+            {
+                continue;
+            }
             var dest = Path.Combine(output_folder, relative);
             var specs = MergingSpecs.Where(x => x.Matches(relative)).ToArray();
             Directory.CreateDirectory(Path.GetDirectoryName(dest));

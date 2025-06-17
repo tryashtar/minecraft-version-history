@@ -62,14 +62,10 @@ public class BedrockVersion : Version
                 }
             }
         }
-
-        var merged = Path.Combine(folder, "latest_packs");
-        var latest_behavior = Path.Combine(merged, "behavior_pack");
-        var latest_resource = Path.Combine(merged, "resource_pack");
-        Directory.CreateDirectory(merged);
-        Directory.CreateDirectory(latest_behavior);
-        Directory.CreateDirectory(latest_resource);
-        bedrock_config.BehaviorMerger.Merge(Path.Combine(folder, "data", "behavior_packs"), latest_behavior);
-        bedrock_config.ResourceMerger.Merge(Path.Combine(folder, "data", "resource_packs"), latest_resource);
+        
+        foreach (var merger in bedrock_config.PackMergers)
+        {
+            merger.Merge(folder);
+        }
     }
 }

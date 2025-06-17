@@ -2,12 +2,10 @@
 
 public class BedrockConfig : VersionConfig
 {
-    public readonly PackMerger BehaviorMerger;
-    public readonly PackMerger ResourceMerger;
+    public readonly List<PackMerger> PackMergers;
     public BedrockConfig(string folder, AppConfig parent, YamlMappingNode yaml) : base(folder, parent, yaml)
     {
-        BehaviorMerger = new PackMerger((YamlMappingNode)yaml.Go("pack merging", "behavior"));
-        ResourceMerger = new PackMerger((YamlMappingNode)yaml.Go("pack merging", "resource"));
+        PackMergers = yaml.Go("pack merging").ToList(x => new PackMerger((YamlMappingNode)x)) ?? new();
     }
 
     protected override VersionFacts CreateVersionFacts(YamlMappingNode yaml)
