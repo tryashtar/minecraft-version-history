@@ -21,7 +21,17 @@ public abstract class VersionConfig
         foreach (var mode in NbtTranslations)
         {
             if (mode.ShouldTranslate(path))
-                mode.Translate(path);
+            {
+                try
+                {
+                    mode.Translate(path);
+                }
+                catch (InvalidDataException ex)
+                {
+                    Console.WriteLine($"Bad NBT file {path}");
+                    Console.WriteLine(ex.ToString());
+                }
+            }
         }
     }
 
