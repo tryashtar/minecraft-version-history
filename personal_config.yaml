@@ -364,7 +364,7 @@ java:
   - file: jar/assets/minecraft/items
     sort:
     - up_path: []
-      order: [type, base, threshold, when, model, models, property, pattern, source, block_state_property, scale, period, on_true, on_false, cases, entries, fallback, tints]
+      order: [type, base, threshold, when, model, models, property, target, component, pattern, source, block_state_property, scale, period, on_true, on_false, cases, entries, fallback, tints]
   version facts:
     # don't include versions that match these patterns
     skip:
@@ -534,6 +534,7 @@ bedrock:
     - experimental_locator_bar
     - experimental_y_2025_drop_1
     - experimental_y_2025_drop_2
+    - experimental_y_2025_drop_3
     - editor
     - server_editor_library
     merging:
@@ -568,6 +569,7 @@ bedrock:
     - experimental_graphics
     - experimental_y_2025_drop_1
     - experimental_y_2025_drop_2
+    - experimental_y_2025_drop_3
     - editor
     - oreui
     merging:

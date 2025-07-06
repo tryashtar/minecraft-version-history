@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Minecraft Version History", "Minecraft Version History\Minecraft Version History.csproj", "{72B2765F-9241-4D00-9D40-98E006FE9B92}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MinecraftVersionHistory", "MinecraftVersionHistory\MinecraftVersionHistory.csproj", "{72B2765F-9241-4D00-9D40-98E006FE9B92}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "fNbt", "fNbt\fNbt\fNbt.csproj", "{377B21B7-860C-4994-B48B-2069DB5E0C80}"
 EndProject
@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Nbt", "utils
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TryashtarUtils.Utility", "utils.utility\TryashtarUtils.Utility.csproj", "{8A7342FF-1239-495B-82C7-4ACAB00FE66F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCP Modernizer", "MCP Modernizer\MCP Modernizer.csproj", "{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCPModernizer", "MCPModernizer\MCPModernizer.csproj", "{F674F77D-D5E5-43C2-98C5-86AF4E57C69D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
