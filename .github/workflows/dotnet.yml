@@ -16,13 +16,13 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
     - name: Build (Windows)
-      run: dotnet publish "Minecraft Version History" --runtime win-x64 -p:PublishSingleFile=true /p:DebugType=None /p:DebugSymbols=false --configuration Release --self-contained false
+      run: dotnet publish "MinecraftVersionHistory" --runtime win-x64 -p:PublishSingleFile=true /p:DebugType=None /p:DebugSymbols=false --configuration Release --self-contained false
     - name: Build (Linux)
-      run: dotnet publish "Minecraft Version History" --runtime linux-x64 -p:PublishSingleFile=true /p:DebugType=None /p:DebugSymbols=false --configuration Release --self-contained false
+      run: dotnet publish "MinecraftVersionHistory" --runtime linux-x64 -p:PublishSingleFile=true /p:DebugType=None /p:DebugSymbols=false --configuration Release --self-contained false
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          ./Minecraft Version History/bin/Release/net7.0/win-x64/publish/MinecraftVersionHistory.exe
-          ./Minecraft Version History/bin/Release/net7.0/linux-x64/publish/MinecraftVersionHistory
+          ./MinecraftVersionHistory/bin/Release/net7.0/win-x64/publish/MinecraftVersionHistory.exe
+          ./MinecraftVersionHistory/bin/Release/net7.0/linux-x64/publish/MinecraftVersionHistory
